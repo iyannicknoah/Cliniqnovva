@@ -5,7 +5,7 @@ const { auth } = require('../config/firebase-admin');
  * the decoded token (uid, custom claims: role/organizationId/branchId) to req.user.
  * Every route in this API sits behind this middleware except public health checks.
  */
-async function requireAuth(req, res, next) {
+async function verifyToken(req, res, next) {
   const header = req.headers.authorization || '';
   const token = header.startsWith('Bearer ') ? header.slice(7) : null;
 
@@ -27,4 +27,4 @@ async function requireAuth(req, res, next) {
   }
 }
 
-module.exports = { requireAuth };
+module.exports = { verifyToken };

@@ -8,8 +8,11 @@ function errorHandler(err, req, res, next) {
   if (status >= 500) {
     console.error(err);
   }
+  // Client errors (4xx) are safe to surface as-is (e.g. validation messages);
+  // 5xx get a generic message so internals never leak to the response.
+  const fallback = status < 500 ? err.message : 'Internal server error';
   res.status(status).json({
-    error: err.publicMessage || 'Internal server error',
+    error: err.publicMessage || fallback,
   });
 }
 

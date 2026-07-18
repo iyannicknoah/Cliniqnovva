@@ -8,21 +8,31 @@ dotenv.config({
   quiet: true, // suppress dotenv's startup banner/tips from server logs
 });
 
-const required = ['FIREBASE_PROJECT_ID', 'FIREBASE_CLIENT_EMAIL', 'FIREBASE_PRIVATE_KEY'];
+// Two supported ways to supply Firebase Admin credentials:
+// 1. FIREBASE_SERVICE_ACCOUNT_PATH — path to the downloaded service-account JSON file.
+// 2. FIREBASE_PROJECT_ID / FIREBASE_CLIENT_EMAIL / FIREBASE_PRIVATE_KEY — discrete env vars.
+const usingServiceAccountFile = Boolean(process.env.FIREBASE_SERVICE_ACCOUNT_PATH);
 
-for (const key of required) {
-  if (!process.env[key]) {
-    throw new Error(`Missing required environment variable: ${key} (NODE_ENV=${NODE_ENV})`);
+if (!usingServiceAccountFile) {
+  const required = ['FIREBASE_PROJECT_ID', 'FIREBASE_CLIENT_EMAIL', 'FIREBASE_PRIVATE_KEY'];
+  for (const key of required) {
+    if (!process.env[key]) {
+      throw new Error(
+        `Missing required environment variable: ${key} (NODE_ENV=${NODE_ENV}). ` +
+          'Alternatively set FIREBASE_SERVICE_ACCOUNT_PATH to a service-account JSON file.'
+      );
+    }
   }
 }
 
 module.exports = {
   nodeEnv: NODE_ENV,
-  port: parseInt(process.env.PORT, 10) || 4000,
+  port: parseInt(process.env.PORT, 10) || 3000,
   firebase: {
+    serviceAccountPath: process.env.FIREBASE_SERVICE_ACCOUNT_PATH || null,
     projectId: process.env.FIREBASE_PROJECT_ID,
     clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-    privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+    privateKey: process.env.FIREBASE_PRIVATE_KEY ? process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n') : undefined,
     storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
   },
   smsProvider: {

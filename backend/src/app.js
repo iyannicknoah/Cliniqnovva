@@ -21,7 +21,11 @@ app.use(morgan(env.nodeEnv === 'production' ? 'combined' : 'dev'));
 app.use(i18nextMiddleware.handle(i18next));
 app.use(defaultRateLimiter);
 
-app.get('/health', (req, res) => res.json({ status: 'ok', env: env.nodeEnv }));
+app.get('/api/health', (req, res) => res.json({ status: 'ok', timestamp: new Date().toISOString() }));
+
+// Part 2 spec calls these at /api/auth/* (no version prefix, matching /api/health).
+// Also reachable at /api/v1/auth/* via the versioned mount below — same router, same code.
+app.use('/api/auth', require('./routes/auth.routes'));
 
 app.use('/api/v1', routes);
 

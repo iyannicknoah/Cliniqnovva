@@ -1,4 +1,4 @@
-const { ROLES } = require('./role.middleware');
+const { ROLES } = require('./requireRole');
 
 /**
  * Enforces org/branch data isolation (spec section 8/10/11): a Branch-level user
