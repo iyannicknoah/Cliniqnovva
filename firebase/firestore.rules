@@ -1,0 +1,157 @@
+rules_version = '2';
+
+// Spec section 10 (Security Model): default-deny; every collection checks
+// request.auth's custom claims (role / organizationId / branchId, set by the
+// backend via the Admin SDK when a staff account is created — see
+// backend/src/services/auth.service.js) before allowing anything.
+//
+// Business-critical writes (medicalRecords, invoices, appointment status
+// changes, staff/branch management, etc.) go through the Node.js backend
+// using the Firebase Admin SDK, which bypasses these rules — so they are
+// intentionally `allow write: if false` here. The ONE deliberate exception is
+// /chats, per spec section 6.13, which clients write to directly for
+// real-time responsiveness.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() { return request.auth != null; }
+    function role() { return request.auth.token.role; }
+    function orgId() { return request.auth.token.organizationId; }
+    function branchId() { return request.auth.token.branchId; }
+    function isSuperAdmin() { return isSignedIn() && role() == 'superAdmin'; }
+    function isOrgAdmin() { return isSignedIn() && role() == 'organizationAdmin'; }
+    function inSameOrg(docOrgId) { return isSignedIn() && docOrgId == orgId(); }
+    function inSameBranch(docBranchId) { return isSignedIn() && docBranchId == branchId(); }
+
+    // Default deny for anything not explicitly matched below.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    match /organizations/{orgId} {
+      allow read: if isSuperAdmin() || inSameOrg(orgId);
+      allow write: if false; // creation/suspension/plan changes: Super Admin only, via backend
+    }
+
+    match /branches/{branchId} {
+      allow read: if isSuperAdmin() || inSameOrg(resource.data.organizationId);
+      allow write: if false; // plan branch-limit check must happen server-side
+    }
+
+    match /departments/{id} {
+      allow read: if isSignedIn(); // needed for booking search across branches
+      allow write: if false;
+    }
+
+    match /services/{id} {
+      allow read: if isSignedIn();
+      allow write: if false;
+    }
+
+    match /users/{userId} {
+      allow read: if isSuperAdmin()
+        || inSameOrg(resource.data.organizationId)
+        || request.auth.uid == userId;
+      allow write: if false; // staff invite/role assignment via backend only
+    }
+
+    match /doctors/{userId} {
+      allow read: if isSignedIn(); // availability must be publicly searchable by patients
+      allow write: if false;
+    }
+
+    match /patients/{patientId} {
+      allow read: if isSuperAdmin()
+        || inSameOrg(resource.data.organizationId)
+        || request.auth.uid == patientId;
+      allow write: if false; // dedupe/merge logic (6.6A) must run server-side
+    }
+
+    match /appointments/{id} {
+      allow read: if isSuperAdmin()
+        || inSameOrg(resource.data.organizationId)
+        || inSameBranch(resource.data.branchId)
+        || request.auth.uid == resource.data.patientId;
+      allow write: if false; // double-booking transaction (6.7) must run server-side
+    }
+
+    match /medicalRecords/{id} {
+      allow read: if isSuperAdmin()
+        || inSameBranch(resource.data.branchId)
+        || request.auth.uid == resource.data.patientId;
+      allow write: if false; // clinical writes are backend-only, always
+    }
+
+    match /invoices/{id} {
+      allow read: if isSuperAdmin()
+        || inSameOrg(resource.data.organizationId)
+        || inSameBranch(resource.data.branchId)
+        || request.auth.uid == resource.data.patientId;
+      allow write: if false; // totals/balances recalculated server-side only
+    }
+
+    match /inventory/{id} {
+      allow read: if isSuperAdmin() || inSameBranch(resource.data.branchId);
+      allow write: if false; // stock never goes negative — enforced server-side
+    }
+
+    match /reviews/{id} {
+      allow read: if true; // public — patients browsing doctors/branches
+      allow write: if false; // "only after completed appointment" enforced server-side
+    }
+
+    match /publicHolidays/{id} {
+      allow read: if isSignedIn();
+      allow write: if false; // Super Admin/Org Admin edits still go through backend for audit logging
+    }
+
+    match /notifications/{id} {
+      allow read: if isSignedIn() && request.auth.uid == resource.data.userId;
+      allow write: if false; // system-triggered only
+    }
+
+    match /auditLogs/{id} {
+      allow read: if isSuperAdmin() || isOrgAdmin();
+      allow write: if false; // append-only, backend-only — never editable by anyone (spec 6.12/10)
+    }
+
+    match /patientMergeLogs/{id} {
+      allow read: if isSuperAdmin() || isOrgAdmin();
+      allow write: if false;
+    }
+
+    // --- Deliberate exception: patient-clinic chat (spec 6.13) ---
+    // Written directly by clients for real-time responsiveness, tightly scoped
+    // to the chat's own participants (the owning patient, or staff in the
+    // owning branch). Never expand this pattern to other collections without
+    // updating the spec's "no direct client writes" rule deliberately.
+    match /chats/{chatId} {
+      allow read: if isSignedIn()
+        && (request.auth.uid == resource.data.patientId
+            || inSameBranch(resource.data.branchId)
+            || isSuperAdmin());
+      allow create: if isSignedIn() && request.auth.uid == request.resource.data.patientId;
+      allow update: if isSignedIn()
+        && (request.auth.uid == resource.data.patientId || inSameBranch(resource.data.branchId));
+      allow delete: if false;
+
+      match /messages/{messageId} {
+        function chatDoc() {
+          return get(/databases/$(database)/documents/chats/$(chatId)).data;
+        }
+        allow read: if isSignedIn()
+          && (request.auth.uid == chatDoc().patientId
+              || inSameBranch(chatDoc().branchId)
+              || isSuperAdmin());
+        allow create: if isSignedIn()
+          && request.resource.data.senderId == request.auth.uid
+          && (request.auth.uid == chatDoc().patientId || inSameBranch(chatDoc().branchId));
+        // Messages are soft-deleted only (never hard-deleted) — spec 6.13.
+        allow update: if isSignedIn()
+          && (request.auth.uid == chatDoc().patientId || inSameBranch(chatDoc().branchId));
+        allow delete: if false;
+      }
+    }
+  }
+}

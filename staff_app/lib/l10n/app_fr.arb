@@ -1,0 +1,14 @@
+{
+  "@@locale": "fr",
+  "appTitle": "Cliniqnovva Personnel",
+  "login": "Connexion",
+  "schedule": "Planning",
+  "myPatients": "Mes patients",
+  "recordVitals": "Enregistrer les constantes",
+  "addDiagnosis": "Ajouter un diagnostic",
+  "addPrescription": "Ajouter une ordonnance",
+  "markComplete": "Marquer comme terminé",
+  "checkIn": "Enregistrer l'arrivée",
+  "queue": "File d'attente",
+  "selectLanguage": "Choisir la langue"
+}

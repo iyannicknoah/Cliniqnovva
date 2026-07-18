@@ -1,0 +1,7 @@
+{
+  "projects": {
+    "dev": "cliniqnovva-dev",
+    "staging": "cliniqnovva-staging",
+    "prod": "cliniqnovva-prod"
+  }
+}

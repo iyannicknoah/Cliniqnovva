@@ -1,0 +1,29 @@
+rules_version = '2';
+
+// Spec section 6.6: lab results, X-rays, scans, profile photos.
+// Everything sensitive (patient documents) is uploaded/downloaded through
+// backend-issued signed URLs so the Node API can enforce the same
+// branch/org/role scoping as Firestore — direct client access is denied here.
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function isSignedIn() { return request.auth != null; }
+
+    match /patientDocuments/{patientId}/{allPaths=**} {
+      allow read, write: if false; // backend issues signed URLs; never direct client access
+    }
+
+    match /profilePhotos/{userId}/{allPaths=**} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn()
+        && request.auth.uid == userId
+        && request.resource.size < 5 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+    }
+
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

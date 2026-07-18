@@ -1,0 +1,14 @@
+{
+  "@@locale": "en",
+  "appTitle": "Cliniqnovva Staff",
+  "login": "Log in",
+  "schedule": "Schedule",
+  "myPatients": "My patients",
+  "recordVitals": "Record vitals",
+  "addDiagnosis": "Add diagnosis",
+  "addPrescription": "Add prescription",
+  "markComplete": "Mark complete",
+  "checkIn": "Check in",
+  "queue": "Queue",
+  "selectLanguage": "Select language"
+}

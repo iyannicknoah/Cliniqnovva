@@ -1,0 +1,14 @@
+{
+  "notifications": {
+    "appointmentConfirmed": "Your appointment at {{branchName}} on {{date}} at {{time}} is confirmed.",
+    "appointmentReminder": "Reminder: you have an appointment at {{branchName}} tomorrow at {{time}}.",
+    "appointmentCancelled": "Your appointment at {{branchName}} on {{date}} has been cancelled.",
+    "paymentRecorded": "Payment of {{amount}} RWF recorded for your visit at {{branchName}}.",
+    "lowStockAlert": "Stock for {{itemName}} is low ({{quantity}} remaining)."
+  },
+  "errors": {
+    "unauthorized": "You are not authorized to perform this action.",
+    "notFound": "The requested resource was not found.",
+    "validation": "One or more fields are invalid."
+  }
+}

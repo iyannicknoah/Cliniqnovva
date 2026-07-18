@@ -1,0 +1,14 @@
+{
+  "notifications": {
+    "appointmentConfirmed": "Gahunda yawe yo kwa muganga kuri {{branchName}} ku itariki {{date}} saa {{time}} yemejwe.",
+    "appointmentReminder": "Kwibutsa: ufite gahunda yo kwa muganga kuri {{branchName}} ejo saa {{time}}.",
+    "appointmentCancelled": "Gahunda yawe yo kwa muganga kuri {{branchName}} ku itariki {{date}} yahagaritswe.",
+    "paymentRecorded": "Kwishyura amafaranga {{amount}} RWF byanditswe ku isura yawe kuri {{branchName}}.",
+    "lowStockAlert": "Ibicuruzwa bya {{itemName}} birindiye gushira ({{quantity}} gusigaye)."
+  },
+  "errors": {
+    "unauthorized": "Ntabwo wemerewe gukora iki gikorwa.",
+    "notFound": "Ibyo usaba ntibyabonetse.",
+    "validation": "Hari amakuru atari yo mu myanya imwe cyangwa menshi."
+  }
+}

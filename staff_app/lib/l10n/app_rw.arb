@@ -1,0 +1,14 @@
+{
+  "@@locale": "rw",
+  "appTitle": "Cliniqnovva Abakozi",
+  "login": "Injira",
+  "schedule": "Gahunda",
+  "myPatients": "Abarwayi banjye",
+  "recordVitals": "Andika ibipimo",
+  "addDiagnosis": "Ongeraho isuzuma",
+  "addPrescription": "Ongeraho urupapuro rw'imiti",
+  "markComplete": "Shyiraho ko byarangiye",
+  "checkIn": "Kwiyandikisha",
+  "queue": "Umurongo",
+  "selectLanguage": "Hitamo ururimi"
+}

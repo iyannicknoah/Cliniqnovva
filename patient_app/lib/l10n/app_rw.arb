@@ -1,0 +1,15 @@
+{
+  "@@locale": "rw",
+  "appTitle": "Cliniqnovva",
+  "login": "Injira",
+  "searchClinics": "Shakisha ivuriro",
+  "bookAppointment": "Fata gahunda yo kwa muganga",
+  "myAppointments": "Gahunda zanjye",
+  "medicalHistory": "Amateka y'ubuvuzi",
+  "invoicesAndReceipts": "Fagitire n'inyemezabwishyu",
+  "chatWithClinic": "Vugana n'ivuriro",
+  "leaveReview": "Tanga igitekerezo",
+  "reschedule": "Hindura igihe",
+  "cancelAppointment": "Hagarika gahunda",
+  "selectLanguage": "Hitamo ururimi"
+}

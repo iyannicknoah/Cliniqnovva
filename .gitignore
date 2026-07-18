@@ -1,0 +1,12 @@
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.iml
+
+# Firebase local emulator state
+firebase/.firebase/
+firebase-debug.log
+firestore-debug.log
+ui-debug.log

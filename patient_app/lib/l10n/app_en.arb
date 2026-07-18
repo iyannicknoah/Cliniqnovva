@@ -1,0 +1,17 @@
+{
+  "@@locale": "en",
+  "appTitle": "Cliniqnovva",
+  "@appTitle": { "description": "App name shown on splash/login screens" },
+
+  "login": "Log in",
+  "searchClinics": "Search clinics",
+  "bookAppointment": "Book appointment",
+  "myAppointments": "My appointments",
+  "medicalHistory": "Medical history",
+  "invoicesAndReceipts": "Invoices & receipts",
+  "chatWithClinic": "Chat with clinic",
+  "leaveReview": "Leave a review",
+  "reschedule": "Reschedule",
+  "cancelAppointment": "Cancel appointment",
+  "selectLanguage": "Select language"
+}

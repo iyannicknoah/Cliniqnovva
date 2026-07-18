@@ -1,0 +1,14 @@
+{
+  "notifications": {
+    "appointmentConfirmed": "Votre rendez-vous à {{branchName}} le {{date}} à {{time}} est confirmé.",
+    "appointmentReminder": "Rappel : vous avez un rendez-vous à {{branchName}} demain à {{time}}.",
+    "appointmentCancelled": "Votre rendez-vous à {{branchName}} le {{date}} a été annulé.",
+    "paymentRecorded": "Paiement de {{amount}} RWF enregistré pour votre visite à {{branchName}}.",
+    "lowStockAlert": "Le stock de {{itemName}} est faible ({{quantity}} restant(s))."
+  },
+  "errors": {
+    "unauthorized": "Vous n'êtes pas autorisé à effectuer cette action.",
+    "notFound": "La ressource demandée est introuvable.",
+    "validation": "Un ou plusieurs champs sont invalides."
+  }
+}

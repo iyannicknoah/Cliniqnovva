@@ -1,0 +1,15 @@
+{
+  "@@locale": "fr",
+  "appTitle": "Cliniqnovva",
+  "login": "Connexion",
+  "searchClinics": "Rechercher une clinique",
+  "bookAppointment": "Prendre rendez-vous",
+  "myAppointments": "Mes rendez-vous",
+  "medicalHistory": "Antécédents médicaux",
+  "invoicesAndReceipts": "Factures et reçus",
+  "chatWithClinic": "Discuter avec la clinique",
+  "leaveReview": "Laisser un avis",
+  "reschedule": "Reprogrammer",
+  "cancelAppointment": "Annuler le rendez-vous",
+  "selectLanguage": "Choisir la langue"
+}
