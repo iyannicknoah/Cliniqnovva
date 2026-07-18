@@ -51,6 +51,17 @@ class AuthNotifier extends AsyncNotifier<User?> {
     state = const AsyncData(null);
   }
 
+  /// Sends a Firebase password-reset email. Throws [AuthException] with a
+  /// friendly message on failure — callers should catch it, not
+  /// FirebaseAuthException directly.
+  Future<void> sendPasswordResetEmail(String email) async {
+    try {
+      await FirebaseService.auth.sendPasswordResetEmail(email: email.trim());
+    } on FirebaseAuthException catch (e) {
+      throw AuthException(_friendlyMessage(e.code));
+    }
+  }
+
   Future<String?> getUserRole() async {
     final claims = await FirebaseService.getCurrentUserClaims();
     return claims?['role'] as String?;

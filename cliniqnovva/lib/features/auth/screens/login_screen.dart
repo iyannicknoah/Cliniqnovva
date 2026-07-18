@@ -9,6 +9,10 @@ import '../../../shared/widgets/cliniqnovva_button.dart';
 import '../../../shared/widgets/cliniqnovva_text_field.dart';
 import '../providers/auth_provider.dart';
 
+/// Matches the reference design language's Signin.txt layout: plain
+/// background (no card/backdrop), small logo top, centered form in the
+/// middle. Social login, public sign-up, legal text, and the "Powered by"
+/// footer are all omitted per the user's explicit instructions.
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
@@ -21,6 +25,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
   String? _errorMessage;
+  String? _infoMessage;
   bool _checkedQueryError = false;
 
   @override
@@ -47,7 +52,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Future<void> _handleSignIn() async {
-    setState(() => _errorMessage = null);
+    setState(() {
+      _errorMessage = null;
+      _infoMessage = null;
+    });
     await ref.read(authNotifierProvider.notifier).signIn(
           email: _emailController.text,
           password: _passwordController.text,
@@ -61,111 +69,181 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
   }
 
+  Future<void> _handleForgotPassword() async {
+    final email = _emailController.text.trim();
+    if (email.isEmpty) {
+      setState(() {
+        _errorMessage = 'Enter your email above first, then tap "Forgot password?" again.';
+        _infoMessage = null;
+      });
+      return;
+    }
+    setState(() {
+      _errorMessage = null;
+      _infoMessage = null;
+    });
+    try {
+      await ref.read(authNotifierProvider.notifier).sendPasswordResetEmail(email);
+      if (!mounted) return;
+      setState(() => _infoMessage = 'Check $email for a link to reset your password.');
+    } on AuthException catch (e) {
+      if (!mounted) return;
+      setState(() => _errorMessage = e.message);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     _maybeShowRedirectError(context);
 
     final authState = ref.watch(authNotifierProvider);
     final isLoading = authState.isLoading;
-    final isWeb = MediaQuery.sizeOf(context).width >= 600;
 
     return Scaffold(
-      body: Stack(
-        fit: StackFit.expand,
-        children: [
-          Container(color: AppColors.deepNavy),
-          Positioned(
-            top: -120,
-            right: -120,
-            child: Container(
-              width: 420,
-              height: 420,
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [Color(0x0D2A9D8F), Colors.transparent],
-                ),
+      backgroundColor: AppColors.backgroundTint,
+      body: SafeArea(
+        child: Align(
+          alignment: Alignment.topCenter,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 400),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 15),
+              child: Column(
+                mainAxisSize: MainAxisSize.max,
+                children: [
+                  const Padding(
+                    padding: EdgeInsets.fromLTRB(0, 40, 0, 20),
+                    child: _LogoMark(),
+                  ),
+                  Expanded(
+                    child: Align(
+                      child: SingleChildScrollView(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.max,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Column(
+                              children: [
+                                const Text(
+                                  'Welcome back',
+                                  style: TextStyle(color: AppColors.textPrimary, fontSize: 18, fontWeight: FontWeight.w600),
+                                ),
+                                const Text(
+                                  'Sign in to your account',
+                                  style: TextStyle(color: AppColors.textSecondary),
+                                ),
+                              ].withGap(5),
+                            ),
+                            const SizedBox(height: 30),
+                            Column(
+                              children: [
+                                Column(
+                                  children: [
+                                    CliniqnovvaTextField(
+                                      label: 'Email',
+                                      controller: _emailController,
+                                      hint: 'you@clinic.rw',
+                                      keyboardType: TextInputType.emailAddress,
+                                    ),
+                                    CliniqnovvaTextField(
+                                      label: 'Password',
+                                      controller: _passwordController,
+                                      hint: '••••••••',
+                                      obscureText: _obscurePassword,
+                                      onFieldSubmitted: (_) => _handleSignIn(),
+                                      suffixIcon: IconButton(
+                                        icon: Icon(
+                                          _obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                                          color: AppColors.textSecondary,
+                                          size: 20,
+                                        ),
+                                        onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                                      ),
+                                    ),
+                                    Align(
+                                      child: CliniqnovvaButton.text(
+                                        label: 'Forgot password?',
+                                        underline: true,
+                                        onPressed: isLoading ? null : _handleForgotPassword,
+                                      ),
+                                    ),
+                                  ].withGap(10),
+                                ),
+                                if (_errorMessage != null)
+                                  _InlineBanner(text: _errorMessage!, bg: AppColors.pillRedBg, fg: AppColors.pillRedText),
+                                if (_infoMessage != null)
+                                  _InlineBanner(text: _infoMessage!, bg: AppColors.pillGreenBg, fg: AppColors.pillGreenText),
+                                CliniqnovvaButton(
+                                  label: 'Sign In',
+                                  isLoading: isLoading,
+                                  onPressed: isLoading ? null : _handleSignIn,
+                                ),
+                              ].withGap(15),
+                            ),
+                            const SizedBox(height: 20),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
-          Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
-              child: Container(
-                width: isWeb ? 420 : double.infinity,
-                padding: const EdgeInsets.all(32),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(24),
-                  boxShadow: [
-                    BoxShadow(color: Colors.black.withValues(alpha: 0.18), blurRadius: 40, offset: const Offset(0, 12)),
-                  ],
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    const Text(
-                      'Cliniqnovva',
-                      style: TextStyle(color: AppColors.textPrimary, fontSize: 26, fontWeight: FontWeight.w700),
-                    ),
-                    const SizedBox(height: 6),
-                    const Text(
-                      AppConstants.appTagline,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: AppColors.textSecondary, fontStyle: FontStyle.italic, fontSize: 14),
-                    ),
-                    const SizedBox(height: 32),
-                    CliniqnovvaTextField(
-                      label: 'Email',
-                      controller: _emailController,
-                      hint: 'you@clinic.rw',
-                      keyboardType: TextInputType.emailAddress,
-                    ),
-                    const SizedBox(height: 16),
-                    CliniqnovvaTextField(
-                      label: 'Password',
-                      controller: _passwordController,
-                      hint: '••••••••',
-                      obscureText: _obscurePassword,
-                      onFieldSubmitted: (_) => _handleSignIn(),
-                      suffixIcon: IconButton(
-                        icon: Icon(
-                          _obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
-                          color: AppColors.textSecondary,
-                          size: 20,
-                        ),
-                        onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
-                      ),
-                    ),
-                    if (_errorMessage != null) ...[
-                      const SizedBox(height: 16),
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: AppColors.pillRedBg,
-                          borderRadius: BorderRadius.circular(AppTheme.inputRadius),
-                        ),
-                        child: Text(
-                          _errorMessage!,
-                          style: const TextStyle(color: AppColors.pillRedText, fontSize: 13.5, height: 1.4),
-                        ),
-                      ),
-                    ],
-                    const SizedBox(height: 24),
-                    CliniqnovvaButton(
-                      label: 'Sign In',
-                      isLoading: isLoading,
-                      onPressed: isLoading ? null : _handleSignIn,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ],
+        ),
       ),
     );
+  }
+}
+
+class _LogoMark extends StatelessWidget {
+  const _LogoMark();
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(10),
+          child: Image.asset('assets/images/logo.png', width: 30, height: 30, fit: BoxFit.cover),
+        ),
+        const SizedBox(width: 5),
+        const Text(
+          AppConstants.appName,
+          style: TextStyle(color: AppColors.textPrimary, fontSize: 18, fontWeight: FontWeight.bold),
+        ),
+      ],
+    );
+  }
+}
+
+class _InlineBanner extends StatelessWidget {
+  const _InlineBanner({required this.text, required this.bg, required this.fg});
+
+  final String text;
+  final Color bg;
+  final Color fg;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(AppTheme.inputRadius)),
+      child: Text(text, style: TextStyle(color: fg, fontSize: 13.5, height: 1.4)),
+    );
+  }
+}
+
+extension _GapList on List<Widget> {
+  List<Widget> withGap(double size) {
+    if (isEmpty) return this;
+    final result = <Widget>[];
+    for (var i = 0; i < length; i++) {
+      if (i > 0) result.add(SizedBox(height: size));
+      result.add(this[i]);
+    }
+    return result;
   }
 }

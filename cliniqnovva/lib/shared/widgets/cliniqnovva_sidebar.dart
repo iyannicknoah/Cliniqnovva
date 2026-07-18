@@ -127,15 +127,15 @@ class _SidebarNavTile extends StatelessWidget {
         margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
         padding: const EdgeInsets.symmetric(horizontal: 12),
         decoration: BoxDecoration(
-          color: active ? AppColors.primaryTeal.withValues(alpha: 0.16) : Colors.transparent,
+          color: active ? AppColors.primary.withValues(alpha: 0.16) : Colors.transparent,
           borderRadius: BorderRadius.circular(8),
           border: Border(
-            left: BorderSide(color: active ? AppColors.primaryTeal : Colors.transparent, width: 3),
+            left: BorderSide(color: active ? AppColors.primary : Colors.transparent, width: 3),
           ),
         ),
         child: Row(
           children: [
-            Icon(item.icon, size: 18, color: active ? AppColors.primaryTeal : Colors.white70),
+            Icon(item.icon, size: 18, color: active ? AppColors.primary : Colors.white70),
             const SizedBox(width: 12),
             Expanded(
               child: Text(

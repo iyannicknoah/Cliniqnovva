@@ -5,7 +5,7 @@ import '../../core/theme/app_colors.dart';
 /// The single avatar component — shows a photo if [photoUrl] is given,
 /// otherwise a gradient-initials circle keyed off the first letter of
 /// [firstName] (see AppColors.avatarGradients). Always has a 1.5px
-/// primaryTeal ring.
+/// primary ring.
 class AvatarWidget extends StatelessWidget {
   const AvatarWidget({
     super.key,
@@ -38,7 +38,7 @@ class AvatarWidget extends StatelessWidget {
       height: size,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        border: Border.all(color: AppColors.primaryTeal, width: 1.5),
+        border: Border.all(color: AppColors.primary, width: 1.5),
       ),
       padding: const EdgeInsets.all(1.5),
       child: ClipOval(

@@ -4,7 +4,11 @@ import 'package:flutter/material.dart';
 /// project's design system — do not change them without an explicit
 /// instruction to update the design language.
 abstract final class AppColors {
-  static const Color primaryTeal = Color(0xFF2A9D8F);
+  /// Extracted from the reference design language's Overview chart (the
+  /// primary line's translucent area-fill `Color(0x0ACFFF04)`, alpha
+  /// stripped) — confirmed with the user 2026-07-18 before replacing the
+  /// previous teal (#2A9D8F).
+  static const Color primary = Color(0xFFCFFF04);
   static const Color deepNavy = Color(0xFF0B2545);
   static const Color backgroundTint = Color(0xFFF6FAFA);
   static const Color successGreen = Color(0xFF2ECC71);
