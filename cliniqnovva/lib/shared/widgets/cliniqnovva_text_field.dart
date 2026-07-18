@@ -57,7 +57,7 @@ class CliniqnovvaTextField extends StatelessWidget {
             errorText: errorText,
             suffixIcon: suffixIcon,
             filled: true,
-            fillColor: AppColors.backgroundTint,
+            fillColor: AppColors.pageBackground,
             contentPadding: const EdgeInsetsDirectional.fromSTEB(14, 15, 15, 15),
             border: _border(_borderColor),
             enabledBorder: _border(_borderColor),

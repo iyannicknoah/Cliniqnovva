@@ -41,7 +41,7 @@ abstract final class AppTheme {
       useMaterial3: true,
       brightness: Brightness.light,
       colorScheme: colorScheme.copyWith(primary: AppColors.primary),
-      scaffoldBackgroundColor: AppColors.backgroundTint,
+      scaffoldBackgroundColor: AppColors.pageBackground,
       cardColor: Colors.white,
       primaryColor: AppColors.primary,
       fontFamily: fontFamily,

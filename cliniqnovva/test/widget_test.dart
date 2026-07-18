@@ -103,7 +103,7 @@ void main() {
     }
   });
 
-  testWidgets('LoginScreen renders the backgroundTint scaffold, logo, and both fields', (tester) async {
+  testWidgets('LoginScreen renders the pageBackground scaffold, logo, and both fields', (tester) async {
     final router = GoRouter(
       initialLocation: '/login',
       routes: [GoRoute(path: '/login', builder: (context, state) => const LoginScreen())],
@@ -136,7 +136,7 @@ void main() {
     expect(wordmark.style?.fontWeight!.value, greaterThan(welcome.style?.fontWeight!.value ?? 0));
 
     final scaffold = tester.widget<Scaffold>(find.byType(Scaffold));
-    expect(scaffold.backgroundColor, AppColors.backgroundTint);
+    expect(scaffold.backgroundColor, AppColors.pageBackground);
   });
 
   testWidgets('LoginScreen password field toggles obscureText via the eye icon', (tester) async {

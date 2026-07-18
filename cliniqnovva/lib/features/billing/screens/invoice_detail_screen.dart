@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_colors.dart';
 
@@ -12,7 +12,7 @@ class InvoiceDetailScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.backgroundTint,
+      backgroundColor: AppColors.pageBackground,
       body: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,

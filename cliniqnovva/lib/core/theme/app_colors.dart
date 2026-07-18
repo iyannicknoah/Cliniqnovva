@@ -10,7 +10,10 @@ abstract final class AppColors {
   /// previous teal (#2A9D8F).
   static const Color primary = Color(0xFFCFFF04);
   static const Color deepNavy = Color(0xFF0B2545);
-  static const Color backgroundTint = Color(0xFFF6FAFA);
+
+  /// Page/scaffold background, input fill, and container backgrounds across
+  /// the whole app — pure white per explicit instruction (2026-07-19).
+  static const Color pageBackground = Color(0xFFFFFFFF);
   static const Color successGreen = Color(0xFF2ECC71);
   static const Color warningAmber = Color(0xFFF4A261);
   static const Color errorRed = Color(0xFFE63946);
