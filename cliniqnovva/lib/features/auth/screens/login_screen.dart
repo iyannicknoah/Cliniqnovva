@@ -6,6 +6,7 @@ import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/widgets/cliniqnovva_button.dart';
+import '../../../shared/widgets/cliniqnovva_logo.dart';
 import '../../../shared/widgets/cliniqnovva_text_field.dart';
 import '../providers/auth_provider.dart';
 
@@ -25,7 +26,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
   String? _errorMessage;
-  String? _infoMessage;
   bool _checkedQueryError = false;
 
   @override
@@ -52,10 +52,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Future<void> _handleSignIn() async {
-    setState(() {
-      _errorMessage = null;
-      _infoMessage = null;
-    });
+    setState(() => _errorMessage = null);
     await ref.read(authNotifierProvider.notifier).signIn(
           email: _emailController.text,
           password: _passwordController.text,
@@ -66,29 +63,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       setState(() {
         _errorMessage = error is AuthException ? error.message : 'Something went wrong signing you in. Please try again.';
       });
-    }
-  }
-
-  Future<void> _handleForgotPassword() async {
-    final email = _emailController.text.trim();
-    if (email.isEmpty) {
-      setState(() {
-        _errorMessage = 'Enter your email above first, then tap "Forgot password?" again.';
-        _infoMessage = null;
-      });
-      return;
-    }
-    setState(() {
-      _errorMessage = null;
-      _infoMessage = null;
-    });
-    try {
-      await ref.read(authNotifierProvider.notifier).sendPasswordResetEmail(email);
-      if (!mounted) return;
-      setState(() => _infoMessage = 'Check $email for a link to reset your password.');
-    } on AuthException catch (e) {
-      if (!mounted) return;
-      setState(() => _errorMessage = e.message);
     }
   }
 
@@ -160,19 +134,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                         onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
                                       ),
                                     ),
-                                    Align(
-                                      child: CliniqnovvaButton.text(
-                                        label: 'Forgot password?',
-                                        underline: true,
-                                        onPressed: isLoading ? null : _handleForgotPassword,
-                                      ),
-                                    ),
                                   ].withGap(10),
                                 ),
                                 if (_errorMessage != null)
                                   _InlineBanner(text: _errorMessage!, bg: AppColors.pillRedBg, fg: AppColors.pillRedText),
-                                if (_infoMessage != null)
-                                  _InlineBanner(text: _infoMessage!, bg: AppColors.pillGreenBg, fg: AppColors.pillGreenText),
                                 CliniqnovvaButton(
                                   label: 'Sign In',
                                   isLoading: isLoading,
@@ -201,15 +166,12 @@ class _LogoMark extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    return const Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        ClipRRect(
-          borderRadius: BorderRadius.circular(10),
-          child: Image.asset('assets/images/logo.png', width: 30, height: 30, fit: BoxFit.cover),
-        ),
-        const SizedBox(width: 5),
-        const Text(
+        CliniqnovvaLogo(size: 30, radius: 10),
+        SizedBox(width: 5),
+        Text(
           AppConstants.appName,
           style: TextStyle(color: AppColors.textPrimary, fontSize: 18, fontWeight: FontWeight.bold),
         ),

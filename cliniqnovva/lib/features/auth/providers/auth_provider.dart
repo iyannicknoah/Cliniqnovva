@@ -144,14 +144,18 @@ class ThemeNotifier extends Notifier<ThemeMode> {
   @override
   ThemeMode build() {
     _restore();
-    return ThemeMode.system;
+    // Light by default, NOT system: every page background is pure white by
+    // design, so inheriting the OS's dark mode would flip only the
+    // theme-driven pieces (e.g. buttons going white-on-white). Dark mode is
+    // an explicit in-app choice via setThemeMode/toggle.
+    return ThemeMode.light;
   }
 
   Future<void> _restore() async {
     final prefs = await SharedPreferences.getInstance();
     final saved = prefs.getString(_prefsKey);
     if (saved != null) {
-      state = ThemeMode.values.firstWhere((m) => m.name == saved, orElse: () => ThemeMode.system);
+      state = ThemeMode.values.firstWhere((m) => m.name == saved, orElse: () => ThemeMode.light);
     }
   }
 

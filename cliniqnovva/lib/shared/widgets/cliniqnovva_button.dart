@@ -6,8 +6,12 @@ import '../../core/theme/app_theme.dart';
 enum _ButtonVariant { filled, text }
 
 /// The single button component used everywhere in the app — 45px height,
-/// fully-rounded pill radius, primary by default. Never use
-/// ElevatedButton/TextButton directly in a screen.
+/// fully-rounded pill radius. Never use ElevatedButton/TextButton directly
+/// in a screen.
+///
+/// Filled buttons are theme-inverted by design (explicit instruction,
+/// 2026-07-19): black with white text in light mode, white with black text
+/// in dark mode. Leave `color` null to get that behavior.
 ///
 /// `.text()` is the transparent, underline-capable secondary style (e.g.
 /// "Forgot password?", "Sign up").
@@ -18,7 +22,7 @@ class CliniqnovvaButton extends StatelessWidget {
     required this.onPressed,
     this.isLoading = false,
     this.isFullWidth = true,
-    this.color = AppColors.primary,
+    this.color,
   }) : _variant = _ButtonVariant.filled,
        underline = false;
 
@@ -36,7 +40,7 @@ class CliniqnovvaButton extends StatelessWidget {
   final VoidCallback? onPressed;
   final bool isLoading;
   final bool isFullWidth;
-  final Color color;
+  final Color? color;
   final _ButtonVariant _variant;
   final bool underline;
 
@@ -46,11 +50,13 @@ class CliniqnovvaButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final disabled = onPressed == null || isLoading;
 
-    // primary is a bright lime — white text on it would be nearly invisible.
-    // Pick a readable foreground automatically instead of hardcoding white,
-    // so this keeps working no matter what `color` a caller passes in.
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final color = this.color ?? (isDark ? Colors.white : Colors.black);
+
+    // Auto-pick a readable foreground for whatever the background resolves
+    // to: black text on light fills, white text on dark fills.
     final onColor = ThemeData.estimateBrightnessForColor(color) == Brightness.light
-        ? AppColors.textPrimary
+        ? Colors.black
         : Colors.white;
 
     final Widget button = switch (_variant) {

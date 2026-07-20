@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
 import 'avatar_widget.dart';
+import 'cliniqnovva_logo.dart';
 
 /// One entry in [CliniqnovvaSidebar]'s nav list. [allowedRoles] controls
 /// role-based visibility — an item is hidden entirely for a role not in
@@ -57,11 +58,21 @@ class CliniqnovvaSidebar extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const SizedBox(height: 24),
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 20),
-            child: Text(
-              'Cliniqnovva',
-              style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w700),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Row(
+              children: [
+                const CliniqnovvaLogo(size: 26, radius: 8),
+                const SizedBox(width: 8),
+                const Flexible(
+                  child: Text(
+                    'Cliniqnovva',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w700),
+                  ),
+                ),
+              ],
             ),
           ),
           const SizedBox(height: 24),

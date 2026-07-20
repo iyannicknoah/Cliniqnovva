@@ -32,19 +32,21 @@ void main() {
     expect(find.text('Dashboard'), findsOneWidget);
   });
 
-  testWidgets('CliniqnovvaButton picks readable text color against a light or dark background', (tester) async {
-    // primary is a bright lime — text must come out dark, not the old hardcoded white.
+  testWidgets('CliniqnovvaButton inverts with the theme: black/white in light, white/black in dark', (tester) async {
     await tester.pumpWidget(_wrap(CliniqnovvaButton(label: 'Save', onPressed: () {})));
-    final lightBg = tester.widget<ElevatedButton>(find.byType(ElevatedButton));
-    final lightFg = lightBg.style?.foregroundColor?.resolve({}) as Color;
-    expect(lightFg, AppColors.textPrimary);
+    final lightButton = tester.widget<ElevatedButton>(find.byType(ElevatedButton));
+    expect(lightButton.style?.backgroundColor?.resolve({}), Colors.black);
+    expect(lightButton.style?.foregroundColor?.resolve({}), Colors.white);
 
     await tester.pumpWidget(_wrap(
-      CliniqnovvaButton(label: 'Save', color: AppColors.deepNavy, onPressed: () {}),
+      CliniqnovvaButton(label: 'Save', onPressed: () {}),
+      theme: AppTheme.darkTheme(),
     ));
-    final darkBg = tester.widget<ElevatedButton>(find.byType(ElevatedButton));
-    final darkFg = darkBg.style?.foregroundColor?.resolve({}) as Color;
-    expect(darkFg, Colors.white);
+    // MaterialApp animates between themes; settle so Theme.of is fully dark.
+    await tester.pumpAndSettle();
+    final darkButton = tester.widget<ElevatedButton>(find.byType(ElevatedButton));
+    expect(darkButton.style?.backgroundColor?.resolve({}), Colors.white);
+    expect(darkButton.style?.foregroundColor?.resolve({}), Colors.black);
   });
 
   testWidgets('CliniqnovvaButton renders label and responds to tap', (tester) async {
@@ -125,7 +127,7 @@ void main() {
     expect(find.text('Sign in to your account'), findsOneWidget);
     expect(find.text('Email'), findsOneWidget);
     expect(find.text('Password'), findsOneWidget);
-    expect(find.text('Forgot password?'), findsOneWidget);
+    expect(find.text('Forgot password?'), findsNothing);
     expect(find.text('Sign In'), findsOneWidget);
     expect(find.textContaining('Powered by'), findsNothing);
     expect(find.textContaining('agree to our'), findsNothing);

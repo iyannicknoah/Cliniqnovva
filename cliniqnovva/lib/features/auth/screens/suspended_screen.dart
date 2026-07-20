@@ -48,7 +48,9 @@ class SuspendedScreen extends ConsumerWidget {
                 width: 220,
                 child: CliniqnovvaButton(
                   label: 'Sign Out',
-                  color: AppColors.warningAmber,
+                  // This screen is always deepNavy regardless of theme, so the
+                  // dark-surface button style (white bg, black text) applies.
+                  color: Colors.white,
                   onPressed: () => ref.read(authNotifierProvider.notifier).signOut(),
                 ),
               ),
