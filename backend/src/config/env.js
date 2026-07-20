@@ -3,6 +3,13 @@ const path = require('path');
 
 const NODE_ENV = process.env.NODE_ENV || 'development';
 
+// Base `.env` (shared across all environments, e.g. R2 credentials for a
+// single bucket) loads first; `.env.${NODE_ENV}` loads second and — per
+// dotenv's default "don't override already-set keys" behavior — only fills
+// in vars the base file didn't already set. This keeps the per-environment
+// separation (each env still points at its own Firebase project) while
+// making a plain `.env` a real, active config source rather than a dead file.
+dotenv.config({ path: path.resolve(process.cwd(), '.env'), quiet: true });
 dotenv.config({
   path: path.resolve(process.cwd(), `.env.${NODE_ENV}`),
   quiet: true, // suppress dotenv's startup banner/tips from server logs
@@ -37,6 +44,12 @@ module.exports = {
   },
   smsProvider: {
     apiKey: process.env.SMS_PROVIDER_API_KEY || '',
+  },
+  r2: {
+    accessKeyId: process.env.CLOUDFLARE_R2_ACCESS_KEY_ID,
+    secretAccessKey: process.env.CLOUDFLARE_R2_SECRET_ACCESS_KEY,
+    endpoint: process.env.CLOUDFLARE_R2_ENDPOINT,
+    bucketName: process.env.CLOUDFLARE_R2_BUCKET_NAME,
   },
   defaultTimezone: 'Africa/Kigali',
   supportedLocales: ['rw', 'en', 'fr'],

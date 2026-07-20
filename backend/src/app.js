@@ -23,6 +23,9 @@ app.use(defaultRateLimiter);
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok', timestamp: new Date().toISOString() }));
 
+// Matches /api/health's no-version-prefix convention.
+app.use('/api', require('./routes/storage.routes'));
+
 // Part 2 spec calls these at /api/auth/* (no version prefix, matching /api/health).
 // Also reachable at /api/v1/auth/* via the versioned mount below — same router, same code.
 app.use('/api/auth', require('./routes/auth.routes'));
