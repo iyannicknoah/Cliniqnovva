@@ -4,7 +4,10 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/theme/theme_ext.dart';
+import '../../../shared/widgets/app_icon.dart';
 import '../../../shared/widgets/cliniqnovva_button.dart';
 import '../../../shared/widgets/cliniqnovva_logo.dart';
 import '../../../shared/widgets/cliniqnovva_text_field.dart';
@@ -126,9 +129,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                       obscureText: _obscurePassword,
                                       onFieldSubmitted: (_) => _handleSignIn(),
                                       suffixIcon: IconButton(
-                                        icon: Icon(
-                                          _obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
-                                          color: AppColors.textSecondary,
+                                        icon: AppIcon(
+                                          _obscurePassword ? AppIcons.view : AppIcons.eyeSlash,
+                                          color: context.appSubtext,
                                           size: 20,
                                         ),
                                         onPressed: () => setState(() => _obscurePassword = !_obscurePassword),

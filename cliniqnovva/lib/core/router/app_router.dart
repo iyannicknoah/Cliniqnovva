@@ -34,6 +34,7 @@ import '../../features/super_admin/screens/billing_screen.dart';
 import '../../features/super_admin/screens/organization_detail_screen.dart';
 import '../../features/super_admin/screens/organizations_screen.dart';
 import '../../features/super_admin/screens/oversight_screen.dart';
+import '../../features/super_admin/screens/support_view_screen.dart';
 import '../constants/app_constants.dart';
 
 /// Roles whose organization's `isActive` status gates access (spec Task 4:
@@ -156,6 +157,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: '/super-admin/organizations/:id',
         builder: (context, state) =>
             OrganizationDetailScreen(organizationId: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: '/super-admin/organizations/:id/support-view',
+        builder: (context, state) =>
+            SupportViewScreen(organizationId: state.pathParameters['id']!),
       ),
       GoRoute(
         path: '/super-admin/billing',

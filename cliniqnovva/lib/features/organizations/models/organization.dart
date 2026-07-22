@@ -20,7 +20,27 @@ class Branch {
   }
 }
 
-/// Mirrors the backend's `organizations` document shape (Part 3).
+/// One entry in an [Organization]'s `subscriptionPaymentHistory` (Part 4 —
+/// cash-only record-keeping, there is no payment gateway).
+class SubscriptionPayment {
+  const SubscriptionPayment({required this.date, required this.amountRwf, this.note, this.recordedBy});
+
+  final DateTime? date;
+  final int amountRwf;
+  final String? note;
+  final String? recordedBy;
+
+  factory SubscriptionPayment.fromJson(Map<String, dynamic> json) {
+    return SubscriptionPayment(
+      date: json['date'] != null ? DateTime.tryParse(json['date'] as String) : null,
+      amountRwf: (json['amountRwf'] as num?)?.toInt() ?? 0,
+      note: json['note'] as String?,
+      recordedBy: json['recordedBy'] as String?,
+    );
+  }
+}
+
+/// Mirrors the backend's `organizations` document shape (Part 3 + Part 4).
 /// [branchLimit] is null for the enterprise plan (unlimited branches).
 /// [branches] is only populated by the detail endpoint, not the list one.
 class Organization {
@@ -35,6 +55,11 @@ class Organization {
     this.ownerContactName,
     this.ownerContactPhone,
     this.branches = const [],
+    required this.billingCycle,
+    required this.subscriptionAmountRwf,
+    this.nextDueDate,
+    this.paymentHistory = const [],
+    required this.billingStatus,
   });
 
   final String id;
@@ -47,6 +72,16 @@ class Organization {
   final String? ownerContactName;
   final String? ownerContactPhone;
   final List<Branch> branches;
+
+  /// Part 4: subscription/billing tracking (cash-only, no gateway).
+  final String billingCycle; // 'monthly' | 'quarterly'
+  final int subscriptionAmountRwf;
+  final DateTime? nextDueDate;
+  final List<SubscriptionPayment> paymentHistory;
+
+  /// Computed server-side on every read (never auto-suspends):
+  /// 'paid' | 'dueSoon' | 'overdue' | 'unknown'.
+  final String billingStatus;
 
   factory Organization.fromJson(Map<String, dynamic> json) {
     return Organization(
@@ -62,8 +97,21 @@ class Organization {
       branches:
           (json['branches'] as List<dynamic>?)?.map((b) => Branch.fromJson(b as Map<String, dynamic>)).toList() ??
           const [],
+      billingCycle: json['billingCycle'] as String? ?? 'monthly',
+      subscriptionAmountRwf: (json['subscriptionAmountRwf'] as num?)?.toInt() ?? 0,
+      nextDueDate: json['nextDueDate'] != null ? DateTime.tryParse(json['nextDueDate'] as String) : null,
+      paymentHistory:
+          (json['subscriptionPaymentHistory'] as List<dynamic>?)
+              ?.map((p) => SubscriptionPayment.fromJson(p as Map<String, dynamic>))
+              .toList() ??
+          const [],
+      billingStatus: json['billingStatus'] as String? ?? 'unknown',
     );
   }
 
   String get branchLimitLabel => branchLimit == null ? 'Unlimited' : '$branchCount / $branchLimit';
+
+  /// Monthly-normalized revenue for this organization (quarterly ÷ 3), used
+  /// for the Billing screen's "Total monthly revenue" MetricCard.
+  double get monthlyEquivalentRwf => billingCycle == 'quarterly' ? subscriptionAmountRwf / 3 : subscriptionAmountRwf.toDouble();
 }

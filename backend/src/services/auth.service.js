@@ -53,6 +53,7 @@ async function createStaffInvite({ email, phone, name, role, organizationId, bra
     action: 'staff.invited',
     targetCollection: 'users',
     targetId: userRecord.uid,
+    organizationId,
     timestamp: new Date().toISOString(),
   });
 

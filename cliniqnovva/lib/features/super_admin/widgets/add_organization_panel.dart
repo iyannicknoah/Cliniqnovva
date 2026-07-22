@@ -3,7 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/theme/theme_ext.dart';
+import '../../../shared/widgets/app_icon.dart';
 import '../../../shared/widgets/cliniqnovva_button.dart';
 import '../../../shared/widgets/cliniqnovva_text_field.dart';
 import '../../organizations/providers/organizations_provider.dart';
@@ -106,7 +109,7 @@ class _AddOrganizationPanelState extends ConsumerState<_AddOrganizationPanel> {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: AppColors.pageBackground,
+      color: context.appCard,
       child: SafeArea(
         child: SizedBox(
           width: 480,
@@ -119,13 +122,16 @@ class _AddOrganizationPanelState extends ConsumerState<_AddOrganizationPanel> {
                 children: [
                   Row(
                     children: [
-                      const Expanded(
+                      Expanded(
                         child: Text(
                           'Add Organization',
-                          style: TextStyle(color: AppColors.textPrimary, fontSize: 18, fontWeight: FontWeight.w600),
+                          style: TextStyle(color: context.appText, fontSize: 18, fontWeight: FontWeight.w600),
                         ),
                       ),
-                      IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.of(context).pop()),
+                      IconButton(
+                        icon: const AppIcon(AppIcons.close),
+                        onPressed: () => Navigator.of(context).pop(),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 20),
@@ -135,9 +141,9 @@ class _AddOrganizationPanelState extends ConsumerState<_AddOrganizationPanel> {
                     hint: 'e.g. Kigali Family Clinic',
                   ),
                   const SizedBox(height: 16),
-                  const Text(
+                  Text(
                     'Subscription plan',
-                    style: TextStyle(color: AppColors.textPrimary, fontSize: 14, fontWeight: FontWeight.w500),
+                    style: TextStyle(color: context.appText, fontSize: 14, fontWeight: FontWeight.w500),
                   ),
                   const SizedBox(height: 8),
                   DropdownButtonFormField<String>(
@@ -145,11 +151,11 @@ class _AddOrganizationPanelState extends ConsumerState<_AddOrganizationPanel> {
                     decoration: InputDecoration(
                       isDense: true,
                       filled: true,
-                      fillColor: AppColors.pageBackground,
+                      fillColor: context.appCard,
                       contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(AppTheme.inputRadius),
-                        borderSide: const BorderSide(color: Color(0xFFD8E8E6)),
+                        borderSide: BorderSide(color: context.appBorder),
                       ),
                     ),
                     items: AppConstants.subscriptionPlans
@@ -179,9 +185,9 @@ class _AddOrganizationPanelState extends ConsumerState<_AddOrganizationPanel> {
                     keyboardType: TextInputType.emailAddress,
                   ),
                   const SizedBox(height: 8),
-                  const Text(
+                  Text(
                     'A temporary password is not set here — an invite email is sent instead.',
-                    style: TextStyle(color: AppColors.textSecondary, fontSize: 12.5),
+                    style: TextStyle(color: context.appSubtext, fontSize: 12.5),
                   ),
                   if (_error != null) ...[
                     const SizedBox(height: 16),

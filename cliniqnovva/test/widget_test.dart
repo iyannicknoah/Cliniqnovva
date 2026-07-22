@@ -3,14 +3,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:heroicons/heroicons.dart';
 
 import 'package:cliniqnovva/core/theme/app_colors.dart';
+import 'package:cliniqnovva/core/theme/app_icons.dart';
 import 'package:cliniqnovva/core/theme/app_theme.dart';
 import 'package:cliniqnovva/features/auth/providers/auth_provider.dart';
 import 'package:cliniqnovva/features/auth/screens/login_screen.dart';
 import 'package:cliniqnovva/features/auth/screens/suspended_screen.dart';
 import 'package:cliniqnovva/features/dashboard/screens/dashboard_screen.dart';
 import 'package:cliniqnovva/features/organizations/models/organization.dart';
+import 'package:cliniqnovva/features/platform/models/platform_models.dart';
+import 'package:cliniqnovva/features/platform/providers/platform_provider.dart';
+import 'package:cliniqnovva/features/super_admin/widgets/payment_history_panel.dart';
 import 'package:cliniqnovva/shared/widgets/avatar_widget.dart';
 import 'package:cliniqnovva/shared/widgets/cliniqnovva_button.dart';
 import 'package:cliniqnovva/shared/widgets/cliniqnovva_sidebar.dart';
@@ -84,26 +89,35 @@ void main() {
     expect(find.text('Patients Today'), findsOneWidget);
   });
 
-  testWidgets('CliniqnovvaSidebar is deepNavy in both light and dark theme', (tester) async {
+  testWidgets('CliniqnovvaSidebar matches the page background in both light and dark theme', (tester) async {
     const items = [
-      SidebarNavItem(label: 'Dashboard', icon: Icons.dashboard, route: '/dashboard', allowedRoles: ['doctor']),
+      SidebarNavItem(label: 'Dashboard', icon: AppIcons.organizations, route: '/dashboard', allowedRoles: ['doctor']),
     ];
 
-    for (final theme in [AppTheme.lightTheme(), AppTheme.darkTheme()]) {
-      await tester.pumpWidget(_wrap(
-        CliniqnovvaSidebar(
-          items: items,
-          currentRoute: '/dashboard',
-          currentRole: 'doctor',
-          userName: 'Jean',
-          userRoleLabel: 'Doctor',
-          onNavTap: (_) {},
+    final expected = {
+      AppTheme.lightTheme(): AppColors.pageBackground,
+      AppTheme.darkTheme(): AppColors.pageBackgroundDark,
+    };
+
+    for (final entry in expected.entries) {
+      await tester.pumpWidget(ProviderScope(
+        child: _wrap(
+          CliniqnovvaSidebar(
+            items: items,
+            currentRoute: '/dashboard',
+            currentRole: 'doctor',
+            userName: 'Jean',
+            userRoleLabel: 'Doctor',
+            onNavTap: (_) {},
+          ),
+          theme: entry.key,
         ),
-        theme: theme,
       ));
+      await tester.pumpAndSettle();
 
       final container = tester.widget<Container>(find.byType(Container).first);
-      expect(container.color, AppColors.deepNavy);
+      final decoration = container.decoration as BoxDecoration;
+      expect(decoration.color, entry.value);
     }
   });
 
@@ -163,7 +177,7 @@ void main() {
     TextField passwordField() => tester.widget<TextField>(find.byType(TextField).last);
 
     expect(passwordField().obscureText, isTrue);
-    await tester.tap(find.byIcon(Icons.visibility_outlined));
+    await tester.tap(find.byWidgetPredicate((w) => w is HeroIcon && w.icon == HeroIcons.eye));
     await tester.pump();
     expect(passwordField().obscureText, isFalse);
   });
@@ -179,7 +193,7 @@ void main() {
     expect(find.text('Sign Out'), findsOneWidget);
 
     final bg = tester.widget<Scaffold>(find.byType(Scaffold));
-    expect(bg.backgroundColor, AppColors.deepNavy);
+    expect(bg.backgroundColor, AppColors.pageBackground);
   });
 
   testWidgets('CliniqnovvaButton.text renders underlined when requested and responds to tap', (tester) async {
@@ -259,12 +273,118 @@ void main() {
     expect(org.createdAt, isNull);
   });
 
+  test('Organization.fromJson parses Part 4 billing fields and payment history', () {
+    final org = Organization.fromJson({
+      'id': 'org3',
+      'name': 'Huye Clinic',
+      'subscriptionPlan': 'basic',
+      'branchLimit': 1,
+      'branchCount': 1,
+      'isActive': true,
+      'createdAt': '2026-07-01T00:00:00.000Z',
+      'billingCycle': 'quarterly',
+      'subscriptionAmountRwf': 90000,
+      'nextDueDate': '2026-10-01T00:00:00.000Z',
+      'billingStatus': 'dueSoon',
+      'subscriptionPaymentHistory': [
+        {'date': '2026-07-01T00:00:00.000Z', 'amountRwf': 90000, 'note': 'Q3', 'recordedBy': 'uid123'},
+      ],
+    });
+
+    expect(org.billingCycle, 'quarterly');
+    expect(org.subscriptionAmountRwf, 90000);
+    expect(org.billingStatus, 'dueSoon');
+    expect(org.monthlyEquivalentRwf, 30000);
+    expect(org.paymentHistory, hasLength(1));
+    expect(org.paymentHistory.first.amountRwf, 90000);
+    expect(org.paymentHistory.first.recordedBy, 'uid123');
+  });
+
+  test('Organization defaults billingCycle to monthly, so monthlyEquivalentRwf is the raw amount', () {
+    final org = Organization.fromJson({
+      'id': 'org4',
+      'name': 'Musanze Clinic',
+      'subscriptionPlan': 'pro',
+      'branchLimit': 5,
+      'branchCount': 3,
+      'isActive': true,
+      'subscriptionAmountRwf': 60000,
+    });
+
+    expect(org.billingCycle, 'monthly');
+    expect(org.monthlyEquivalentRwf, 60000.0);
+    expect(org.billingStatus, 'unknown');
+  });
+
+  test('formatRwf inserts thousands separators', () {
+    expect(formatRwf(1500000), '1,500,000 RWF');
+    expect(formatRwf(90000), '90,000 RWF');
+    expect(formatRwf(500), '500 RWF');
+  });
+
   testWidgets('StatusBadge renders Active/Suspended with the right tone', (tester) async {
     await tester.pumpWidget(_wrap(const StatusBadge(text: 'Active', type: BadgeType.success)));
     expect(find.text('Active'), findsOneWidget);
 
     await tester.pumpWidget(_wrap(const StatusBadge(text: 'Suspended', type: BadgeType.error)));
     expect(find.text('Suspended'), findsOneWidget);
+  });
+
+  test('PlatformMetrics.fromJson parses all five counts', () {
+    final metrics = PlatformMetrics.fromJson({
+      'totalOrganizations': 3,
+      'totalBranches': 7,
+      'totalActiveStaff': 12,
+      'totalPatients': 40,
+      'totalAppointmentsThisMonth': 9,
+    });
+    expect(metrics.totalOrganizations, 3);
+    expect(metrics.totalBranches, 7);
+    expect(metrics.totalActiveStaff, 12);
+    expect(metrics.totalPatients, 40);
+    expect(metrics.totalAppointmentsThisMonth, 9);
+  });
+
+  test('PlatformSearchResults.fromJson parses branches/staff and reports isEmpty correctly', () {
+    final empty = PlatformSearchResults.fromJson({'branches': [], 'staff': []});
+    expect(empty.isEmpty, isTrue);
+
+    final results = PlatformSearchResults.fromJson({
+      'branches': [
+        {'id': 'b1', 'name': 'Downtown', 'organizationName': 'Kigali Clinic', 'address': '12 KG St'},
+      ],
+      'staff': [
+        {'id': 'u1', 'name': 'Jean Uwase', 'role': 'doctor', 'organizationName': 'Kigali Clinic', 'email': 'jean@clinic.rw'},
+      ],
+    });
+    expect(results.isEmpty, isFalse);
+    expect(results.branches.single.organizationName, 'Kigali Clinic');
+    expect(results.staff.single.role, 'doctor');
+  });
+
+  test('AuditLogEntry.fromJson parses fields and timestamp', () {
+    final entry = AuditLogEntry.fromJson({
+      'id': 'log1',
+      'action': 'organization.suspended',
+      'actorId': 'admin1',
+      'actorRole': 'super_admin',
+      'targetCollection': 'organizations',
+      'targetId': 'org1',
+      'organizationId': 'org1',
+      'timestamp': '2026-07-22T12:00:00.000Z',
+    });
+    expect(entry.action, 'organization.suspended');
+    expect(entry.organizationId, 'org1');
+    expect(entry.timestamp, DateTime.parse('2026-07-22T12:00:00.000Z'));
+  });
+
+  test('AuditLogFilter equality holds for identical filters and differs otherwise', () {
+    const a = AuditLogFilter(organizationId: 'org1', action: 'organization.suspended');
+    const b = AuditLogFilter(organizationId: 'org1', action: 'organization.suspended');
+    const c = AuditLogFilter(organizationId: 'org2', action: 'organization.suspended');
+    expect(a, equals(b));
+    expect(a.hashCode, equals(b.hashCode));
+    expect(a, isNot(equals(c)));
   });
 
   testWidgets('No italic text style is used anywhere in the login screen', (tester) async {

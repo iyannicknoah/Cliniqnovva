@@ -27,12 +27,20 @@ async function getById(req, res, next) {
 // Admin (Part 2 Task 6's staff-invite flow) — no password is set here.
 async function create(req, res, next) {
   try {
-    const { name, subscriptionPlan, ownerContactName, ownerContactPhone, adminEmail } = req.body;
+    const { name, subscriptionPlan, ownerContactName, ownerContactPhone, adminEmail, billingCycle, subscriptionAmountRwf } =
+      req.body;
     if (!name || !subscriptionPlan || !adminEmail) {
       return res.status(400).json({ error: 'name, subscriptionPlan, and adminEmail are required' });
     }
 
-    const organization = await organizationsService.create({ name, subscriptionPlan, ownerContactName, ownerContactPhone });
+    const organization = await organizationsService.create({
+      name,
+      subscriptionPlan,
+      ownerContactName,
+      ownerContactPhone,
+      billingCycle,
+      subscriptionAmountRwf,
+    });
 
     const invite = await authService.createStaffInvite({
       email: adminEmail,
@@ -75,4 +83,29 @@ async function remove(req, res) {
   res.status(501).json({ error: 'Not implemented yet: remove organizations' });
 }
 
-module.exports = { list, getById, create, update, setStatus, remove };
+// Part 4 Task 3 — cash-only record-keeping, no payment gateway involved.
+async function recordPayment(req, res, next) {
+  try {
+    const { amountRwf, date, note } = req.body;
+    if (typeof amountRwf !== 'number' || amountRwf <= 0) {
+      return res.status(400).json({ error: 'amountRwf (positive number) is required' });
+    }
+    const organization = await organizationsService.recordPayment(req.params.id, { amountRwf, date, note }, req.user?.uid);
+    if (!organization) return res.status(404).json({ error: 'Organization not found' });
+    res.status(201).json({ organization });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function getPaymentHistory(req, res, next) {
+  try {
+    const paymentHistory = await organizationsService.getPaymentHistory(req.params.id);
+    if (paymentHistory === null) return res.status(404).json({ error: 'Organization not found' });
+    res.json({ paymentHistory });
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { list, getById, create, update, setStatus, remove, recordPayment, getPaymentHistory };

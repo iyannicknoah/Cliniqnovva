@@ -3,9 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_constants.dart';
-import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_theme.dart';
-import '../../../shared/widgets/cliniqnovva_button.dart';
+import '../../../core/theme/theme_ext.dart';
+import '../../../shared/widgets/app_icon.dart';
 import '../../../shared/widgets/cliniqnovva_sidebar.dart';
 import '../../auth/providers/auth_provider.dart';
 
@@ -14,19 +15,19 @@ import '../../auth/providers/auth_provider.dart';
 const superAdminNavItems = [
   SidebarNavItem(
     label: 'Organizations',
-    icon: Icons.apartment_outlined,
+    icon: AppIcons.organizations,
     route: '/super-admin/organizations',
     allowedRoles: [AppConstants.roleSuperAdmin],
   ),
   SidebarNavItem(
     label: 'Billing',
-    icon: Icons.receipt_long_outlined,
+    icon: AppIcons.billing,
     route: '/super-admin/billing',
     allowedRoles: [AppConstants.roleSuperAdmin],
   ),
   SidebarNavItem(
     label: 'Oversight',
-    icon: Icons.shield_outlined,
+    icon: AppIcons.oversight,
     route: '/super-admin/oversight',
     allowedRoles: [AppConstants.roleSuperAdmin],
   ),
@@ -47,7 +48,7 @@ class SuperAdminScaffold extends ConsumerWidget {
     final userName = user?.displayName ?? user?.email ?? 'Super Admin';
 
     return Scaffold(
-      backgroundColor: AppColors.pageBackground,
+      backgroundColor: context.appBg,
       body: Row(
         children: [
           CliniqnovvaSidebar(
@@ -65,29 +66,25 @@ class SuperAdminScaffold extends ConsumerWidget {
                 Container(
                   height: AppTheme.topbarHeight,
                   padding: const EdgeInsets.symmetric(horizontal: 24),
-                  decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: AppColors.cardBorder))),
                   child: Row(
                     children: [
                       Text(
                         title,
-                        style: const TextStyle(color: AppColors.textPrimary, fontSize: 18, fontWeight: FontWeight.w600),
+                        style: TextStyle(color: context.appText, fontSize: 18, fontWeight: FontWeight.w600),
                       ),
                       const Spacer(),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: AppColors.pillTealBg,
-                          borderRadius: BorderRadius.circular(AppTheme.buttonRadius),
-                        ),
-                        child: const Text(
-                          'Super Admin',
-                          style: TextStyle(color: AppColors.pillTealText, fontSize: 12.5, fontWeight: FontWeight.w600),
+                      InkWell(
+                        borderRadius: BorderRadius.circular(20),
+                        onTap: () => context.push('/chat'),
+                        child: Padding(
+                          padding: const EdgeInsets.all(6),
+                          child: AppIcon(AppIcons.chat, size: 22, color: context.appText),
                         ),
                       ),
-                      const SizedBox(width: 16),
-                      CliniqnovvaButton.text(
-                        label: 'Sign out',
-                        onPressed: () => ref.read(authNotifierProvider.notifier).signOut(),
+                      const SizedBox(width: 12),
+                      Padding(
+                        padding: const EdgeInsets.all(6),
+                        child: AppIcon(AppIcons.notification, size: 22, color: context.appText),
                       ),
                     ],
                   ),

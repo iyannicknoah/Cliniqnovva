@@ -14,6 +14,11 @@ abstract final class AppColors {
   /// Page/scaffold background, input fill, and container backgrounds across
   /// the whole app — pure white per explicit instruction (2026-07-19).
   static const Color pageBackground = Color(0xFFFFFFFF);
+
+  /// The dark-mode equivalent of [pageBackground] — pure black, per explicit
+  /// instruction (2026-07-23). Cards/containers use this SAME value, never a
+  /// separate "dark card" shade — see `theme_ext.dart`'s `appCard`.
+  static const Color pageBackgroundDark = Color(0xFF000000);
   static const Color successGreen = Color(0xFF2ECC71);
   static const Color warningAmber = Color(0xFFF4A261);
   static const Color errorRed = Color(0xFFE63946);

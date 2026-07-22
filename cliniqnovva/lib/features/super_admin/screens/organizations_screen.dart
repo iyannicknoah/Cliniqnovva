@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_icons.dart';
+import '../../../core/theme/theme_ext.dart';
+import '../../../shared/widgets/app_icon.dart';
 import '../../../shared/widgets/cliniqnovva_button.dart';
 import '../../../shared/widgets/cliniqnovva_card.dart';
 import '../../../shared/widgets/cliniqnovva_table.dart';
@@ -102,9 +104,9 @@ class _OrganizationsScreenState extends ConsumerState<OrganizationsScreen> {
                   children: [
                     const CliniqnovvaTableHeader(columns: ['Name', 'Plan', 'Branches', 'Status', 'Created', 'Actions']),
                     if (filtered.isEmpty)
-                      const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 24),
-                        child: Text('No organizations yet.', style: TextStyle(color: AppColors.textSecondary)),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 24),
+                        child: Text('No organizations yet.', style: TextStyle(color: context.appSubtext)),
                       )
                     else
                       for (final org in filtered)
@@ -113,7 +115,7 @@ class _OrganizationsScreenState extends ConsumerState<OrganizationsScreen> {
                           cells: [
                             Text(
                               org.name,
-                              style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600),
+                              style: TextStyle(color: context.appText, fontWeight: FontWeight.w600),
                             ),
                             Text('${org.subscriptionPlan[0].toUpperCase()}${org.subscriptionPlan.substring(1)}'),
                             Text(org.branchLimitLabel),
@@ -125,15 +127,12 @@ class _OrganizationsScreenState extends ConsumerState<OrganizationsScreen> {
                             Row(
                               children: [
                                 IconButton(
-                                  icon: const Icon(Icons.visibility_outlined, size: 18),
+                                  icon: const AppIcon(AppIcons.view, size: 18),
                                   tooltip: 'View',
                                   onPressed: () => context.push('/super-admin/organizations/${org.id}'),
                                 ),
                                 IconButton(
-                                  icon: Icon(
-                                    org.isActive ? Icons.pause_circle_outline : Icons.play_circle_outline,
-                                    size: 18,
-                                  ),
+                                  icon: AppIcon(org.isActive ? AppIcons.pause : AppIcons.play, size: 18),
                                   tooltip: org.isActive ? 'Suspend' : 'Activate',
                                   onPressed: () => _confirmSetStatus(org, !org.isActive),
                                 ),

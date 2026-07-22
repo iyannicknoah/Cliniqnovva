@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../core/theme/app_colors.dart';
+import '../../core/theme/theme_ext.dart';
 
 /// The single table-header component — a row of secondaryText column labels
 /// (one per `Expanded` cell), bracketed by hairline dividers above and
@@ -14,19 +14,19 @@ class CliniqnovvaTableHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        const Divider(height: 1, thickness: 1, color: AppColors.cardBorder),
+        Divider(height: 1, thickness: 1, color: context.appBorder),
         Padding(
           padding: const EdgeInsetsDirectional.fromSTEB(0, 20, 0, 20),
           child: Row(
             children: [
               for (final column in columns)
                 Expanded(
-                  child: Text(column, style: const TextStyle(color: AppColors.textSecondary)),
+                  child: Text(column, style: TextStyle(color: context.appSubtext)),
                 ),
             ].divideWith(const SizedBox(width: 20)),
           ),
         ),
-        const Divider(height: 1, thickness: 1, color: AppColors.cardBorder),
+        Divider(height: 1, thickness: 1, color: context.appBorder),
       ],
     );
   }

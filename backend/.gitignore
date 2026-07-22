@@ -4,3 +4,4 @@ node_modules/
 .env.staging
 .env.production
 *.log
+serviceAccount.json

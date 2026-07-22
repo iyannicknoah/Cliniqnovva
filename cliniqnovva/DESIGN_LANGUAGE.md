@@ -18,22 +18,127 @@ components, never raw Material widgets (`ElevatedButton`, `TextField`, etc.).
 
 | Token | Value | Use |
 |---|---|---|
-| `primary` | `#CFFF04` (lime) | Brand accent: focus borders, highlights, charts |
+| `primary` | `#CFFF04` (lime) | Brand accent: focus borders, highlights, charts, active-nav tint. **Never as body text/icon color** — too pale to read on white, see Sidebar below. |
 | `pageBackground` | `#FFFFFF` (pure white) | Every page/scaffold background, input fills, containers (light mode) |
-| `deepNavy` | `#0B2545` | Sidebar, suspended screen, dark surfaces |
-| `textPrimary` | `#0B2545` | Headings and body text |
-| `textSecondary` | `#5B6B73` | Labels, captions, subtitles |
+| `pageBackgroundDark` | `#000000` (pure black) | Same role as `pageBackground`, dark mode (rule set 2026-07-23) |
+| `textPrimary` | `#0B2545` | Headings/body text, light mode only — use `context.appText` (theme-aware) for anything that also renders in dark mode |
+| `textSecondary` | `#5B6B73` | Labels/captions, light mode only — use `context.appSubtext` for theme-aware text |
 | `successGreen` / `warningAmber` / `errorRed` | `#2ECC71` / `#F4A261` / `#E63946` | Status semantics |
 | Pill pairs (`pillGreenBg/Text` etc.) | — | Status badges and inline banners |
 | `avatarGradients` | 26 letter-keyed gradients | Avatar initials |
 
-Dark mode surfaces: background `#071820`, cards `#0F2430` (private to `AppTheme`).
+`deepNavy` (`#0B2545`) still exists but is no longer used for any page/sidebar
+background — see the "no mixing colors" rule below.
+
+## No mixing colors (rule set 2026-07-23, copied from HRNova)
+
+**A card/container must be the exact same flat color as the page it sits on.**
+Pure white page → white cards. Pure black page (dark mode) → black cards.
+Never give a card a distinct "secondary" shade — differentiate it from the
+page with a **1px border only** (`AppTheme.cardBorderSide`/`context.appBorder`),
+never a background-color difference. `AppTheme.cardColor(context)` and
+`context.appCard` both resolve to the exact same value as the scaffold
+background, in both themes — if you ever see them diverge, that's a bug.
+
+**No card shadow, in either theme (rule 2026-07-24).** `CliniqnovvaCard` used
+to carry a translucent-lime `boxShadow` (`AppTheme.cardShadow`, now deleted) —
+it read as a muddy haze rather than a visible shadow in light mode, so it was
+removed entirely. Border is the only card-definition mechanism now, in both
+light and dark. Don't reintroduce a shadow on cards/containers.
+
+Use `lib/core/theme/theme_ext.dart`'s `BuildContext` extension
+(`isDark`, `appBg`, `appCard`, `appText`, `appSubtext`, `appBorder`,
+`cardDeco()`) for anything that needs to look right in both themes, rather
+than reaching for `AppColors.textPrimary`/`pageBackground` directly.
 
 ## Shape (`AppTheme`)
 
 - Buttons: fully-rounded pill, radius **30**, height **45**
 - Inputs: radius **12**, border width 1, dense, filled
-- Cards: radius **18**, hairline border, white in light / `#0F2430` in dark
+- Cards: radius **18**, hairline border, same flat color as the page (see
+  "No mixing colors" above) — never a distinct card shade
+
+## Icons — Heroicons only (rule set 2026-07-23, copied from HRNova)
+
+**Never use `Icon`/`Icons.*` (Material icons) in a screen.** Use the
+`heroicons` package via two wrapper types:
+
+- `IconRef` (`core/theme/app_icons.dart`) — a typed reference to a
+  `HeroIcons` enum value.
+- `AppIcons` (same file) — the catalog. Add a new named entry here when a
+  new icon is needed, rather than reaching for `HeroIcons.xxx` inline.
+- `AppIcon` (`shared/widgets/app_icon.dart`) — the rendering widget, a
+  drop-in replacement for `Icon`. Always renders `HeroIconStyle.solid`.
+
+```dart
+AppIcon(AppIcons.view, size: 18, color: context.appSubtext)
+```
+
+## Sidebar / nav bar
+
+`CliniqnovvaSidebar` has no background color of its own — it uses
+`context.appBg`, the exact same white/black as the page (the earlier
+hardcoded `deepNavy` rule is retired). No divider directly under the logo;
+logo mark and wordmark sit close together (**4px gap**, tightened 2026-07-24).
+A **1px right-edge border** (`context.appBorder`) marks where the sidebar
+ends and page content begins (rule set 2026-07-24).
+
+Nav items: **16px icons, 13px text** (tightened 2026-07-24 — was 18/14),
+**14px radius** on the tile (was 10), **6px gap** between items (was 2, so
+items read as more clearly separated rows).
+
+Active nav items get a **soft secondary-background pill**
+(`context.appSecondaryBg` — a neutral gray wash, see the new token below) with
+bold text — **no left border** (rule updated 2026-07-24; was a primary-lime
+tint, now a neutral one). Active/inactive text and icon color is theme-aware
+(`context.appText`/`context.appSubtext`).
+
+**`context.appSecondaryBg`** (`theme_ext.dart`) — a subtle neutral fill
+distinct from `appBg`/`appCard`, for interactive-state highlights (active nav
+item, the profile menu's theme-toggle track and row backgrounds). Never the
+brand lime for this role — lime is reserved for the profile chip and other
+deliberate brand accents, not neutral hover/active states.
+
+### Profile chip (bottom of sidebar)
+
+**No background, 1px border only** (`context.appBorder` — corrected
+2026-07-24; briefly had a lime fill/no border the same day, that was wrong).
+Text/icons are theme-aware (`context.appText`/`context.appSubtext`) since the
+chip no longer has a fixed-color background to contrast against.
+
+Tapping the **"more" (⋯) icon** opens a small floating menu — implemented via
+a custom `OverlayEntry` + `CompositedTransformFollower`/`Target` (not
+`PopupMenuButton`, so each row can have independent tap handling without the
+menu closing prematurely). The menu itself: **300px wide, 10px padding
+(2026-07-24, was 16), bordered (`context.appBorder`), no shadow** (shadows are
+gone project-wide — see "No mixing colors"), positioned so its **left edge
+sits ~50px from the window's left edge** regardless of the chip's exact
+position (`targetAnchor: topLeft`/`followerAnchor: bottomLeft` + a fixed
+`Offset(50, -8)` — the sidebar is always docked flush left, so this is
+effectively an absolute screen position, not just relative to the chip).
+Contents: a Light/Dark segmented theme toggle, a Language row, and a Logout
+row. This is the **only** sign-out entry point now — the topbar's old "Sign
+out" button is gone.
+
+**Language row (2026-07-24, design-only):** tapping it opens a SECOND
+floating panel — same styling as the main menu (bordered, `appCard`, radius
+16, 10px padding), 220px wide, listing Kinyarwanda/English/Français —
+anchored beside (to the right of, 8px gap) the whole main menu panel via its
+own `LayerLink`/`OverlayEntry`, so it visually reads as a nested submenu, not
+a nested dialog. **It does not call `setLocale()` yet** — this is explicitly
+a design-only placeholder per instruction; picking any option just dismisses
+both floating panels. Wire up real language switching only when that's
+separately requested — don't infer it from this submenu existing.
+
+## Topbar
+
+No bottom border (rule 2026-07-24 — was a 1px `appBorder` divider, removed).
+Right side is a plain icon row: a chat icon (`AppIcons.chat` →
+`HeroIcons.chatBubbleOvalLeftEllipsis`, navigates to `/chat`) and a
+notification bell (`AppIcons.notification` → `HeroIcons.bell`, currently
+static — no unread-count/notifications feature exists yet to wire a badge
+to). The old "Super Admin" role pill and "Sign out" button are both gone —
+sign-out lives in the sidebar profile chip's menu now.
 
 ## Buttons (`CliniqnovvaButton`)
 
@@ -43,28 +148,29 @@ Dark mode surfaces: background `#071820`, cards `#0F2430` (private to `AppTheme`
 - **Dark mode: white background, black text.**
 
 Leave `color` unset to get this automatically — the component resolves it from
-the active theme. Only pass an explicit `color` when the button sits on a
-surface that ignores the theme (e.g. the always-navy suspended screen uses
-`Colors.white`). Text color is auto-picked for contrast
+the active theme. Text color is auto-picked for contrast
 (`estimateBrightnessForColor`): black text on light fills, white on dark fills —
-never hardcode a foreground.
+never hardcode a foreground. As of 2026-07-23 no screen needs an explicit
+override anymore (the suspended screen's old always-navy exception was
+retired along with the sidebar's — see "No mixing colors" above).
 
 `.text()` is the transparent link-style secondary variant ("Forgot password?"),
 with an optional underline.
 
 ## Backgrounds
 
-Pure white (`AppColors.pageBackground`) everywhere in light mode (rule set
-2026-07-19): scaffold backgrounds, text-field fills, containers, dropdowns.
-There is no off-white tint token anymore — do not reintroduce one.
+Pure white (`AppColors.pageBackground`) in light mode, pure black
+(`AppColors.pageBackgroundDark`) in dark mode — scaffold backgrounds,
+text-field fills, containers, dropdowns, cards (see "No mixing colors").
+There is no off-white/off-black tint token — do not reintroduce one.
 
 ## Admin screen layout
 
 `SuperAdminScaffold` (`features/super_admin/widgets/super_admin_scaffold.dart`)
 is the shared shell for every Super Admin screen: `CliniqnovvaSidebar` on the
-left, a topbar (screen title, "Super Admin" pill badge, sign-out button) on
-the right, body content scrolls underneath. New Super Admin screens should use
-this instead of building their own Scaffold/Row/sidebar boilerplate.
+left, a topbar (screen title + the chat/notification icon row — see Topbar
+above) on the right, body content scrolls underneath. New Super Admin screens
+should use this instead of building their own Scaffold/Row/sidebar boilerplate.
 
 ## Slide-out panel
 
@@ -85,7 +191,8 @@ is an explicit in-app choice via `ThemeNotifier.setThemeMode`/`toggle`.
 `CliniqnovvaButton`, `CliniqnovvaTextField`, `CliniqnovvaCard`, `MetricCard`
 (label over 18px w600 value), `CliniqnovvaTableHeader` + `CliniqnovvaTableRow`
 (divider-bracketed header, `Expanded`-per-cell rows), `StatusBadge`,
-`AvatarWidget`, `CliniqnovvaSidebar` (always deepNavy in both themes).
+`AvatarWidget`, `CliniqnovvaSidebar` (background matches the page, see Sidebar
+above), `AppIcon` (Heroicons wrapper, see Icons above).
 
 ## Brand assets
 
@@ -105,6 +212,37 @@ is an explicit in-app choice via `ThemeNotifier.setThemeMode`/`toggle`.
 
 ## Change log
 
+- **2026-07-24 (language submenu)** — Language row in the profile menu now
+  opens a second floating panel (same styling, positioned beside the main
+  menu to its right) instead of a dialog — design-only, no `setLocale()` call
+  yet. Main menu padding reduced to 10px (was 16px).
+- **2026-07-24 (refinement pass)** — Sidebar: tighter logo/wordmark gap (4px),
+  smaller nav icons/text (16px/13px), larger tile radius (14px) and more
+  vertical gap between items (6px). Profile chip corrected back to
+  no-background/border-only (the same-day "lime background" version was
+  wrong). Profile dropdown menu: border restored, positioned a fixed 50px
+  from the window's left edge (was centered over the chip, which made it read
+  as clipped to the sidebar). Topbar chat icon switched to the specific
+  `chatBubbleOvalLeftEllipsis` heroicon. Removed `AppTheme.cardShadow`
+  entirely (translucent-lime shadow, unreadable in light mode) — see "No
+  mixing colors."
+- **2026-07-24** — Sidebar: removed the divider under the logo, added a
+  1px right-edge divider marking the sidebar's end, active-item background
+  changed from primary-lime tint to a new neutral `context.appSecondaryBg`
+  token. Profile chip rebuilt: no border, always primary-lime background,
+  "more" icon opens a floating theme/language/logout menu (custom
+  `OverlayEntry`, not `PopupMenuButton`). Topbar: removed the bottom border;
+  replaced the "Super Admin" pill + "Sign out" button with a plain chat +
+  notification icon row — sign-out now lives only in the sidebar's profile menu.
+- **2026-07-23** — Major overhaul copied from the HRNova reference project
+  (`C:\WhiteZebra\HRNova`): sidebar background retired (now matches the page,
+  no more permanent deepNavy), sidebar active-item left border removed
+  (replaced with a soft primary-tinted pill), Heroicons adopted app-wide
+  (`AppIcons`/`AppIcon`, no more `Icon`/`Icons.*`), dark mode unified to pure
+  black with cards/containers matching the page exactly (`pageBackgroundDark`,
+  "No mixing colors" rule), new `theme_ext.dart` `BuildContext` extension for
+  theme-aware colors. Suspended screen's old always-navy background retired
+  too, since it's now covered by the same global page-background rule.
 - **2026-07-20** — Brand-asset sources replaced with `Light Logo.png`/
   `Dark Logo.png`; favicon/PWA/mobile icons now derive from `Dark Logo.png`.
 - **2026-07-20** — In-app logo is theme-aware via the `CliniqnovvaLogo` widget:

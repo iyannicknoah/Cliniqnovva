@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/theme/theme_ext.dart';
 
 /// The single text field component used everywhere — label above the field,
-/// #F6FAFA background, 1px border (alternate/focused/error states), 12px
-/// radius, isDense layout.
+/// fill matches the page/card background (no separate tint), 1px border
+/// (alternate/focused/error states), 12px radius, isDense layout.
 class CliniqnovvaTextField extends StatelessWidget {
   const CliniqnovvaTextField({
     super.key,
@@ -30,8 +31,6 @@ class CliniqnovvaTextField extends StatelessWidget {
   final ValueChanged<String>? onFieldSubmitted;
   final Widget? suffixIcon;
 
-  static const _borderColor = Color(0xFFD8E8E6);
-
   OutlineInputBorder _border(Color color) => OutlineInputBorder(
     borderRadius: BorderRadius.circular(AppTheme.inputRadius),
     borderSide: BorderSide(color: color, width: 1),
@@ -42,7 +41,7 @@ class CliniqnovvaTextField extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(color: AppColors.textPrimary, fontSize: 14, fontWeight: FontWeight.w500)),
+        Text(label, style: TextStyle(color: context.appText, fontSize: 14, fontWeight: FontWeight.w500)),
         const SizedBox(height: 8),
         TextField(
           controller: controller,
@@ -50,17 +49,17 @@ class CliniqnovvaTextField extends StatelessWidget {
           keyboardType: keyboardType,
           onChanged: onChanged,
           onSubmitted: onFieldSubmitted,
-          style: const TextStyle(color: AppColors.textPrimary, fontSize: 15),
+          style: TextStyle(color: context.appText, fontSize: 15),
           decoration: InputDecoration(
             isDense: true,
             hintText: hint,
             errorText: errorText,
             suffixIcon: suffixIcon,
             filled: true,
-            fillColor: AppColors.pageBackground,
+            fillColor: context.appCard,
             contentPadding: const EdgeInsetsDirectional.fromSTEB(14, 15, 15, 15),
-            border: _border(_borderColor),
-            enabledBorder: _border(_borderColor),
+            border: _border(context.appBorder),
+            enabledBorder: _border(context.appBorder),
             focusedBorder: _border(AppColors.primary),
             errorBorder: _border(AppColors.errorRed),
             focusedErrorBorder: _border(AppColors.errorRed),

@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 
 router.use('/organizations', require('./organizations.routes'));
+router.use('/platform', require('./platform.routes'));
 router.use('/branches', require('./branches.routes'));
 router.use('/departments', require('./departments.routes'));
 router.use('/services', require('./services.routes'));

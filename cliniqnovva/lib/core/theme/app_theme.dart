@@ -16,21 +16,17 @@ abstract final class AppTheme {
   static const double sidebarWidth = 220;
   static const double topbarHeight = 64;
 
-  static const List<BoxShadow> cardShadow = [
-    BoxShadow(color: Color(0x12CFFF04), blurRadius: 20, offset: Offset(0, 2)),
-  ];
-
   static BorderSide cardBorderSide(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    return BorderSide(color: isDark ? const Color(0xFF1C3640) : AppColors.cardBorder, width: 0.5);
+    return BorderSide(color: isDark ? const Color(0xFF2A2A2A) : AppColors.cardBorder, width: 0.5);
   }
 
+  // Cards use the exact same value as the page background in both themes
+  // (design rule 2026-07-23, copied from HRNova) — never a separate shade.
+  // Differentiate a card from the page with `cardBorderSide` only.
   static Color cardColor(BuildContext context) {
-    return Theme.of(context).brightness == Brightness.dark ? _darkCard : Colors.white;
+    return Theme.of(context).brightness == Brightness.dark ? AppColors.pageBackgroundDark : AppColors.pageBackground;
   }
-
-  static const Color _darkBg = Color(0xFF071820);
-  static const Color _darkCard = Color(0xFF0F2430);
 
   static ThemeData lightTheme() {
     final colorScheme = ColorScheme.fromSeed(
@@ -63,8 +59,8 @@ abstract final class AppTheme {
       useMaterial3: true,
       brightness: Brightness.dark,
       colorScheme: colorScheme.copyWith(primary: AppColors.primary),
-      scaffoldBackgroundColor: _darkBg,
-      cardColor: _darkCard,
+      scaffoldBackgroundColor: AppColors.pageBackgroundDark,
+      cardColor: AppColors.pageBackgroundDark,
       primaryColor: AppColors.primary,
       fontFamily: fontFamily,
       textTheme: const TextTheme().apply(
@@ -72,7 +68,7 @@ abstract final class AppTheme {
         bodyColor: Colors.white,
         displayColor: Colors.white,
       ),
-      dividerColor: const Color(0xFF1C3640),
+      dividerColor: const Color(0xFF2A2A2A),
     );
   }
 }

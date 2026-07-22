@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_constants.dart';
-import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/theme/theme_ext.dart';
 import '../../../shared/widgets/cliniqnovva_button.dart';
 import '../../../shared/widgets/cliniqnovva_card.dart';
 import '../../../shared/widgets/cliniqnovva_table.dart';
@@ -31,7 +32,9 @@ class _OrganizationDetailScreenState extends ConsumerState<OrganizationDetailScr
   final _nameController = TextEditingController();
   final _ownerNameController = TextEditingController();
   final _ownerPhoneController = TextEditingController();
+  final _subscriptionAmountController = TextEditingController();
   String _plan = AppConstants.planBasic;
+  String _billingCycle = 'monthly';
   bool _fieldsLoaded = false;
   bool _saving = false;
 
@@ -40,7 +43,13 @@ class _OrganizationDetailScreenState extends ConsumerState<OrganizationDetailScr
     _nameController.dispose();
     _ownerNameController.dispose();
     _ownerPhoneController.dispose();
+    _subscriptionAmountController.dispose();
     super.dispose();
+  }
+
+  String _formatDate(DateTime? date) {
+    if (date == null) return '—';
+    return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
   }
 
   void _loadFields(Organization org) {
@@ -50,6 +59,8 @@ class _OrganizationDetailScreenState extends ConsumerState<OrganizationDetailScr
     _ownerNameController.text = org.ownerContactName ?? '';
     _ownerPhoneController.text = org.ownerContactPhone ?? '';
     _plan = org.subscriptionPlan;
+    _billingCycle = org.billingCycle;
+    _subscriptionAmountController.text = org.subscriptionAmountRwf.toString();
   }
 
   Future<void> _save() async {
@@ -62,6 +73,8 @@ class _OrganizationDetailScreenState extends ConsumerState<OrganizationDetailScr
             'subscriptionPlan': _plan,
             'ownerContactName': _ownerNameController.text.trim(),
             'ownerContactPhone': _ownerPhoneController.text.trim(),
+            'billingCycle': _billingCycle,
+            'subscriptionAmountRwf': int.tryParse(_subscriptionAmountController.text.trim()) ?? 0,
           });
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Organization updated.')));
@@ -152,7 +165,7 @@ class _OrganizationDetailScreenState extends ConsumerState<OrganizationDetailScr
                   Expanded(
                     child: Text(
                       org.name,
-                      style: const TextStyle(color: AppColors.textPrimary, fontSize: 20, fontWeight: FontWeight.w600),
+                      style: TextStyle(color: context.appText, fontSize: 20, fontWeight: FontWeight.w600),
                     ),
                   ),
                   StatusBadge(
@@ -160,6 +173,11 @@ class _OrganizationDetailScreenState extends ConsumerState<OrganizationDetailScr
                     type: org.isActive ? BadgeType.success : BadgeType.error,
                   ),
                   const SizedBox(width: 12),
+                  CliniqnovvaButton.text(
+                    label: 'View as Organization Admin',
+                    onPressed: () => context.push('/super-admin/organizations/${org.id}/support-view'),
+                  ),
+                  const SizedBox(width: 4),
                   CliniqnovvaButton(
                     label: org.isActive ? 'Suspend' : 'Activate',
                     isFullWidth: false,
@@ -175,9 +193,9 @@ class _OrganizationDetailScreenState extends ConsumerState<OrganizationDetailScr
                   children: [
                     CliniqnovvaTextField(label: 'Organization name', controller: _nameController),
                     const SizedBox(height: 16),
-                    const Text(
+                    Text(
                       'Subscription plan',
-                      style: TextStyle(color: AppColors.textPrimary, fontSize: 14, fontWeight: FontWeight.w500),
+                      style: TextStyle(color: context.appText, fontSize: 14, fontWeight: FontWeight.w500),
                     ),
                     const SizedBox(height: 8),
                     DropdownButtonFormField<String>(
@@ -185,11 +203,11 @@ class _OrganizationDetailScreenState extends ConsumerState<OrganizationDetailScr
                       decoration: InputDecoration(
                         isDense: true,
                         filled: true,
-                        fillColor: AppColors.pageBackground,
+                        fillColor: context.appCard,
                         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(AppTheme.inputRadius),
-                          borderSide: const BorderSide(color: Color(0xFFD8E8E6)),
+                          borderSide: BorderSide(color: context.appBorder),
                         ),
                       ),
                       items: AppConstants.subscriptionPlans
@@ -200,7 +218,39 @@ class _OrganizationDetailScreenState extends ConsumerState<OrganizationDetailScr
                       onChanged: (value) => setState(() => _plan = value ?? _plan),
                     ),
                     const SizedBox(height: 4),
-                    Text('Branches used: ${org.branchLimitLabel}', style: const TextStyle(color: AppColors.textSecondary)),
+                    Text('Branches used: ${org.branchLimitLabel}', style: TextStyle(color: context.appSubtext)),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Billing cycle',
+                      style: TextStyle(color: context.appText, fontSize: 14, fontWeight: FontWeight.w500),
+                    ),
+                    const SizedBox(height: 8),
+                    DropdownButtonFormField<String>(
+                      initialValue: _billingCycle,
+                      decoration: InputDecoration(
+                        isDense: true,
+                        filled: true,
+                        fillColor: context.appCard,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(AppTheme.inputRadius),
+                          borderSide: BorderSide(color: context.appBorder),
+                        ),
+                      ),
+                      items: const [
+                        DropdownMenuItem(value: 'monthly', child: Text('Monthly')),
+                        DropdownMenuItem(value: 'quarterly', child: Text('Quarterly')),
+                      ],
+                      onChanged: (value) => setState(() => _billingCycle = value ?? _billingCycle),
+                    ),
+                    const SizedBox(height: 16),
+                    CliniqnovvaTextField(
+                      label: 'Subscription amount (RWF)',
+                      controller: _subscriptionAmountController,
+                      keyboardType: TextInputType.number,
+                    ),
+                    const SizedBox(height: 4),
+                    Text('Next due: ${_formatDate(org.nextDueDate)}', style: TextStyle(color: context.appSubtext)),
                     const SizedBox(height: 16),
                     CliniqnovvaTextField(label: 'Owner contact name', controller: _ownerNameController),
                     const SizedBox(height: 16),
@@ -221,10 +271,10 @@ class _OrganizationDetailScreenState extends ConsumerState<OrganizationDetailScr
                   children: [
                     Row(
                       children: [
-                        const Expanded(
+                        Expanded(
                           child: Text(
                             'Branches',
-                            style: TextStyle(color: AppColors.textPrimary, fontSize: 16, fontWeight: FontWeight.w600),
+                            style: TextStyle(color: context.appText, fontSize: 16, fontWeight: FontWeight.w600),
                           ),
                         ),
                         CliniqnovvaButton.text(
@@ -236,15 +286,15 @@ class _OrganizationDetailScreenState extends ConsumerState<OrganizationDetailScr
                     const SizedBox(height: 8),
                     const CliniqnovvaTableHeader(columns: ['Name', 'Address', 'Phone', 'Status']),
                     if (org.branches.isEmpty)
-                      const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 24),
-                        child: Text('No branches yet.', style: TextStyle(color: AppColors.textSecondary)),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 24),
+                        child: Text('No branches yet.', style: TextStyle(color: context.appSubtext)),
                       )
                     else
                       for (final branch in org.branches)
                         CliniqnovvaTableRow(
                           cells: [
-                            Text(branch.name, style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600)),
+                            Text(branch.name, style: TextStyle(color: context.appText, fontWeight: FontWeight.w600)),
                             Text(branch.address ?? '—'),
                             Text(branch.phone ?? '—'),
                             StatusBadge(

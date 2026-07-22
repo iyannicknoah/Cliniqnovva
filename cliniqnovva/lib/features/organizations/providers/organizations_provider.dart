@@ -14,6 +14,14 @@ final organizationDetailProvider = FutureProvider.autoDispose.family<Organizatio
   return Organization.fromJson(response.data!['organization'] as Map<String, dynamic>);
 });
 
+/// Part 4 Task 3 — the dedicated payment-history endpoint backing the
+/// billing screen's per-organization panel.
+final paymentHistoryProvider = FutureProvider.autoDispose.family<List<SubscriptionPayment>, String>((ref, id) async {
+  final response = await ApiService.instance.get<Map<String, dynamic>>('/api/v1/organizations/$id/payment-history');
+  final data = response.data!['paymentHistory'] as List<dynamic>;
+  return data.map((e) => SubscriptionPayment.fromJson(e as Map<String, dynamic>)).toList();
+});
+
 /// Owns every write action on organizations/branches-on-behalf-of-org (Part 3
 /// Tasks 2-3) — screens call these instead of hitting ApiService directly.
 class OrganizationsNotifier extends AsyncNotifier<void> {
@@ -64,6 +72,18 @@ class OrganizationsNotifier extends AsyncNotifier<void> {
       data: {'organizationId': organizationId, 'name': name, 'address': address, 'phone': phone},
     );
     ref.invalidate(organizationDetailProvider(organizationId));
+  }
+
+  /// Part 4 Task 2/3 — cash-only record-keeping, no payment gateway. Appends
+  /// to `subscriptionPaymentHistory` and recalculates `nextDueDate` server-side.
+  Future<void> recordPayment(String organizationId, {required int amountRwf, DateTime? date, String? note}) async {
+    await ApiService.instance.post<Map<String, dynamic>>(
+      '/api/v1/organizations/$organizationId/record-payment',
+      data: {'amountRwf': amountRwf, 'date': date?.toIso8601String(), 'note': note},
+    );
+    ref.invalidate(organizationsListProvider);
+    ref.invalidate(organizationDetailProvider(organizationId));
+    ref.invalidate(paymentHistoryProvider(organizationId));
   }
 }
 

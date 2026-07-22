@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 
-import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/theme/theme_ext.dart';
 
-/// The single card container used everywhere — white background, 18px
-/// radius, 0.5px border, soft teal-tinted shadow. Change it here, every
-/// card in the app updates.
+/// The single card container used everywhere — page-matching background,
+/// 18px radius, border-only definition (no shadow — a translucent-lime
+/// shadow used to sit here but read as a muddy haze in light mode, removed
+/// 2026-07-24 in both themes). Change it here, every card in the app updates.
 class CliniqnovvaCard extends StatelessWidget {
   const CliniqnovvaCard({
     super.key,
@@ -25,7 +26,6 @@ class CliniqnovvaCard extends StatelessWidget {
         color: AppTheme.cardColor(context),
         borderRadius: BorderRadius.circular(AppTheme.cardRadius),
         border: Border.fromBorderSide(AppTheme.cardBorderSide(context)),
-        boxShadow: AppTheme.cardShadow,
       ),
       padding: padding,
       child: Column(
@@ -34,7 +34,7 @@ class CliniqnovvaCard extends StatelessWidget {
           if (title != null) ...[
             Text(
               title!,
-              style: const TextStyle(color: AppColors.textPrimary, fontSize: 16, fontWeight: FontWeight.w600),
+              style: TextStyle(color: context.appText, fontSize: 16, fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 14),
           ],

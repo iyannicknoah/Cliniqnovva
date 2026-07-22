@@ -1,27 +1,100 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/theme_ext.dart';
+import '../../../shared/widgets/cliniqnovva_card.dart';
+import '../../../shared/widgets/cliniqnovva_table.dart';
+import '../../../shared/widgets/metric_card.dart';
+import '../../../shared/widgets/status_badge.dart';
+import '../../organizations/models/organization.dart';
+import '../../organizations/providers/organizations_provider.dart';
+import '../widgets/payment_history_panel.dart';
+import '../widgets/super_admin_scaffold.dart';
 
-/// Placeholder screen (Part 1 — Project Foundation). Real content lands in
-/// a later part of the build plan.
-class SuperAdminBillingScreen extends StatelessWidget {
+/// Part 4 — Super Admin B: subscription/billing tracking. Cash-only
+/// record-keeping — there is NO payment gateway, this screen only records
+/// that a payment happened and surfaces overdue status (never auto-suspends;
+/// suspending stays the manual Part 3 toggle).
+class SuperAdminBillingScreen extends ConsumerWidget {
   const SuperAdminBillingScreen({super.key});
 
+  String _formatDate(DateTime? date) {
+    if (date == null) return '—';
+    return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+  }
+
+  (String, BadgeType) _statusLabel(String billingStatus) {
+    return switch (billingStatus) {
+      'overdue' => ('Overdue', BadgeType.error),
+      'dueSoon' => ('Due soon', BadgeType.warning),
+      'paid' => ('Paid', BadgeType.success),
+      _ => ('Unknown', BadgeType.info),
+    };
+  }
+
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.pageBackground,
-      body: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text(
-              'Platform Billing',
-              style: TextStyle(color: AppColors.textPrimary, fontSize: 20, fontWeight: FontWeight.w600),
-            ),
-          ],
-        ),
+  Widget build(BuildContext context, WidgetRef ref) {
+    final organizationsAsync = ref.watch(organizationsListProvider);
+
+    return SuperAdminScaffold(
+      currentRoute: '/super-admin/billing',
+      title: 'Platform Billing',
+      body: organizationsAsync.when(
+        loading: () => const Padding(padding: EdgeInsets.all(40), child: Center(child: CircularProgressIndicator())),
+        error: (err, _) => Text('Failed to load organizations: $err'),
+        data: (organizations) {
+          final active = organizations.where((o) => o.isActive).toList();
+          final totalMonthlyRevenue = active.fold<double>(0, (sum, o) => sum + o.monthlyEquivalentRwf);
+          final paidThisCycle = active.where((o) => o.billingStatus == 'paid').length;
+          final overdue = active.where((o) => o.billingStatus == 'overdue').length;
+
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(child: MetricCard(value: formatRwf(totalMonthlyRevenue), label: 'Total monthly revenue')),
+                  const SizedBox(width: 16),
+                  Expanded(child: MetricCard(value: '$paidThisCycle', label: 'Organizations paid this cycle')),
+                  const SizedBox(width: 16),
+                  Expanded(child: MetricCard(value: '$overdue', label: 'Organizations overdue')),
+                ],
+              ),
+              const SizedBox(height: 24),
+              CliniqnovvaCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const CliniqnovvaTableHeader(columns: ['Organization', 'Plan', 'Amount (RWF)', 'Next due', 'Status']),
+                    if (organizations.isEmpty)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 24),
+                        child: Text('No organizations yet.', style: TextStyle(color: context.appSubtext)),
+                      )
+                    else
+                      for (final org in organizations)
+                        CliniqnovvaTableRow(
+                          onTap: () => showPaymentHistoryPanel(context, org),
+                          cells: _buildRowCells(context, org),
+                        ),
+                  ],
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
+  }
+
+  List<Widget> _buildRowCells(BuildContext context, Organization org) {
+    final (label, type) = _statusLabel(org.billingStatus);
+    return [
+      Text(org.name, style: TextStyle(color: context.appText, fontWeight: FontWeight.w600)),
+      Text('${org.subscriptionPlan[0].toUpperCase()}${org.subscriptionPlan.substring(1)}'),
+      Text(formatRwf(org.subscriptionAmountRwf)),
+      Text(_formatDate(org.nextDueDate)),
+      StatusBadge(text: label, type: type),
+    ];
   }
 }
