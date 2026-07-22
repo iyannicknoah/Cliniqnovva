@@ -58,6 +58,21 @@ Pure white (`AppColors.pageBackground`) everywhere in light mode (rule set
 2026-07-19): scaffold backgrounds, text-field fills, containers, dropdowns.
 There is no off-white tint token anymore — do not reintroduce one.
 
+## Admin screen layout
+
+`SuperAdminScaffold` (`features/super_admin/widgets/super_admin_scaffold.dart`)
+is the shared shell for every Super Admin screen: `CliniqnovvaSidebar` on the
+left, a topbar (screen title, "Super Admin" pill badge, sign-out button) on
+the right, body content scrolls underneath. New Super Admin screens should use
+this instead of building their own Scaffold/Row/sidebar boilerplate.
+
+## Slide-out panel
+
+A right-side 480px panel (`Add Organization`, `features/super_admin/widgets/
+add_organization_panel.dart`) — `showGeneralDialog` + `Align(alignment:
+centerRight)` + a `SlideTransition` from `Offset(1,0)` to `Offset.zero`. Reuse
+this pattern for any future "quick add" form that shouldn't be a full page.
+
 ## Theme mode
 
 The app defaults to **light mode**, never `ThemeMode.system`. Page backgrounds

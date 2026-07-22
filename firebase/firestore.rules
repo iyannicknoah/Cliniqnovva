@@ -19,8 +19,11 @@ service cloud.firestore {
     function role() { return request.auth.token.role; }
     function orgId() { return request.auth.token.organizationId; }
     function branchId() { return request.auth.token.branchId; }
-    function isSuperAdmin() { return isSignedIn() && role() == 'superAdmin'; }
-    function isOrgAdmin() { return isSignedIn() && role() == 'organizationAdmin'; }
+    // Must match backend/src/middleware/requireRole.js's ROLES exactly
+    // (snake_case) — these are the literal custom-claim strings set by
+    // auth.service.js, not just internal naming.
+    function isSuperAdmin() { return isSignedIn() && role() == 'super_admin'; }
+    function isOrgAdmin() { return isSignedIn() && role() == 'organization_admin'; }
     function inSameOrg(docOrgId) { return isSignedIn() && docOrgId == orgId(); }
     function inSameBranch(docBranchId) { return isSignedIn() && docBranchId == branchId(); }
 

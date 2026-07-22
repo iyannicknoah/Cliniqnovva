@@ -10,11 +10,13 @@ import 'package:cliniqnovva/features/auth/providers/auth_provider.dart';
 import 'package:cliniqnovva/features/auth/screens/login_screen.dart';
 import 'package:cliniqnovva/features/auth/screens/suspended_screen.dart';
 import 'package:cliniqnovva/features/dashboard/screens/dashboard_screen.dart';
+import 'package:cliniqnovva/features/organizations/models/organization.dart';
 import 'package:cliniqnovva/shared/widgets/avatar_widget.dart';
 import 'package:cliniqnovva/shared/widgets/cliniqnovva_button.dart';
 import 'package:cliniqnovva/shared/widgets/cliniqnovva_sidebar.dart';
 import 'package:cliniqnovva/shared/widgets/cliniqnovva_table.dart';
 import 'package:cliniqnovva/shared/widgets/metric_card.dart';
+import 'package:cliniqnovva/shared/widgets/status_badge.dart';
 
 Widget _wrap(Widget child, {ThemeData? theme}) {
   return MaterialApp(theme: theme ?? AppTheme.lightTheme(), home: Scaffold(body: child));
@@ -216,6 +218,53 @@ void main() {
     expect(find.byType(Expanded), findsNWidgets(4));
     await tester.tap(find.byType(CliniqnovvaTableRow));
     expect(tapped, isTrue);
+  });
+
+  test('Organization.fromJson parses a finite-plan org and computes branchLimitLabel', () {
+    final org = Organization.fromJson({
+      'id': 'org1',
+      'name': 'Kigali Family Clinic',
+      'subscriptionPlan': 'pro',
+      'branchLimit': 5,
+      'branchCount': 2,
+      'isActive': true,
+      'createdAt': '2026-07-20T10:00:00.000Z',
+      'ownerContactName': 'Jean Uwase',
+      'ownerContactPhone': '+250788123456',
+      'branches': [
+        {'id': 'b1', 'name': 'Downtown', 'isActive': true},
+      ],
+    });
+
+    expect(org.name, 'Kigali Family Clinic');
+    expect(org.subscriptionPlan, 'pro');
+    expect(org.branchLimitLabel, '2 / 5');
+    expect(org.branches, hasLength(1));
+    expect(org.branches.first.name, 'Downtown');
+  });
+
+  test('Organization.fromJson reports "Unlimited" for a null (enterprise) branchLimit', () {
+    final org = Organization.fromJson({
+      'id': 'org2',
+      'name': 'Rwanda Health Group',
+      'subscriptionPlan': 'enterprise',
+      'branchLimit': null,
+      'branchCount': 12,
+      'isActive': false,
+      'createdAt': null,
+    });
+
+    expect(org.isActive, isFalse);
+    expect(org.branchLimitLabel, 'Unlimited');
+    expect(org.createdAt, isNull);
+  });
+
+  testWidgets('StatusBadge renders Active/Suspended with the right tone', (tester) async {
+    await tester.pumpWidget(_wrap(const StatusBadge(text: 'Active', type: BadgeType.success)));
+    expect(find.text('Active'), findsOneWidget);
+
+    await tester.pumpWidget(_wrap(const StatusBadge(text: 'Suspended', type: BadgeType.error)));
+    expect(find.text('Suspended'), findsOneWidget);
   });
 
   testWidgets('No italic text style is used anywhere in the login screen', (tester) async {

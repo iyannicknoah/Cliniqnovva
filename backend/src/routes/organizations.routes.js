@@ -11,7 +11,8 @@ router.use(verifyToken, attachScope);
 router.get('/', requireRole(ROLES.SUPER_ADMIN, ROLES.ORGANIZATION_ADMIN), controller.list);
 router.get('/:id', requireRole(ROLES.SUPER_ADMIN, ROLES.ORGANIZATION_ADMIN), controller.getById);
 router.post('/', requireRole(ROLES.SUPER_ADMIN), controller.create);
-router.patch('/:id', requireRole(ROLES.SUPER_ADMIN), controller.update);
+router.put('/:id', requireRole(ROLES.SUPER_ADMIN), controller.update);
+router.put('/:id/status', requireRole(ROLES.SUPER_ADMIN), controller.setStatus);
 router.delete('/:id', requireRole(ROLES.SUPER_ADMIN), controller.remove);
 
 module.exports = router;

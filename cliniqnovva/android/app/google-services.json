@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "943939108409",
+    "project_id": "risingacademy-801eb",
+    "storage_bucket": "risingacademy-801eb.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:943939108409:android:0029fa7f55ade07c6797e8",
+        "android_client_info": {
+          "package_name": "com.cliniqnovva.cliniqnovva"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCESs1B01TmZ1jl6Ggd4BticYmrBY-LgRw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:943939108409:android:838aa6d73dda08876797e8",
+        "android_client_info": {
+          "package_name": "com.mycompany.risingexpensesmanagmentapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCESs1B01TmZ1jl6Ggd4BticYmrBY-LgRw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

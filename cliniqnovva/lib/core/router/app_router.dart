@@ -31,6 +31,7 @@ import '../../features/reviews/screens/reviews_screen.dart';
 import '../../features/staff/screens/doctor_schedule_screen.dart';
 import '../../features/staff/screens/staff_screen.dart';
 import '../../features/super_admin/screens/billing_screen.dart';
+import '../../features/super_admin/screens/organization_detail_screen.dart';
 import '../../features/super_admin/screens/organizations_screen.dart';
 import '../../features/super_admin/screens/oversight_screen.dart';
 import '../constants/app_constants.dart';
@@ -150,6 +151,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/super-admin/organizations',
         builder: (context, state) => const OrganizationsScreen(),
+      ),
+      GoRoute(
+        path: '/super-admin/organizations/:id',
+        builder: (context, state) =>
+            OrganizationDetailScreen(organizationId: state.pathParameters['id']!),
       ),
       GoRoute(
         path: '/super-admin/billing',
