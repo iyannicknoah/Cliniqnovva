@@ -33,7 +33,6 @@ import '../../features/staff/screens/staff_screen.dart';
 import '../../features/super_admin/screens/billing_screen.dart';
 import '../../features/super_admin/screens/organization_detail_screen.dart';
 import '../../features/super_admin/screens/organizations_screen.dart';
-import '../../features/super_admin/screens/oversight_screen.dart';
 import '../../features/super_admin/screens/overview_screen.dart';
 import '../../features/super_admin/screens/support_view_screen.dart';
 import '../constants/app_constants.dart';
@@ -105,7 +104,9 @@ Future<String?> _redirect(Ref ref, GoRouterState state) async {
   }
 
   if (_orgScopedRolesForSuspension.contains(role) && organizationId != null) {
-    final isActive = await ref.read(organizationStatusProvider(organizationId).future);
+    final isActive = await ref.read(
+      organizationStatusProvider(organizationId).future,
+    );
     if (!isActive) {
       return state.matchedLocation == '/suspended' ? null : '/suspended';
     }
@@ -117,7 +118,9 @@ Future<String?> _redirect(Ref ref, GoRouterState state) async {
   }
 
   if (role == AppConstants.roleOrganizationAdmin && organizationId != null) {
-    final hasBranches = await ref.read(hasBranchesProvider(organizationId).future);
+    final hasBranches = await ref.read(
+      hasBranchesProvider(organizationId).future,
+    );
     if (!hasBranches) {
       return state.matchedLocation == '/onboarding' ? null : '/onboarding';
     }
@@ -147,8 +150,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     redirect: (context, state) => _redirect(ref, state),
     routes: [
       GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
-      GoRoute(path: '/suspended', builder: (context, state) => const SuspendedScreen()),
-      GoRoute(path: '/dashboard', builder: (context, state) => const DashboardScreen()),
+      GoRoute(
+        path: '/suspended',
+        builder: (context, state) => const SuspendedScreen(),
+      ),
+      GoRoute(
+        path: '/dashboard',
+        builder: (context, state) => const DashboardScreen(),
+      ),
 
       GoRoute(
         path: '/super-admin/overview',
@@ -160,8 +169,9 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/super-admin/organizations/:id',
-        builder: (context, state) =>
-            OrganizationDetailScreen(organizationId: state.pathParameters['id']!),
+        builder: (context, state) => OrganizationDetailScreen(
+          organizationId: state.pathParameters['id']!,
+        ),
       ),
       GoRoute(
         path: '/super-admin/organizations/:id/support-view',
@@ -172,55 +182,105 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: '/super-admin/billing',
         builder: (context, state) => const SuperAdminBillingScreen(),
       ),
+
       GoRoute(
-        path: '/super-admin/oversight',
-        builder: (context, state) => const OversightScreen(),
+        path: '/branches',
+        builder: (context, state) => const BranchesScreen(),
+      ),
+      GoRoute(
+        path: '/onboarding',
+        builder: (context, state) => const OnboardingScreen(),
       ),
 
-      GoRoute(path: '/branches', builder: (context, state) => const BranchesScreen()),
-      GoRoute(path: '/onboarding', builder: (context, state) => const OnboardingScreen()),
-
-      GoRoute(path: '/departments', builder: (context, state) => const DepartmentsScreen()),
-      GoRoute(path: '/services', builder: (context, state) => const ServicesScreen()),
+      GoRoute(
+        path: '/departments',
+        builder: (context, state) => const DepartmentsScreen(),
+      ),
+      GoRoute(
+        path: '/services',
+        builder: (context, state) => const ServicesScreen(),
+      ),
 
       GoRoute(path: '/staff', builder: (context, state) => const StaffScreen()),
-      GoRoute(path: '/doctor-schedule', builder: (context, state) => const DoctorScheduleScreen()),
+      GoRoute(
+        path: '/doctor-schedule',
+        builder: (context, state) => const DoctorScheduleScreen(),
+      ),
 
-      GoRoute(path: '/patients', builder: (context, state) => const PatientsScreen()),
+      GoRoute(
+        path: '/patients',
+        builder: (context, state) => const PatientsScreen(),
+      ),
       GoRoute(
         path: '/patients/walk-in-register',
         builder: (context, state) => const WalkInRegisterScreen(),
       ),
       GoRoute(
         path: '/patients/:id',
-        builder: (context, state) => PatientProfileScreen(id: state.pathParameters['id']),
+        builder: (context, state) =>
+            PatientProfileScreen(id: state.pathParameters['id']),
       ),
 
-      GoRoute(path: '/appointments', builder: (context, state) => const AppointmentsScreen()),
-      GoRoute(path: '/appointments/book', builder: (context, state) => const BookingScreen()),
+      GoRoute(
+        path: '/appointments',
+        builder: (context, state) => const AppointmentsScreen(),
+      ),
+      GoRoute(
+        path: '/appointments/book',
+        builder: (context, state) => const BookingScreen(),
+      ),
 
-      GoRoute(path: '/billing', builder: (context, state) => const BillingScreen()),
+      GoRoute(
+        path: '/billing',
+        builder: (context, state) => const BillingScreen(),
+      ),
       GoRoute(
         path: '/billing/:invoiceId',
-        builder: (context, state) => InvoiceDetailScreen(invoiceId: state.pathParameters['invoiceId']),
+        builder: (context, state) =>
+            InvoiceDetailScreen(invoiceId: state.pathParameters['invoiceId']),
       ),
 
-      GoRoute(path: '/inventory', builder: (context, state) => const InventoryScreen()),
+      GoRoute(
+        path: '/inventory',
+        builder: (context, state) => const InventoryScreen(),
+      ),
 
-      GoRoute(path: '/reports', builder: (context, state) => const ReportsScreen()),
-      GoRoute(path: '/audit-log', builder: (context, state) => const AuditLogScreen()),
+      GoRoute(
+        path: '/reports',
+        builder: (context, state) => const ReportsScreen(),
+      ),
+      GoRoute(
+        path: '/audit-log',
+        builder: (context, state) => const AuditLogScreen(),
+      ),
 
-      GoRoute(path: '/chat', builder: (context, state) => const ChatInboxScreen()),
+      GoRoute(
+        path: '/chat',
+        builder: (context, state) => const ChatInboxScreen(),
+      ),
       GoRoute(
         path: '/chat/:chatId',
-        builder: (context, state) => ChatThreadScreen(chatId: state.pathParameters['chatId']),
+        builder: (context, state) =>
+            ChatThreadScreen(chatId: state.pathParameters['chatId']),
       ),
 
-      GoRoute(path: '/reviews', builder: (context, state) => const ReviewsScreen()),
-      GoRoute(path: '/popular-clinics', builder: (context, state) => const PopularClinicsScreen()),
+      GoRoute(
+        path: '/reviews',
+        builder: (context, state) => const ReviewsScreen(),
+      ),
+      GoRoute(
+        path: '/popular-clinics',
+        builder: (context, state) => const PopularClinicsScreen(),
+      ),
 
-      GoRoute(path: '/staff-home', builder: (context, state) => const StaffHomeScreen()),
-      GoRoute(path: '/patient-home', builder: (context, state) => const PatientHomeScreen()),
+      GoRoute(
+        path: '/staff-home',
+        builder: (context, state) => const StaffHomeScreen(),
+      ),
+      GoRoute(
+        path: '/patient-home',
+        builder: (context, state) => const PatientHomeScreen(),
+      ),
     ],
   );
 });

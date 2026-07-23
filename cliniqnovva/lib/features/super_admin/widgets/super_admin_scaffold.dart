@@ -10,8 +10,8 @@ import '../../../shared/widgets/app_icon.dart';
 import '../../../shared/widgets/cliniqnovva_sidebar.dart';
 import '../../auth/providers/auth_provider.dart';
 
-/// Shared by every Super Admin screen (Organizations now; Billing/Oversight
-/// once Parts 4-5 build them) so the sidebar/topbar aren't duplicated per screen.
+/// Shared by every Super Admin screen so the sidebar/topbar aren't
+/// duplicated per screen.
 const superAdminNavItems = [
   SidebarNavItem(
     label: 'Overview',
@@ -31,18 +31,17 @@ const superAdminNavItems = [
     route: '/super-admin/billing',
     allowedRoles: [AppConstants.roleSuperAdmin],
   ),
-  SidebarNavItem(
-    label: 'Oversight',
-    icon: AppIcons.oversight,
-    route: '/super-admin/oversight',
-    allowedRoles: [AppConstants.roleSuperAdmin],
-  ),
 ];
 
 /// Dark sidebar + top bar ("Super Admin" badge, sign out) shell for every
 /// Super Admin screen — screens only supply their own scrollable [body].
 class SuperAdminScaffold extends ConsumerWidget {
-  const SuperAdminScaffold({super.key, required this.currentRoute, required this.title, required this.body});
+  const SuperAdminScaffold({
+    super.key,
+    required this.currentRoute,
+    required this.title,
+    required this.body,
+  });
 
   final String currentRoute;
   final String title;
@@ -76,7 +75,11 @@ class SuperAdminScaffold extends ConsumerWidget {
                     children: [
                       Text(
                         title,
-                        style: TextStyle(color: context.appText, fontSize: 18, fontWeight: FontWeight.w600),
+                        style: TextStyle(
+                          color: context.appText,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                       const Spacer(),
                       InkWell(
@@ -84,18 +87,31 @@ class SuperAdminScaffold extends ConsumerWidget {
                         onTap: () => context.push('/chat'),
                         child: Padding(
                           padding: const EdgeInsets.all(6),
-                          child: AppIcon(AppIcons.chat, size: 22, color: context.appText),
+                          child: AppIcon(
+                            AppIcons.chat,
+                            size: 22,
+                            color: context.appText,
+                          ),
                         ),
                       ),
                       const SizedBox(width: 12),
                       Padding(
                         padding: const EdgeInsets.all(6),
-                        child: AppIcon(AppIcons.notification, size: 22, color: context.appText),
+                        child: AppIcon(
+                          AppIcons.notification,
+                          size: 22,
+                          color: context.appText,
+                        ),
                       ),
                     ],
                   ),
                 ),
-                Expanded(child: SingleChildScrollView(padding: const EdgeInsets.all(24), child: body)),
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(24),
+                    child: body,
+                  ),
+                ),
               ],
             ),
           ),

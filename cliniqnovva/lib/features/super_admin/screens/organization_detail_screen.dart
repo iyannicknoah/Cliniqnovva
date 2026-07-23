@@ -55,6 +55,9 @@ class _OrganizationDetailScreenState
     return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
   }
 
+  bool _atBranchLimit(Organization org) =>
+      org.branchLimit != null && org.branchCount >= org.branchLimit!;
+
   void _loadFields(Organization org) {
     if (_fieldsLoaded) return;
     _fieldsLoaded = true;
@@ -381,10 +384,22 @@ class _OrganizationDetailScreenState
                         ),
                         CliniqnovvaButton.text(
                           label: '+ Create branch on this clinic\'s behalf',
-                          onPressed: _createBranchOnBehalf,
+                          onPressed: _atBranchLimit(org)
+                              ? null
+                              : _createBranchOnBehalf,
                         ),
                       ],
                     ),
+                    if (_atBranchLimit(org)) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        'This clinic\'s plan allows ${org.branchLimit} branch${org.branchLimit == 1 ? '' : 'es'} — upgrade the plan to add more.',
+                        style: TextStyle(
+                          color: context.appSubtext,
+                          fontSize: 12.5,
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 8),
                     const CliniqnovvaTableHeader(
                       columns: ['Name', 'Address', 'Phone', 'Status'],

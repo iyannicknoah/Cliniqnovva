@@ -1,52 +1,11 @@
 // Service layer for Super Admin platform oversight/support tools (Part 5).
 // Everything here is read-only except the audit-log writes for
-// record-view/support-view actions themselves — Super Admin must never be
-// able to WRITE another organization's data through this module (Task 4
-// DONE CONDITION).
+// support-view actions themselves — Super Admin must never be able to
+// WRITE another organization's data through this module (Task 4 DONE
+// CONDITION).
 const { randomUUID } = require('crypto');
-const { db, auth } = require('../config/firebase-admin');
+const { db } = require('../config/firebase-admin');
 const { ORG_SCOPED_ROLES_FOR_SUSPENSION } = require('../middleware/branchScope.middleware');
-
-// Only these collections can be viewed via viewRecord() — a fixed whitelist,
-// not whatever collection name a caller passes in.
-const VIEWABLE_COLLECTIONS = ['patients', 'appointments', 'invoices'];
-
-async function _organizationNameMap() {
-  const snapshot = await db.collection('organizations').get();
-  const map = {};
-  snapshot.docs.forEach((doc) => {
-    map[doc.id] = doc.data().name;
-  });
-  return map;
-}
-
-/**
- * Part 5 Task 1 — search any branch or staff member across ALL
- * organizations by name. Not logged (only viewing a specific
- * patient/appointment/invoice record is, per the spec).
- */
-async function search(query) {
-  const q = (query || '').trim().toLowerCase();
-  if (!q) return { branches: [], staff: [] };
-
-  const [branchesSnapshot, staffSnapshot, orgNameById] = await Promise.all([
-    db.collection('branches').get(),
-    db.collection('users').where('role', 'in', ORG_SCOPED_ROLES_FOR_SUSPENSION).get(),
-    _organizationNameMap(),
-  ]);
-
-  const branches = branchesSnapshot.docs
-    .map((doc) => ({ id: doc.id, ...doc.data() }))
-    .filter((b) => (b.name || '').toLowerCase().includes(q))
-    .map((b) => ({ ...b, organizationName: orgNameById[b.organizationId] || null }));
-
-  const staff = staffSnapshot.docs
-    .map((doc) => ({ id: doc.id, ...doc.data() }))
-    .filter((u) => (u.name || '').toLowerCase().includes(q))
-    .map((u) => ({ ...u, organizationName: orgNameById[u.organizationId] || null }));
-
-  return { branches, staff };
-}
 
 /**
  * Part 5 Task 2 — platform-wide metrics, for Cliniqnovva's own business
@@ -81,101 +40,6 @@ async function getMetrics() {
     totalPatients: patientsCount.data().count,
     totalAppointmentsThisMonth: appointmentsCount.data().count,
   };
-}
-
-/**
- * Resolves actor uids to a human-readable label — a `/users` doc's
- * name/email for staff/org admins, falling back to the Firebase Auth
- * record's email for accounts with no Firestore mirror (e.g. Super Admin,
- * which is auth-only). So the audit log never shows a bare uid when a real
- * name/email is available.
- */
-async function _actorLabelMap(actorIds) {
-  const uniqueIds = [...new Set(actorIds.filter(Boolean))];
-  if (uniqueIds.length === 0) return {};
-
-  const map = {};
-  const userDocs = await Promise.all(uniqueIds.map((id) => db.collection('users').doc(id).get()));
-  const missing = [];
-  userDocs.forEach((doc, i) => {
-    if (doc.exists) {
-      const data = doc.data();
-      map[uniqueIds[i]] = data.name || data.email || uniqueIds[i];
-    } else {
-      missing.push(uniqueIds[i]);
-    }
-  });
-
-  await Promise.all(
-    missing.map(async (id) => {
-      try {
-        const userRecord = await auth.getUser(id);
-        map[id] = userRecord.email || userRecord.displayName || id;
-      } catch {
-        map[id] = id;
-      }
-    })
-  );
-
-  return map;
-}
-
-/**
- * Part 5 Task 1 — platform-wide audit log, filterable by organization,
- * actor, action type, and date range. Resolves `organizationId`/`actorId`
- * to a real clinic name and a real actor name/email so the log reads as
- * actual activity, not a wall of opaque Firestore ids.
- */
-async function getAuditLog({ organizationId, actorId, action, dateFrom, dateTo, limit } = {}) {
-  let query = db.collection('auditLogs').orderBy('timestamp', 'desc');
-  if (organizationId) query = query.where('organizationId', '==', organizationId);
-  if (actorId) query = query.where('actorId', '==', actorId);
-  if (action) query = query.where('action', '==', action);
-  if (dateFrom) query = query.where('timestamp', '>=', dateFrom);
-  if (dateTo) query = query.where('timestamp', '<=', dateTo);
-  query = query.limit(Math.min(Number(limit) || 100, 500));
-
-  const snapshot = await query.get();
-  const entries = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-
-  const [orgNameById, actorLabelById] = await Promise.all([
-    _organizationNameMap(),
-    _actorLabelMap(entries.map((e) => e.actorId)),
-  ]);
-
-  return entries.map((e) => ({
-    ...e,
-    organizationName: e.organizationId ? orgNameById[e.organizationId] || null : null,
-    actorLabel: e.actorId ? actorLabelById[e.actorId] || e.actorId : e.actorRole || null,
-  }));
-}
-
-/**
- * Part 5 Task 1 — read-only cross-org record view for support/dispute
- * resolution, logged every time (`platform.recordViewed`).
- */
-async function viewRecord(collection, id, actorId) {
-  if (!VIEWABLE_COLLECTIONS.includes(collection)) {
-    const err = new Error(`"${collection}" is not a viewable collection`);
-    err.status = 400;
-    throw err;
-  }
-
-  const doc = await db.collection(collection).doc(id).get();
-  if (!doc.exists) return null;
-
-  const data = doc.data();
-  await db.collection('auditLogs').add({
-    actorId: actorId || null,
-    actorRole: 'super_admin',
-    action: 'platform.recordViewed',
-    targetCollection: collection,
-    targetId: id,
-    organizationId: data.organizationId || null,
-    timestamp: new Date().toISOString(),
-  });
-
-  return { id: doc.id, ...data };
 }
 
 /**
@@ -253,12 +117,8 @@ async function getRevenueTrend({ months = 12 } = {}) {
 }
 
 module.exports = {
-  search,
   getMetrics,
-  getAuditLog,
-  viewRecord,
   startSupportView,
   endSupportView,
   getRevenueTrend,
-  VIEWABLE_COLLECTIONS,
 };

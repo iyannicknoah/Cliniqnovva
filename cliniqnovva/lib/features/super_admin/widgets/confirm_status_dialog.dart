@@ -18,8 +18,14 @@ Future<bool> confirmOrganizationStatusChange(
             : '$organizationName and every user under it will immediately lose access.',
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Cancel')),
-        TextButton(onPressed: () => Navigator.pop(dialogContext, true), child: Text(activate ? 'Activate' : 'Suspend')),
+        TextButton(
+          onPressed: () => Navigator.pop(dialogContext, false),
+          child: const Text('Cancel'),
+        ),
+        TextButton(
+          onPressed: () => Navigator.pop(dialogContext, true),
+          child: Text(activate ? 'Activate' : 'Suspend'),
+        ),
       ],
     ),
   );

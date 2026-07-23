@@ -6,7 +6,12 @@ import 'app_icon.dart';
 
 /// One action inside a [RowActionsMenu] (e.g. "Edit", "Delete").
 class RowAction {
-  const RowAction({required this.label, required this.icon, required this.onTap, this.danger = false});
+  const RowAction({
+    required this.label,
+    required this.icon,
+    required this.onTap,
+    this.danger = false,
+  });
 
   final String label;
   final IconRef icon;
@@ -32,14 +37,19 @@ class RowActionsMenu extends StatelessWidget {
       itemBuilder: (context) {
         return List.generate(actions.length, (i) {
           final action = actions[i];
-          final color = action.danger ? const Color(0xFFDC2626) : context.appText;
+          final color = action.danger
+              ? const Color(0xFFDC2626)
+              : context.appText;
           return PopupMenuItem<int>(
             value: i,
             child: Row(
               children: [
                 AppIcon(action.icon, size: 18, color: color),
                 const SizedBox(width: 10),
-                Text(action.label, style: TextStyle(color: color, fontSize: 14)),
+                Text(
+                  action.label,
+                  style: TextStyle(color: color, fontSize: 14),
+                ),
               ],
             ),
           );

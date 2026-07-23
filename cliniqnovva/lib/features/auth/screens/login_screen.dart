@@ -47,7 +47,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
           setState(() {
-            _errorMessage = "We couldn't tell what kind of account this is. Please contact support.";
+            _errorMessage =
+                "We couldn't tell what kind of account this is. Please contact support.";
           });
         }
       });
@@ -56,7 +57,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   Future<void> _handleSignIn() async {
     setState(() => _errorMessage = null);
-    await ref.read(authNotifierProvider.notifier).signIn(
+    await ref
+        .read(authNotifierProvider.notifier)
+        .signIn(
           email: _emailController.text,
           password: _passwordController.text,
         );
@@ -64,7 +67,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     if (state.hasError && mounted) {
       final error = state.error;
       setState(() {
-        _errorMessage = error is AuthException ? error.message : 'Something went wrong signing you in. Please try again.';
+        _errorMessage = error is AuthException
+            ? error.message
+            : 'Something went wrong signing you in. Please try again.';
       });
     }
   }
@@ -103,11 +108,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               children: [
                                 const Text(
                                   'Welcome back',
-                                  style: TextStyle(color: AppColors.textPrimary, fontSize: 18, fontWeight: FontWeight.w600),
+                                  style: TextStyle(
+                                    color: AppColors.textPrimary,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w600,
+                                  ),
                                 ),
                                 const Text(
                                   'Sign in to your account',
-                                  style: TextStyle(color: AppColors.textSecondary),
+                                  style: TextStyle(
+                                    color: AppColors.textSecondary,
+                                  ),
                                 ),
                               ].withGap(5),
                             ),
@@ -130,17 +141,26 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                       onFieldSubmitted: (_) => _handleSignIn(),
                                       suffixIcon: IconButton(
                                         icon: AppIcon(
-                                          _obscurePassword ? AppIcons.view : AppIcons.eyeSlash,
+                                          _obscurePassword
+                                              ? AppIcons.view
+                                              : AppIcons.eyeSlash,
                                           color: context.appSubtext,
                                           size: 20,
                                         ),
-                                        onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                                        onPressed: () => setState(
+                                          () => _obscurePassword =
+                                              !_obscurePassword,
+                                        ),
                                       ),
                                     ),
                                   ].withGap(10),
                                 ),
                                 if (_errorMessage != null)
-                                  _InlineBanner(text: _errorMessage!, bg: AppColors.pillRedBg, fg: AppColors.pillRedText),
+                                  _InlineBanner(
+                                    text: _errorMessage!,
+                                    bg: AppColors.pillRedBg,
+                                    fg: AppColors.pillRedText,
+                                  ),
                                 CliniqnovvaButton(
                                   label: 'Sign In',
                                   isLoading: isLoading,
@@ -176,7 +196,11 @@ class _LogoMark extends StatelessWidget {
         SizedBox(width: 5),
         Text(
           AppConstants.appName,
-          style: TextStyle(color: AppColors.textPrimary, fontSize: 18, fontWeight: FontWeight.bold),
+          style: TextStyle(
+            color: AppColors.textPrimary,
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
         ),
       ],
     );
@@ -195,8 +219,14 @@ class _InlineBanner extends StatelessWidget {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(AppTheme.inputRadius)),
-      child: Text(text, style: TextStyle(color: fg, fontSize: 13.5, height: 1.4)),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(AppTheme.inputRadius),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(color: fg, fontSize: 13.5, height: 1.4),
+      ),
     );
   }
 }

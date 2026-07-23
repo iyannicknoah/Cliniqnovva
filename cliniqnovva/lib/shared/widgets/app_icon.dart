@@ -14,6 +14,11 @@ class AppIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return HeroIcon(ref.hero, style: HeroIconStyle.solid, size: size, color: color);
+    return HeroIcon(
+      ref.hero,
+      style: HeroIconStyle.solid,
+      size: size,
+      color: color,
+    );
   }
 }

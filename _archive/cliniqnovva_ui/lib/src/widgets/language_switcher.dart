@@ -17,7 +17,12 @@ const List<(String code, String label)> kSupportedLocales = [
 /// setState, whatever the app uses); it just reports the chosen code via
 /// [onChanged] and displays [currentLocaleCode].
 class LanguageSwitcher extends StatelessWidget {
-  const LanguageSwitcher({super.key, required this.currentLocaleCode, required this.onChanged, this.size = 36});
+  const LanguageSwitcher({
+    super.key,
+    required this.currentLocaleCode,
+    required this.onChanged,
+    this.size = 36,
+  });
 
   final String currentLocaleCode;
   final ValueChanged<String> onChanged;
@@ -36,9 +41,17 @@ class LanguageSwitcher extends StatelessWidget {
             value: locale.$1,
             child: Row(
               children: [
-                if (selected) AppIcon(AppIcons.checkRounded, size: 16, color: context.appText),
+                if (selected)
+                  AppIcon(
+                    AppIcons.checkRounded,
+                    size: 16,
+                    color: context.appText,
+                  ),
                 if (selected) const SizedBox(width: 8),
-                Text(locale.$2, style: TextStyle(color: context.appText, fontSize: 14)),
+                Text(
+                  locale.$2,
+                  style: TextStyle(color: context.appText, fontSize: 14),
+                ),
               ],
             ),
           );
@@ -47,11 +60,18 @@ class LanguageSwitcher extends StatelessWidget {
       child: Container(
         width: size,
         height: size,
-        decoration: BoxDecoration(color: context.appTint, shape: BoxShape.circle),
+        decoration: BoxDecoration(
+          color: context.appTint,
+          shape: BoxShape.circle,
+        ),
         child: Center(
           child: Text(
             currentLocaleCode.toUpperCase(),
-            style: TextStyle(color: context.appText, fontSize: 12, fontWeight: FontWeight.w600),
+            style: TextStyle(
+              color: context.appText,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ),
       ),

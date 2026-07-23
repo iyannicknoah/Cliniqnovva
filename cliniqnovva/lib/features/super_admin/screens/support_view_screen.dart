@@ -41,7 +41,9 @@ class _SupportViewScreenState extends ConsumerState<SupportViewScreen> {
   }
 
   Future<void> _startSession() async {
-    final sessionId = await ref.read(platformNotifierProvider.notifier).startSupportView(widget.organizationId);
+    final sessionId = await ref
+        .read(platformNotifierProvider.notifier)
+        .startSupportView(widget.organizationId);
     if (!mounted) return;
     setState(() => _sessionId = sessionId);
   }
@@ -51,7 +53,9 @@ class _SupportViewScreenState extends ConsumerState<SupportViewScreen> {
     if (_sessionId != null) {
       // Fire-and-forget — dispose() can't be async, and this is a pure
       // audit-log write, not user-facing state.
-      ref.read(platformNotifierProvider.notifier).endSupportView(widget.organizationId, _sessionId!);
+      ref
+          .read(platformNotifierProvider.notifier)
+          .endSupportView(widget.organizationId, _sessionId!);
     }
     super.dispose();
   }
@@ -63,10 +67,12 @@ class _SupportViewScreenState extends ConsumerState<SupportViewScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final detailAsync = ref.watch(organizationDetailProvider(widget.organizationId));
+    final detailAsync = ref.watch(
+      organizationDetailProvider(widget.organizationId),
+    );
 
     return SuperAdminScaffold(
-      currentRoute: '/super-admin/oversight',
+      currentRoute: '/super-admin/organizations',
       title: 'Support View',
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -74,28 +80,43 @@ class _SupportViewScreenState extends ConsumerState<SupportViewScreen> {
           Container(
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: BoxDecoration(color: AppColors.pillAmberBg, borderRadius: BorderRadius.circular(12)),
+            decoration: BoxDecoration(
+              color: AppColors.pillAmberBg,
+              borderRadius: BorderRadius.circular(12),
+            ),
             child: Row(
               children: [
-                const AppIcon(AppIcons.warning, size: 18, color: AppColors.pillAmberText),
+                const AppIcon(
+                  AppIcons.warning,
+                  size: 18,
+                  color: AppColors.pillAmberText,
+                ),
                 const SizedBox(width: 10),
                 const Expanded(
                   child: Text(
                     'Support View — Read Only. This session is logged.',
-                    style: TextStyle(color: AppColors.pillAmberText, fontWeight: FontWeight.w600),
+                    style: TextStyle(
+                      color: AppColors.pillAmberText,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
                 CliniqnovvaButton.text(
                   label: 'Exit',
                   color: AppColors.pillAmberText,
-                  onPressed: () => context.go('/super-admin/oversight'),
+                  onPressed: () => context.go(
+                    '/super-admin/organizations/${widget.organizationId}',
+                  ),
                 ),
               ],
             ),
           ),
           const SizedBox(height: 24),
           detailAsync.when(
-            loading: () => const Padding(padding: EdgeInsets.all(40), child: Center(child: CircularProgressIndicator())),
+            loading: () => const Padding(
+              padding: EdgeInsets.all(40),
+              child: Center(child: CircularProgressIndicator()),
+            ),
             error: (err, _) => Text('Failed to load clinic: $err'),
             data: (org) {
               return Column(
@@ -106,12 +127,18 @@ class _SupportViewScreenState extends ConsumerState<SupportViewScreen> {
                       Expanded(
                         child: Text(
                           org.name,
-                          style: TextStyle(color: context.appText, fontSize: 20, fontWeight: FontWeight.w600),
+                          style: TextStyle(
+                            color: context.appText,
+                            fontSize: 20,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
                       StatusBadge(
                         text: org.isActive ? 'Active' : 'Suspended',
-                        type: org.isActive ? BadgeType.success : BadgeType.error,
+                        type: org.isActive
+                            ? BadgeType.success
+                            : BadgeType.error,
                       ),
                     ],
                   ),
@@ -123,14 +150,33 @@ class _SupportViewScreenState extends ConsumerState<SupportViewScreen> {
                       children: [
                         _InfoRow(
                           label: 'Subscription plan',
-                          value: '${org.subscriptionPlan[0].toUpperCase()}${org.subscriptionPlan.substring(1)}',
+                          value:
+                              '${org.subscriptionPlan[0].toUpperCase()}${org.subscriptionPlan.substring(1)}',
                         ),
-                        _InfoRow(label: 'Branches', value: org.branchLimitLabel),
-                        _InfoRow(label: 'Billing cycle', value: org.billingCycle),
-                        _InfoRow(label: 'Subscription amount', value: '${org.subscriptionAmountRwf} RWF'),
-                        _InfoRow(label: 'Next due', value: _formatDate(org.nextDueDate)),
-                        _InfoRow(label: 'Owner contact', value: org.ownerContactName ?? '—'),
-                        _InfoRow(label: 'Owner phone', value: org.ownerContactPhone ?? '—'),
+                        _InfoRow(
+                          label: 'Branches',
+                          value: org.branchLimitLabel,
+                        ),
+                        _InfoRow(
+                          label: 'Billing cycle',
+                          value: org.billingCycle,
+                        ),
+                        _InfoRow(
+                          label: 'Subscription amount',
+                          value: '${org.subscriptionAmountRwf} RWF',
+                        ),
+                        _InfoRow(
+                          label: 'Next due',
+                          value: _formatDate(org.nextDueDate),
+                        ),
+                        _InfoRow(
+                          label: 'Owner contact',
+                          value: org.ownerContactName ?? '—',
+                        ),
+                        _InfoRow(
+                          label: 'Owner phone',
+                          value: org.ownerContactPhone ?? '—',
+                        ),
                       ],
                     ),
                   ),
@@ -140,22 +186,35 @@ class _SupportViewScreenState extends ConsumerState<SupportViewScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const CliniqnovvaTableHeader(columns: ['Name', 'Address', 'Phone', 'Status']),
+                        const CliniqnovvaTableHeader(
+                          columns: ['Name', 'Address', 'Phone', 'Status'],
+                        ),
                         if (org.branches.isEmpty)
                           Padding(
                             padding: const EdgeInsets.symmetric(vertical: 24),
-                            child: Text('No branches yet.', style: TextStyle(color: context.appSubtext)),
+                            child: Text(
+                              'No branches yet.',
+                              style: TextStyle(color: context.appSubtext),
+                            ),
                           )
                         else
                           for (final branch in org.branches)
                             CliniqnovvaTableRow(
                               cells: [
-                                Text(branch.name, style: TextStyle(color: context.appText, fontWeight: FontWeight.w600)),
+                                Text(
+                                  branch.name,
+                                  style: TextStyle(
+                                    color: context.appText,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
                                 Text(branch.address ?? '—'),
                                 Text(branch.phone ?? '—'),
                                 StatusBadge(
                                   text: branch.isActive ? 'Active' : 'Inactive',
-                                  type: branch.isActive ? BadgeType.success : BadgeType.error,
+                                  type: branch.isActive
+                                      ? BadgeType.success
+                                      : BadgeType.error,
                                 ),
                               ],
                             ),
@@ -184,8 +243,19 @@ class _InfoRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
         children: [
-          SizedBox(width: 180, child: Text(label, style: TextStyle(color: context.appSubtext))),
-          Expanded(child: Text(value, style: TextStyle(color: context.appText, fontWeight: FontWeight.w500))),
+          SizedBox(
+            width: 180,
+            child: Text(label, style: TextStyle(color: context.appSubtext)),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: TextStyle(
+                color: context.appText,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
         ],
       ),
     );

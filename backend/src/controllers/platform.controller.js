@@ -2,40 +2,10 @@
 // (Part 5). Keep thin: parse/validate req, call platform.service.js.
 const platformService = require('../services/platform.service');
 
-async function search(req, res, next) {
-  try {
-    const results = await platformService.search(req.query.query);
-    res.json(results);
-  } catch (err) {
-    next(err);
-  }
-}
-
 async function getMetrics(req, res, next) {
   try {
     const metrics = await platformService.getMetrics();
     res.json({ metrics });
-  } catch (err) {
-    next(err);
-  }
-}
-
-async function getAuditLog(req, res, next) {
-  try {
-    const { organizationId, actorId, action, dateFrom, dateTo, limit } = req.query;
-    const auditLog = await platformService.getAuditLog({ organizationId, actorId, action, dateFrom, dateTo, limit });
-    res.json({ auditLog });
-  } catch (err) {
-    next(err);
-  }
-}
-
-async function viewRecord(req, res, next) {
-  try {
-    const { collection, id } = req.params;
-    const record = await platformService.viewRecord(collection, id, req.user?.uid);
-    if (!record) return res.status(404).json({ error: 'Record not found' });
-    res.json({ record });
   } catch (err) {
     next(err);
   }
@@ -69,4 +39,4 @@ async function getRevenueTrend(req, res, next) {
   }
 }
 
-module.exports = { search, getMetrics, getAuditLog, viewRecord, startSupportView, endSupportView, getRevenueTrend };
+module.exports = { getMetrics, startSupportView, endSupportView, getRevenueTrend };

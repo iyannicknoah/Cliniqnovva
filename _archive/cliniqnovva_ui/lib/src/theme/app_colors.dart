@@ -34,7 +34,8 @@ abstract final class AppColors {
       [Color(0xFF546E7A), Color(0xFF90A4AE)],
     ];
     if (name.isEmpty) return gradients[0];
-    final index = name.codeUnits.fold<int>(0, (sum, c) => sum + c) % gradients.length;
+    final index =
+        name.codeUnits.fold<int>(0, (sum, c) => sum + c) % gradients.length;
     return gradients[index];
   }
 }

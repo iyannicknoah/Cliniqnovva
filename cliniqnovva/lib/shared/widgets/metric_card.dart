@@ -22,7 +22,11 @@ class MetricCard extends StatelessWidget {
           const SizedBox(height: 12),
           Text(
             value,
-            style: TextStyle(color: context.appText, fontSize: 18, fontWeight: FontWeight.w600),
+            style: TextStyle(
+              color: context.appText,
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ],
       ),

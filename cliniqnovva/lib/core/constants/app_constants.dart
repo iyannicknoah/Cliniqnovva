@@ -34,7 +34,11 @@ abstract final class AppConstants {
   static const String planBasic = 'basic';
   static const String planPro = 'pro';
   static const String planEnterprise = 'enterprise';
-  static const List<String> subscriptionPlans = [planBasic, planPro, planEnterprise];
+  static const List<String> subscriptionPlans = [
+    planBasic,
+    planPro,
+    planEnterprise,
+  ];
 
   // Appointment statuses
   static const String appointmentPending = 'pending';
@@ -55,7 +59,12 @@ abstract final class AppConstants {
   static const String invoicePartial = 'partial';
   static const String invoicePaid = 'paid';
   static const String invoiceVoided = 'voided';
-  static const List<String> invoiceStatuses = [invoiceUnpaid, invoicePartial, invoicePaid, invoiceVoided];
+  static const List<String> invoiceStatuses = [
+    invoiceUnpaid,
+    invoicePartial,
+    invoicePaid,
+    invoiceVoided,
+  ];
 
   // Insurance schemes
   static const String insuranceMutuelle = 'mutuelle';
@@ -73,7 +82,11 @@ abstract final class AppConstants {
   static const String langKinyarwanda = 'rw';
   static const String langEnglish = 'en';
   static const String langFrench = 'fr';
-  static const List<String> supportedLanguages = [langKinyarwanda, langEnglish, langFrench];
+  static const List<String> supportedLanguages = [
+    langKinyarwanda,
+    langEnglish,
+    langFrench,
+  ];
 
   // Rwandan mobile prefixes valid for phone-number validation (spec section 1)
   static const List<String> validPhonePrefixes = ['078', '079', '073', '072'];

@@ -23,6 +23,29 @@ async function getById(id) {
  *   was a Super Admin acting on an organization's behalf (Part 3 Task 3).
  */
 async function create({ organizationId, name, address, phone }, { actorId, actorRole }) {
+  const orgDoc = await db.collection('organizations').doc(organizationId).get();
+  if (!orgDoc.exists) {
+    const err = new Error('Organization not found');
+    err.status = 404;
+    throw err;
+  }
+
+  // Enforce the subscription plan's branch limit (basic=1, pro=5,
+  // enterprise=unlimited/null) — applies here too, not just the Organization
+  // Admin's own creation flow, since Super Admin's "on this org's behalf"
+  // path is the same underlying write.
+  const { branchLimit } = orgDoc.data();
+  if (branchLimit !== null && branchLimit !== undefined) {
+    const countSnapshot = await db.collection('branches').where('organizationId', '==', organizationId).count().get();
+    if (countSnapshot.data().count >= branchLimit) {
+      const err = new Error(
+        `This clinic's plan allows ${branchLimit} branch${branchLimit === 1 ? '' : 'es'} — limit reached. Upgrade the plan to add more.`
+      );
+      err.status = 400;
+      throw err;
+    }
+  }
+
   const data = {
     organizationId,
     name,

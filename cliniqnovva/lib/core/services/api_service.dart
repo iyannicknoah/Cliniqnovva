@@ -40,7 +40,10 @@ class ApiService {
 
   Dio get client => _dio;
 
-  Future<Response<T>> get<T>(String path, {Map<String, dynamic>? queryParameters}) {
+  Future<Response<T>> get<T>(
+    String path, {
+    Map<String, dynamic>? queryParameters,
+  }) {
     return _wrap(() => _dio.get<T>(path, queryParameters: queryParameters));
   }
 
@@ -69,7 +72,9 @@ class ApiService {
   }
 
   String _messageFor(DioException e) {
-    final serverError = e.response?.data is Map ? (e.response!.data as Map)['error'] : null;
+    final serverError = e.response?.data is Map
+        ? (e.response!.data as Map)['error']
+        : null;
     if (serverError is String && serverError.isNotEmpty) return serverError;
 
     switch (e.type) {

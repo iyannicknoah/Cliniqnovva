@@ -305,11 +305,14 @@ not a deliberate look. Fixed 2026-07-24:
 `OverviewScreen` (`/super-admin/overview`, `features/super_admin/screens/
 overview_screen.dart`) is now the first page a Super Admin reaches — added
 2026-07-24, structurally modeled on a typical admin-dashboard overview (KPI
-row → growth chart → two recent-activity list panels) but built entirely on
-Cliniqnovva's own real data, not copied reference content. The two list
-panels (`_OverviewListRow`) use tinted rounded rows (`context.appSecondaryBg`)
-rather than the formal `CliniqnovvaTableRow` — reads as a lighter "recent
-activity" feed, distinct from a data table.
+row → growth chart → a recent-clinics table) but built entirely on
+Cliniqnovva's own real data, not copied reference content. "Recent clinics"
+is a full-width `CliniqnovvaCard` containing a real `CliniqnovvaTableHeader`
++ `CliniqnovvaTableRow` table (2026-07-23) — full width + the standard table
+component is the reference pattern for any future "recent X" list on this
+screen. (The audit-log-backed "Recent platform activity" table that used to
+sit alongside it was removed 2026-07-23 along with the rest of the audit
+log feature — see the change log.)
 
 **Chart**: `fl_chart`'s `LineChart`, one series (real monthly revenue,
 summed server-side from every organization's recorded cash payments — see
@@ -329,6 +332,32 @@ growth/trend chart rather than introducing a new chart style or color.
 
 ## Change log
 
+- **2026-07-23 (Audit log feature + Oversight page removed)** — The
+  platform audit log display and the whole "Platform Oversight" page
+  (`/super-admin/oversight`, cross-clinic branch/staff search, read-only
+  record lookup, and the filterable audit log table) were removed at the
+  user's request — not needed. Deleted `oversight_screen.dart`, its route,
+  and its sidebar nav item; removed the "Recent platform activity" table
+  from the Overview page; removed the now-unused backend endpoints
+  (`GET /audit-log`, `GET /search`, `GET /record/:collection/:id`) and their
+  service functions; removed `AuditLogEntry`/`AuditLogFilter`/
+  `PlatformSearchResults`/`BranchSearchResult`/`StaffSearchResult` from the
+  Flutter models. Support View (accessed from a Clinic detail page's "View
+  as Clinic Admin" button) is unaffected — its "Exit" now returns to the
+  clinic's detail page instead of the deleted Oversight page. **The
+  underlying audit-log writes on every mutation (suspend/activate, billing
+  status changes, staff invites, branch creation, payments recorded,
+  Support View start/end) were intentionally left in place** — this was a
+  removal of the viewing feature, not the accountability trail itself;
+  flag it if the write-side should go too.
+- **2026-07-23 (Overview "recent" panels → full-width tables)** — "Recent
+  clinics" and "Recent platform activity" changed from two half-width cards
+  side by side (a custom tinted-row list, `_OverviewListRow`) to full-width
+  `CliniqnovvaCard`s stacked in a `Column`, each using the standard
+  `CliniqnovvaTableHeader`/`CliniqnovvaTableRow` table component with real
+  columns (Name/Plan/Created; Action/Clinic/Time) instead of a single
+  title+subtitle+trailing row. `_OverviewListRow` was deleted — no other
+  callers.
 - **2026-07-23 (Real names in the audit log; chart curve fix)** — The
   platform audit log (Oversight screen + Overview's "Recent platform
   activity") was showing raw Firestore ids for Clinic and Actor, which read

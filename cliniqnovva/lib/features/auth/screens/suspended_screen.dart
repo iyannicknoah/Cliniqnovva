@@ -26,32 +26,52 @@ class SuspendedScreen extends ConsumerWidget {
             children: [
               Text(
                 'Cliniqnovva',
-                style: TextStyle(color: context.appText, fontSize: 22, fontWeight: FontWeight.w700),
+                style: TextStyle(
+                  color: context.appText,
+                  fontSize: 22,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
               const SizedBox(height: 40),
               Container(
                 width: 64,
                 height: 64,
-                decoration: BoxDecoration(color: AppColors.warningAmber.withValues(alpha: 0.15), shape: BoxShape.circle),
-                child: const AppIcon(AppIcons.warning, color: AppColors.warningAmber, size: 34),
+                decoration: BoxDecoration(
+                  color: AppColors.warningAmber.withValues(alpha: 0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: const AppIcon(
+                  AppIcons.warning,
+                  color: AppColors.warningAmber,
+                  size: 34,
+                ),
               ),
               const SizedBox(height: 24),
               Text(
                 'Account Suspended',
-                style: TextStyle(color: context.appText, fontSize: 20, fontWeight: FontWeight.w600),
+                style: TextStyle(
+                  color: context.appText,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
               const SizedBox(height: 12),
               Text(
                 "Your organization's account has been suspended. Please contact Cliniqnovva support.",
                 textAlign: TextAlign.center,
-                style: TextStyle(color: context.appSubtext, fontSize: 15, height: 1.5),
+                style: TextStyle(
+                  color: context.appSubtext,
+                  fontSize: 15,
+                  height: 1.5,
+                ),
               ),
               const SizedBox(height: 32),
               SizedBox(
                 width: 220,
                 child: CliniqnovvaButton(
                   label: 'Sign Out',
-                  onPressed: () => ref.read(authNotifierProvider.notifier).signOut(),
+                  onPressed: () =>
+                      ref.read(authNotifierProvider.notifier).signOut(),
                 ),
               ),
             ],

@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_colors.dart';
 
@@ -19,11 +19,21 @@ class ChatThreadScreen extends StatelessWidget {
           children: [
             const Text(
               'Chat',
-              style: TextStyle(color: AppColors.textPrimary, fontSize: 20, fontWeight: FontWeight.w600),
+              style: TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 20,
+                fontWeight: FontWeight.w600,
+              ),
             ),
             if (chatId != null) ...[
               const SizedBox(height: 8),
-              Text('chatId: $chatId', style: const TextStyle(color: AppColors.textSecondary, fontSize: 14)),
+              Text(
+                'chatId: $chatId',
+                style: const TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 14,
+                ),
+              ),
             ],
           ],
         ),

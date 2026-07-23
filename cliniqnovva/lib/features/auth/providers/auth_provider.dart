@@ -35,10 +35,11 @@ class AuthNotifier extends AsyncNotifier<User?> {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       try {
-        final credential = await FirebaseService.auth.signInWithEmailAndPassword(
-          email: email.trim(),
-          password: password,
-        );
+        final credential = await FirebaseService.auth
+            .signInWithEmailAndPassword(
+              email: email.trim(),
+              password: password,
+            );
         return credential.user;
       } on FirebaseAuthException catch (e) {
         throw AuthException(_friendlyMessage(e.code));
@@ -77,7 +78,8 @@ class AuthNotifier extends AsyncNotifier<User?> {
     return claims?['branchId'] as String?;
   }
 
-  Future<Map<String, dynamic>?> getUserClaims() => FirebaseService.getCurrentUserClaims();
+  Future<Map<String, dynamic>?> getUserClaims() =>
+      FirebaseService.getCurrentUserClaims();
 
   String _friendlyMessage(String code) {
     switch (code) {
@@ -99,7 +101,9 @@ class AuthNotifier extends AsyncNotifier<User?> {
   }
 }
 
-final authNotifierProvider = AsyncNotifierProvider<AuthNotifier, User?>(AuthNotifier.new);
+final authNotifierProvider = AsyncNotifierProvider<AuthNotifier, User?>(
+  AuthNotifier.new,
+);
 
 /// Task 7 scaffold — 2FA is only offered to super_admin/organization_admin
 /// (enforced by whatever screen surfaces this toggle, not here). Full
@@ -155,7 +159,10 @@ class ThemeNotifier extends Notifier<ThemeMode> {
     final prefs = await SharedPreferences.getInstance();
     final saved = prefs.getString(_prefsKey);
     if (saved != null) {
-      state = ThemeMode.values.firstWhere((m) => m.name == saved, orElse: () => ThemeMode.light);
+      state = ThemeMode.values.firstWhere(
+        (m) => m.name == saved,
+        orElse: () => ThemeMode.light,
+      );
     }
   }
 
@@ -171,4 +178,6 @@ class ThemeNotifier extends Notifier<ThemeMode> {
   }
 }
 
-final themeNotifierProvider = NotifierProvider<ThemeNotifier, ThemeMode>(ThemeNotifier.new);
+final themeNotifierProvider = NotifierProvider<ThemeNotifier, ThemeMode>(
+  ThemeNotifier.new,
+);

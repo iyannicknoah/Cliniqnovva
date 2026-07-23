@@ -4,7 +4,9 @@ import 'package:staff_app/app.dart';
 import 'package:staff_app/core/config/flavor_config.dart';
 
 void main() {
-  testWidgets('App boots and shows the setup placeholder screen', (WidgetTester tester) async {
+  testWidgets('App boots and shows the setup placeholder screen', (
+    WidgetTester tester,
+  ) async {
     FlavorConfig(
       flavor: Flavor.dev,
       apiBaseUrl: 'https://api-dev.cliniqnovva.rw',

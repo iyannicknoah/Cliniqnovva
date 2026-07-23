@@ -21,7 +21,10 @@ class CliniqnovvaTableHeader extends StatelessWidget {
             children: [
               for (final column in columns)
                 Expanded(
-                  child: Text(column, style: TextStyle(color: context.appSubtext)),
+                  child: Text(
+                    column,
+                    style: TextStyle(color: context.appSubtext),
+                  ),
                 ),
             ].divideWith(const SizedBox(width: 20)),
           ),

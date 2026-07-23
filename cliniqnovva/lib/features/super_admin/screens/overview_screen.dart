@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/theme_ext.dart';
 import '../../../shared/widgets/cliniqnovva_card.dart';
+import '../../../shared/widgets/cliniqnovva_table.dart';
 import '../../../shared/widgets/metric_card.dart';
 import '../../organizations/providers/organizations_provider.dart';
 import '../../platform/models/platform_models.dart';
@@ -14,7 +15,7 @@ import '../widgets/payment_history_panel.dart';
 import '../widgets/super_admin_scaffold.dart';
 
 /// The Super Admin landing page — structured like a typical admin dashboard
-/// overview (KPI row, a growth chart, two recent-activity lists), adapted to
+/// overview (KPI row, a growth chart, a recent-clinics table), adapted to
 /// Cliniqnovva's own real data rather than copying any reference content.
 class OverviewScreen extends ConsumerWidget {
   const OverviewScreen({super.key});
@@ -24,20 +25,11 @@ class OverviewScreen extends ConsumerWidget {
     return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
   }
 
-  String _formatDateTime(DateTime? dt) {
-    if (dt == null) return '—';
-    final local = dt.toLocal();
-    return '${_formatDate(local)} ${local.hour.toString().padLeft(2, '0')}:${local.minute.toString().padLeft(2, '0')}';
-  }
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final metricsAsync = ref.watch(platformMetricsProvider);
     final organizationsAsync = ref.watch(organizationsListProvider);
     final revenueTrendAsync = ref.watch(platformRevenueTrendProvider);
-    final activityAsync = ref.watch(
-      platformAuditLogProvider(const AuditLogFilter()),
-    );
 
     return SuperAdminScaffold(
       currentRoute: '/super-admin/overview',
@@ -116,147 +108,52 @@ class OverviewScreen extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 24),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: CliniqnovvaCard(
-                  title: 'Recent clinics',
-                  child: organizationsAsync.when(
-                    loading: () =>
-                        const Center(child: CircularProgressIndicator()),
-                    error: (err, _) => Text(
-                      'Failed to load: $err',
-                      style: TextStyle(color: context.appSubtext),
-                    ),
-                    data: (organizations) {
-                      final recent = organizations.take(5).toList();
-                      if (recent.isEmpty) {
-                        return Text(
-                          'No clinics yet.',
-                          style: TextStyle(color: context.appSubtext),
-                        );
-                      }
-                      return Column(
-                        children: [
-                          for (final org in recent)
-                            _OverviewListRow(
-                              onTap: () => context.push(
-                                '/super-admin/organizations/${org.id}',
-                              ),
-                              title: org.name,
-                              subtitle:
-                                  '${org.subscriptionPlan[0].toUpperCase()}${org.subscriptionPlan.substring(1)}',
-                              trailing: _formatDate(org.createdAt),
-                            ),
-                        ],
-                      );
-                    },
-                  ),
-                ),
+          CliniqnovvaCard(
+            title: 'Recent clinics',
+            child: organizationsAsync.when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (err, _) => Text(
+                'Failed to load: $err',
+                style: TextStyle(color: context.appSubtext),
               ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: CliniqnovvaCard(
-                  title: 'Recent platform activity',
-                  child: activityAsync.when(
-                    loading: () =>
-                        const Center(child: CircularProgressIndicator()),
-                    error: (err, _) => Text(
-                      'Failed to load: $err',
-                      style: TextStyle(color: context.appSubtext),
+              data: (organizations) {
+                final recent = organizations.take(5).toList();
+                if (recent.isEmpty) {
+                  return Text(
+                    'No clinics yet.',
+                    style: TextStyle(color: context.appSubtext),
+                  );
+                }
+                return Column(
+                  children: [
+                    const CliniqnovvaTableHeader(
+                      columns: ['Name', 'Plan', 'Created'],
                     ),
-                    data: (entries) {
-                      final recent = entries.take(5).toList();
-                      if (recent.isEmpty) {
-                        return Text(
-                          'No activity yet.',
-                          style: TextStyle(color: context.appSubtext),
-                        );
-                      }
-                      return Column(
-                        children: [
-                          for (final entry in recent)
-                            _OverviewListRow(
-                              title: entry.action,
-                              subtitle:
-                                  entry.organizationName ??
-                                  entry.actorLabel ??
-                                  entry.actorRole ??
-                                  '—',
-                              trailing: _formatDateTime(entry.timestamp),
+                    for (final org in recent)
+                      CliniqnovvaTableRow(
+                        onTap: () => context.push(
+                          '/super-admin/organizations/${org.id}',
+                        ),
+                        cells: [
+                          Text(
+                            org.name,
+                            style: TextStyle(
+                              color: context.appText,
+                              fontWeight: FontWeight.w600,
                             ),
+                          ),
+                          Text(
+                            '${org.subscriptionPlan[0].toUpperCase()}${org.subscriptionPlan.substring(1)}',
+                          ),
+                          Text(_formatDate(org.createdAt)),
                         ],
-                      );
-                    },
-                  ),
-                ),
-              ),
-            ],
+                      ),
+                  ],
+                );
+              },
+            ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _OverviewListRow extends StatelessWidget {
-  const _OverviewListRow({
-    required this.title,
-    required this.subtitle,
-    required this.trailing,
-    this.onTap,
-  });
-
-  final String title;
-  final String subtitle;
-  final String trailing;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(12),
-      onTap: onTap,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 8),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        decoration: BoxDecoration(
-          color: context.appSecondaryBg,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: context.appText,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 14,
-                    ),
-                  ),
-                  Text(
-                    subtitle,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(color: context.appSubtext, fontSize: 12),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 8),
-            Text(
-              trailing,
-              style: TextStyle(color: context.appSubtext, fontSize: 12),
-            ),
-          ],
-        ),
       ),
     );
   }

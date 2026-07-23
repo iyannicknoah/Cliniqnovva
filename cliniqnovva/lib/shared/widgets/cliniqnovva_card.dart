@@ -34,7 +34,11 @@ class CliniqnovvaCard extends StatelessWidget {
           if (title != null) ...[
             Text(
               title!,
-              style: TextStyle(color: context.appText, fontSize: 16, fontWeight: FontWeight.w600),
+              style: TextStyle(
+                color: context.appText,
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
             ),
             const SizedBox(height: 14),
           ],

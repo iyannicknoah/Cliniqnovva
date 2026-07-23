@@ -9,11 +9,8 @@ const controller = require('../controllers/platform.controller');
 // oversight, never something an Organization/Branch Admin can reach.
 router.use(verifyToken, attachScope, requireRole(ROLES.SUPER_ADMIN));
 
-router.get('/search', controller.search);
 router.get('/metrics', controller.getMetrics);
 router.get('/revenue-trend', controller.getRevenueTrend);
-router.get('/audit-log', controller.getAuditLog);
-router.get('/record/:collection/:id', controller.viewRecord);
 router.post('/support-view/:organizationId', controller.startSupportView);
 router.post('/support-view/:organizationId/end', controller.endSupportView);
 

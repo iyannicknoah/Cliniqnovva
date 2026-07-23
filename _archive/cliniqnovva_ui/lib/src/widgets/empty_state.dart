@@ -30,11 +30,19 @@ class EmptyState extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          AppIcon(icon, size: 64, color: context.appSubtext.withValues(alpha: 0.4)),
+          AppIcon(
+            icon,
+            size: 64,
+            color: context.appSubtext.withValues(alpha: 0.4),
+          ),
           const SizedBox(height: AppSpacing.lg),
           Text(
             title,
-            style: TextStyle(color: context.appText, fontSize: 18, fontWeight: FontWeight.w500),
+            style: TextStyle(
+              color: context.appText,
+              fontSize: 18,
+              fontWeight: FontWeight.w500,
+            ),
           ),
           if (message != null) ...[
             const SizedBox(height: AppSpacing.sm),

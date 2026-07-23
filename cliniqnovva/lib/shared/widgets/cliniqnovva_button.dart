@@ -55,7 +55,8 @@ class CliniqnovvaButton extends StatelessWidget {
 
     // Auto-pick a readable foreground for whatever the background resolves
     // to: black text on light fills, white text on dark fills.
-    final onColor = ThemeData.estimateBrightnessForColor(color) == Brightness.light
+    final onColor =
+        ThemeData.estimateBrightnessForColor(color) == Brightness.light
         ? Colors.black
         : Colors.white;
 
@@ -69,22 +70,35 @@ class CliniqnovvaButton extends StatelessWidget {
             foregroundColor: onColor,
             disabledBackgroundColor: color.withValues(alpha: 0.4),
             elevation: 0,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.buttonRadius)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppTheme.buttonRadius),
+            ),
           ),
           child: isLoading
               ? SizedBox(
                   width: 18,
                   height: 18,
-                  child: CircularProgressIndicator(strokeWidth: 2, color: onColor),
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: onColor,
+                  ),
                 )
-              : Text(label, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+              : Text(
+                  label,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
         ),
       ),
       _ButtonVariant.text => TextButton(
         onPressed: disabled ? null : onPressed,
         style: TextButton.styleFrom(
           foregroundColor: color,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.buttonRadius)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppTheme.buttonRadius),
+          ),
         ),
         child: isLoading
             ? SizedBox(
@@ -97,12 +111,16 @@ class CliniqnovvaButton extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
-                  decoration: underline ? TextDecoration.underline : TextDecoration.none,
+                  decoration: underline
+                      ? TextDecoration.underline
+                      : TextDecoration.none,
                 ),
               ),
       ),
     };
 
-    return isFullWidth ? SizedBox(width: double.infinity, child: button) : button;
+    return isFullWidth
+        ? SizedBox(width: double.infinity, child: button)
+        : button;
   }
 }

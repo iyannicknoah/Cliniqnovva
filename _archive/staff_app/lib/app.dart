@@ -35,7 +35,8 @@ class _SetupPlaceholderScreen extends StatefulWidget {
   const _SetupPlaceholderScreen();
 
   @override
-  State<_SetupPlaceholderScreen> createState() => _SetupPlaceholderScreenState();
+  State<_SetupPlaceholderScreen> createState() =>
+      _SetupPlaceholderScreenState();
 }
 
 class _SetupPlaceholderScreenState extends State<_SetupPlaceholderScreen> {
@@ -73,18 +74,29 @@ class _SetupPlaceholderScreenState extends State<_SetupPlaceholderScreen> {
                 children: [
                   Text(
                     'Project setup complete — flavor: $flavor',
-                    style: TextStyle(color: context.appText, fontSize: 16, fontWeight: FontWeight.w600),
+                    style: TextStyle(
+                      color: context.appText,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                   const SizedBox(height: AppSpacing.md),
-                  const Wrap(spacing: AppSpacing.sm, children: [
-                    StatusPill(label: 'On Time', tone: PillTone.success),
-                    StatusPill(label: 'Late', tone: PillTone.warning),
-                  ]),
+                  const Wrap(
+                    spacing: AppSpacing.sm,
+                    children: [
+                      StatusPill(label: 'On Time', tone: PillTone.success),
+                      StatusPill(label: 'Late', tone: PillTone.warning),
+                    ],
+                  ),
                 ],
               ),
             ),
             const SizedBox(height: AppSpacing.xl),
-            CliniqnovvaButton(label: l10n.checkIn, icon: AppIcons.eventAvailableRounded, onPressed: () {}),
+            CliniqnovvaButton(
+              label: l10n.checkIn,
+              icon: AppIcons.eventAvailableRounded,
+              onPressed: () {},
+            ),
           ],
         ),
       ),

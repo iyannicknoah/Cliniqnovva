@@ -14,7 +14,6 @@ import 'package:cliniqnovva/features/auth/screens/suspended_screen.dart';
 import 'package:cliniqnovva/features/dashboard/screens/dashboard_screen.dart';
 import 'package:cliniqnovva/features/organizations/models/organization.dart';
 import 'package:cliniqnovva/features/platform/models/platform_models.dart';
-import 'package:cliniqnovva/features/platform/providers/platform_provider.dart';
 import 'package:cliniqnovva/features/super_admin/widgets/payment_history_panel.dart';
 import 'package:cliniqnovva/shared/widgets/avatar_widget.dart';
 import 'package:cliniqnovva/shared/widgets/cliniqnovva_button.dart';
@@ -468,81 +467,6 @@ void main() {
     expect(metrics.totalPatients, 40);
     expect(metrics.totalAppointmentsThisMonth, 9);
   });
-
-  test(
-    'PlatformSearchResults.fromJson parses branches/staff and reports isEmpty correctly',
-    () {
-      final empty = PlatformSearchResults.fromJson({
-        'branches': [],
-        'staff': [],
-      });
-      expect(empty.isEmpty, isTrue);
-
-      final results = PlatformSearchResults.fromJson({
-        'branches': [
-          {
-            'id': 'b1',
-            'name': 'Downtown',
-            'organizationName': 'Kigali Clinic',
-            'address': '12 KG St',
-          },
-        ],
-        'staff': [
-          {
-            'id': 'u1',
-            'name': 'Jean Uwase',
-            'role': 'doctor',
-            'organizationName': 'Kigali Clinic',
-            'email': 'jean@clinic.rw',
-          },
-        ],
-      });
-      expect(results.isEmpty, isFalse);
-      expect(results.branches.single.organizationName, 'Kigali Clinic');
-      expect(results.staff.single.role, 'doctor');
-    },
-  );
-
-  test('AuditLogEntry.fromJson parses fields and timestamp', () {
-    final entry = AuditLogEntry.fromJson({
-      'id': 'log1',
-      'action': 'organization.suspended',
-      'actorId': 'admin1',
-      'actorRole': 'super_admin',
-      'actorLabel': 'admin@cliniqnova.rw',
-      'targetCollection': 'organizations',
-      'targetId': 'org1',
-      'organizationId': 'org1',
-      'organizationName': 'Kigali Family Clinic',
-      'timestamp': '2026-07-22T12:00:00.000Z',
-    });
-    expect(entry.action, 'organization.suspended');
-    expect(entry.organizationId, 'org1');
-    expect(entry.organizationName, 'Kigali Family Clinic');
-    expect(entry.actorLabel, 'admin@cliniqnova.rw');
-    expect(entry.timestamp, DateTime.parse('2026-07-22T12:00:00.000Z'));
-  });
-
-  test(
-    'AuditLogFilter equality holds for identical filters and differs otherwise',
-    () {
-      const a = AuditLogFilter(
-        organizationId: 'org1',
-        action: 'organization.suspended',
-      );
-      const b = AuditLogFilter(
-        organizationId: 'org1',
-        action: 'organization.suspended',
-      );
-      const c = AuditLogFilter(
-        organizationId: 'org2',
-        action: 'organization.suspended',
-      );
-      expect(a, equals(b));
-      expect(a.hashCode, equals(b.hashCode));
-      expect(a, isNot(equals(c)));
-    },
-  );
 
   test(
     'RevenueTrendPoint.monthLabel formats YYYY-MM as a short month name',

@@ -44,7 +44,12 @@ class AvatarWidget extends StatelessWidget {
       padding: const EdgeInsets.all(1.5),
       child: ClipOval(
         child: (photoUrl != null && photoUrl!.isNotEmpty)
-            ? Image.network(photoUrl!, fit: BoxFit.cover, width: size, height: size)
+            ? Image.network(
+                photoUrl!,
+                fit: BoxFit.cover,
+                width: size,
+                height: size,
+              )
             : Container(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(

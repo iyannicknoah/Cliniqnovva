@@ -22,14 +22,18 @@ abstract final class FirebaseService {
     return result.claims;
   }
 
-  static CollectionReference<Map<String, dynamic>> organizationsRef() => db.collection('organizations');
+  static CollectionReference<Map<String, dynamic>> organizationsRef() =>
+      db.collection('organizations');
 
-  static Query<Map<String, dynamic>> branchesRef(String organizationId) =>
-      db.collection('branches').where('organizationId', isEqualTo: organizationId);
+  static Query<Map<String, dynamic>> branchesRef(String organizationId) => db
+      .collection('branches')
+      .where('organizationId', isEqualTo: organizationId);
 
-  static CollectionReference<Map<String, dynamic>> usersRef() => db.collection('users');
+  static CollectionReference<Map<String, dynamic>> usersRef() =>
+      db.collection('users');
 
-  static CollectionReference<Map<String, dynamic>> patientsRef() => db.collection('patients');
+  static CollectionReference<Map<String, dynamic>> patientsRef() =>
+      db.collection('patients');
 
   static Query<Map<String, dynamic>> appointmentsRef(String branchId) =>
       db.collection('appointments').where('branchId', isEqualTo: branchId);
@@ -37,7 +41,8 @@ abstract final class FirebaseService {
   static Query<Map<String, dynamic>> invoicesRef(String branchId) =>
       db.collection('invoices').where('branchId', isEqualTo: branchId);
 
-  static CollectionReference<Map<String, dynamic>> medicalRecordsRef() => db.collection('medicalRecords');
+  static CollectionReference<Map<String, dynamic>> medicalRecordsRef() =>
+      db.collection('medicalRecords');
 
   static Query<Map<String, dynamic>> chatsRef(String branchId) =>
       db.collection('chats').where('branchId', isEqualTo: branchId);
@@ -45,5 +50,6 @@ abstract final class FirebaseService {
   static Query<Map<String, dynamic>> reviewsRef(String branchId) =>
       db.collection('reviews').where('branchId', isEqualTo: branchId);
 
-  static CollectionReference<Map<String, dynamic>> auditLogsRef() => db.collection('auditLogs');
+  static CollectionReference<Map<String, dynamic>> auditLogsRef() =>
+      db.collection('auditLogs');
 }

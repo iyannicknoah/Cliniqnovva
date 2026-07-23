@@ -56,11 +56,16 @@ class CliniqnovvaSidebar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final visibleItems = items.where((item) => item.allowedRoles.contains(currentRole)).toList();
+    final visibleItems = items
+        .where((item) => item.allowedRoles.contains(currentRole))
+        .toList();
 
     return Container(
       width: AppTheme.sidebarWidth,
-      decoration: BoxDecoration(color: context.appBg, border: Border(right: BorderSide(color: context.appBorder))),
+      decoration: BoxDecoration(
+        color: context.appBg,
+        border: Border(right: BorderSide(color: context.appBorder)),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -76,7 +81,11 @@ class CliniqnovvaSidebar extends StatelessWidget {
                     'Cliniqnovva',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(color: context.appText, fontSize: 18, fontWeight: FontWeight.w700),
+                    style: TextStyle(
+                      color: context.appText,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
               ],
@@ -88,11 +97,19 @@ class CliniqnovvaSidebar extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 10),
               children: visibleItems.map((item) {
                 final active = item.route == currentRoute;
-                return _SidebarNavTile(item: item, active: active, onTap: () => onNavTap(item.route));
+                return _SidebarNavTile(
+                  item: item,
+                  active: active,
+                  onTap: () => onNavTap(item.route),
+                );
               }).toList(),
             ),
           ),
-          _ProfileChip(userName: userName, userRoleLabel: userRoleLabel, userPhotoUrl: userPhotoUrl),
+          _ProfileChip(
+            userName: userName,
+            userRoleLabel: userRoleLabel,
+            userPhotoUrl: userPhotoUrl,
+          ),
         ],
       ),
     );
@@ -100,7 +117,11 @@ class CliniqnovvaSidebar extends StatelessWidget {
 }
 
 class _SidebarNavTile extends StatelessWidget {
-  const _SidebarNavTile({required this.item, required this.active, required this.onTap});
+  const _SidebarNavTile({
+    required this.item,
+    required this.active,
+    required this.onTap,
+  });
 
   final SidebarNavItem item;
   final bool active;
@@ -131,7 +152,11 @@ class _SidebarNavTile extends StatelessWidget {
             ),
             child: Row(
               children: [
-                AppIcon(item.icon, size: 16, color: active ? activeColor : inactiveColor),
+                AppIcon(
+                  item.icon,
+                  size: 16,
+                  color: active ? activeColor : inactiveColor,
+                ),
                 const SizedBox(width: 10),
                 Text(
                   item.label,
@@ -156,7 +181,11 @@ class _SidebarNavTile extends StatelessWidget {
 /// the sidebar) via a custom [OverlayEntry] rather than [PopupMenuButton], so
 /// each row inside can have its own independent tap handling.
 class _ProfileChip extends ConsumerStatefulWidget {
-  const _ProfileChip({required this.userName, required this.userRoleLabel, this.userPhotoUrl});
+  const _ProfileChip({
+    required this.userName,
+    required this.userRoleLabel,
+    this.userPhotoUrl,
+  });
 
   final String userName;
   final String userRoleLabel;
@@ -190,7 +219,12 @@ class _ProfileChipState extends ConsumerState<_ProfileChip> {
     _menuEntry = OverlayEntry(
       builder: (overlayContext) => Stack(
         children: [
-          Positioned.fill(child: GestureDetector(behavior: HitTestBehavior.translucent, onTap: _removeMenu)),
+          Positioned.fill(
+            child: GestureDetector(
+              behavior: HitTestBehavior.translucent,
+              onTap: _removeMenu,
+            ),
+          ),
           CompositedTransformFollower(
             link: _layerLink,
             targetAnchor: Alignment.topLeft,
@@ -221,7 +255,11 @@ class _ProfileChipState extends ConsumerState<_ProfileChip> {
         ),
         child: Row(
           children: [
-            AvatarWidget(firstName: widget.userName, photoUrl: widget.userPhotoUrl, size: 36),
+            AvatarWidget(
+              firstName: widget.userName,
+              photoUrl: widget.userPhotoUrl,
+              size: 36,
+            ),
             const SizedBox(width: 10),
             Expanded(
               child: Column(
@@ -231,7 +269,11 @@ class _ProfileChipState extends ConsumerState<_ProfileChip> {
                     widget.userName,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(color: context.appText, fontSize: 14, fontWeight: FontWeight.w500),
+                    style: TextStyle(
+                      color: context.appText,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                   Text(
                     widget.userRoleLabel,
@@ -247,7 +289,11 @@ class _ProfileChipState extends ConsumerState<_ProfileChip> {
               onTap: _toggleMenu,
               child: Padding(
                 padding: const EdgeInsets.all(4),
-                child: AppIcon(AppIcons.moreHoriz, size: 18, color: context.appSubtext),
+                child: AppIcon(
+                  AppIcons.moreHoriz,
+                  size: 18,
+                  color: context.appSubtext,
+                ),
               ),
             ),
           ],
@@ -272,7 +318,8 @@ class _ProfileMenuContent extends ConsumerStatefulWidget {
   final VoidCallback onClose;
 
   @override
-  ConsumerState<_ProfileMenuContent> createState() => _ProfileMenuContentState();
+  ConsumerState<_ProfileMenuContent> createState() =>
+      _ProfileMenuContentState();
 }
 
 class _ProfileMenuContentState extends ConsumerState<_ProfileMenuContent> {
@@ -302,7 +349,12 @@ class _ProfileMenuContentState extends ConsumerState<_ProfileMenuContent> {
     _languageEntry = OverlayEntry(
       builder: (overlayContext) => Stack(
         children: [
-          Positioned.fill(child: GestureDetector(behavior: HitTestBehavior.translucent, onTap: _removeLanguageSubmenu)),
+          Positioned.fill(
+            child: GestureDetector(
+              behavior: HitTestBehavior.translucent,
+              onTap: _removeLanguageSubmenu,
+            ),
+          ),
           CompositedTransformFollower(
             link: _languageLink,
             targetAnchor: Alignment.topRight,
@@ -345,25 +397,39 @@ class _ProfileMenuContentState extends ConsumerState<_ProfileMenuContent> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Theme', style: TextStyle(color: context.appText, fontSize: 13, fontWeight: FontWeight.w600)),
+              Text(
+                'Theme',
+                style: TextStyle(
+                  color: context.appText,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
               const SizedBox(height: 8),
               Container(
                 padding: const EdgeInsets.all(3),
-                decoration: BoxDecoration(color: context.appSecondaryBg, borderRadius: BorderRadius.circular(10)),
+                decoration: BoxDecoration(
+                  color: context.appSecondaryBg,
+                  borderRadius: BorderRadius.circular(10),
+                ),
                 child: Row(
                   children: [
                     Expanded(
                       child: _ThemeOption(
                         label: 'Light',
                         selected: !isDark,
-                        onTap: () => ref.read(themeNotifierProvider.notifier).setThemeMode(ThemeMode.light),
+                        onTap: () => ref
+                            .read(themeNotifierProvider.notifier)
+                            .setThemeMode(ThemeMode.light),
                       ),
                     ),
                     Expanded(
                       child: _ThemeOption(
                         label: 'Dark',
                         selected: isDark,
-                        onTap: () => ref.read(themeNotifierProvider.notifier).setThemeMode(ThemeMode.dark),
+                        onTap: () => ref
+                            .read(themeNotifierProvider.notifier)
+                            .setThemeMode(ThemeMode.dark),
                       ),
                     ),
                   ],
@@ -372,20 +438,40 @@ class _ProfileMenuContentState extends ConsumerState<_ProfileMenuContent> {
               const SizedBox(height: 14),
               Divider(height: 1, color: context.appBorder),
               const SizedBox(height: 14),
-              Text('Language', style: TextStyle(color: context.appText, fontSize: 13, fontWeight: FontWeight.w600)),
+              Text(
+                'Language',
+                style: TextStyle(
+                  color: context.appText,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
               const SizedBox(height: 8),
               InkWell(
                 borderRadius: BorderRadius.circular(10),
                 onTap: _toggleLanguageSubmenu,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                  decoration: BoxDecoration(color: context.appSecondaryBg, borderRadius: BorderRadius.circular(10)),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
+                  decoration: BoxDecoration(
+                    color: context.appSecondaryBg,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                   child: Row(
                     children: [
                       Expanded(
-                        child: Text(_localeName(context.locale.languageCode), style: TextStyle(color: context.appSubtext)),
+                        child: Text(
+                          _localeName(context.locale.languageCode),
+                          style: TextStyle(color: context.appSubtext),
+                        ),
                       ),
-                      AppIcon(AppIcons.chevronRight, size: 16, color: context.appSubtext),
+                      AppIcon(
+                        AppIcons.chevronRight,
+                        size: 16,
+                        color: context.appSubtext,
+                      ),
                     ],
                   ),
                 ),
@@ -403,9 +489,18 @@ class _ProfileMenuContentState extends ConsumerState<_ProfileMenuContent> {
                   },
                   child: Container(
                     padding: const EdgeInsets.symmetric(vertical: 12),
-                    decoration: BoxDecoration(color: context.appSecondaryBg, borderRadius: BorderRadius.circular(10)),
+                    decoration: BoxDecoration(
+                      color: context.appSecondaryBg,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
                     child: Center(
-                      child: Text('Logout', style: TextStyle(color: context.appText, fontWeight: FontWeight.w600)),
+                      child: Text(
+                        'Logout',
+                        style: TextStyle(
+                          color: context.appText,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                     ),
                   ),
                 ),
@@ -449,8 +544,14 @@ class _LanguageSubmenu extends StatelessWidget {
                 onTap: onPick,
                 child: Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                  child: Text(_localeName(code), style: TextStyle(color: context.appText, fontSize: 13)),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
+                  child: Text(
+                    _localeName(code),
+                    style: TextStyle(color: context.appText, fontSize: 13),
+                  ),
                 ),
               ),
           ],
@@ -461,7 +562,11 @@ class _LanguageSubmenu extends StatelessWidget {
 }
 
 class _ThemeOption extends StatelessWidget {
-  const _ThemeOption({required this.label, required this.selected, required this.onTap});
+  const _ThemeOption({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
 
   final String label;
   final bool selected;

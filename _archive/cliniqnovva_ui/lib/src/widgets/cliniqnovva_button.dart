@@ -76,7 +76,11 @@ class CliniqnovvaButton extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               if (icon != null) ...[
-                AppIcon(icon!, size: 18, color: textColor ?? _defaultForegroundColor(context)),
+                AppIcon(
+                  icon!,
+                  size: 18,
+                  color: textColor ?? _defaultForegroundColor(context),
+                ),
                 const SizedBox(width: AppSpacing.sm),
               ],
               Text(label),
@@ -85,38 +89,54 @@ class CliniqnovvaButton extends StatelessWidget {
 
     final Widget button = switch (_variant) {
       _ButtonVariant.filled => ElevatedButton(
-          onPressed: effectiveOnPressed,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: backgroundColor ?? AppColors.primaryBlue,
-            foregroundColor: textColor ?? Colors.white,
-            disabledBackgroundColor: (backgroundColor ?? AppColors.primaryBlue).withValues(alpha: 0.4),
-            padding: const EdgeInsets.symmetric(vertical: AppSpacing.md, horizontal: AppSpacing.xl),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            elevation: 0,
+        onPressed: effectiveOnPressed,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: backgroundColor ?? AppColors.primaryBlue,
+          foregroundColor: textColor ?? Colors.white,
+          disabledBackgroundColor: (backgroundColor ?? AppColors.primaryBlue)
+              .withValues(alpha: 0.4),
+          padding: const EdgeInsets.symmetric(
+            vertical: AppSpacing.md,
+            horizontal: AppSpacing.xl,
           ),
-          child: child,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+          elevation: 0,
         ),
+        child: child,
+      ),
       _ButtonVariant.outlined => OutlinedButton(
-          onPressed: effectiveOnPressed,
-          style: OutlinedButton.styleFrom(
-            foregroundColor: textColor ?? context.appText,
-            side: BorderSide(color: context.appBorder),
-            padding: const EdgeInsets.symmetric(vertical: AppSpacing.md, horizontal: AppSpacing.xl),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        onPressed: effectiveOnPressed,
+        style: OutlinedButton.styleFrom(
+          foregroundColor: textColor ?? context.appText,
+          side: BorderSide(color: context.appBorder),
+          padding: const EdgeInsets.symmetric(
+            vertical: AppSpacing.md,
+            horizontal: AppSpacing.xl,
           ),
-          child: child,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
         ),
+        child: child,
+      ),
       _ButtonVariant.text => TextButton(
-          onPressed: effectiveOnPressed,
-          style: TextButton.styleFrom(
-            foregroundColor: textColor ?? AppColors.primaryBlue,
-            padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm, horizontal: AppSpacing.md),
+        onPressed: effectiveOnPressed,
+        style: TextButton.styleFrom(
+          foregroundColor: textColor ?? AppColors.primaryBlue,
+          padding: const EdgeInsets.symmetric(
+            vertical: AppSpacing.sm,
+            horizontal: AppSpacing.md,
           ),
-          child: child,
         ),
+        child: child,
+      ),
     };
 
-    return isFullWidth ? SizedBox(width: double.infinity, child: button) : button;
+    return isFullWidth
+        ? SizedBox(width: double.infinity, child: button)
+        : button;
   }
 
   Color _defaultForegroundColor(BuildContext context) {

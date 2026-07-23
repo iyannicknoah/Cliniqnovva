@@ -48,7 +48,11 @@ class CliniqnovvaTextField extends StatelessWidget {
       children: [
         Text(
           label,
-          style: TextStyle(color: context.appText, fontSize: 14, fontWeight: FontWeight.w500),
+          style: TextStyle(
+            color: context.appText,
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+          ),
         ),
         const SizedBox(height: AppSpacing.sm),
         TextField(
@@ -69,7 +73,10 @@ class CliniqnovvaTextField extends StatelessWidget {
             suffixIcon: suffixIcon,
             filled: true,
             fillColor: context.appTint,
-            contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.lg,
+              vertical: AppSpacing.md,
+            ),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
               borderSide: BorderSide.none,
@@ -80,11 +87,17 @@ class CliniqnovvaTextField extends StatelessWidget {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(color: Color(0xFF2563EB), width: 1.5),
+              borderSide: const BorderSide(
+                color: Color(0xFF2563EB),
+                width: 1.5,
+              ),
             ),
             errorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(color: Color(0xFFDC2626), width: 1.2),
+              borderSide: const BorderSide(
+                color: Color(0xFFDC2626),
+                width: 1.2,
+              ),
             ),
           ),
         ),

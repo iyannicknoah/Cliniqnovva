@@ -18,7 +18,10 @@ class LoadingWidget extends StatelessWidget {
           CircularProgressIndicator(color: context.appPrimary),
           if (message != null) ...[
             const SizedBox(height: 16),
-            Text(message!, style: TextStyle(color: context.appSubtext, fontSize: 14)),
+            Text(
+              message!,
+              style: TextStyle(color: context.appSubtext, fontSize: 14),
+            ),
           ],
         ],
       ),

@@ -35,7 +35,8 @@ class _SetupPlaceholderScreen extends StatefulWidget {
   const _SetupPlaceholderScreen();
 
   @override
-  State<_SetupPlaceholderScreen> createState() => _SetupPlaceholderScreenState();
+  State<_SetupPlaceholderScreen> createState() =>
+      _SetupPlaceholderScreenState();
 }
 
 class _SetupPlaceholderScreenState extends State<_SetupPlaceholderScreen> {
@@ -80,21 +81,36 @@ class _SetupPlaceholderScreenState extends State<_SetupPlaceholderScreen> {
                 children: [
                   Text(
                     'Project setup complete — flavor: $flavor',
-                    style: TextStyle(color: context.appText, fontSize: 16, fontWeight: FontWeight.w600),
+                    style: TextStyle(
+                      color: context.appText,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                   const SizedBox(height: AppSpacing.md),
-                  const Wrap(spacing: AppSpacing.sm, children: [
-                    StatusPill(label: 'Confirmed', tone: PillTone.success),
-                    StatusPill(label: 'Pending', tone: PillTone.warning),
-                    StatusPill(label: 'Cancelled', tone: PillTone.error),
-                  ]),
+                  const Wrap(
+                    spacing: AppSpacing.sm,
+                    children: [
+                      StatusPill(label: 'Confirmed', tone: PillTone.success),
+                      StatusPill(label: 'Pending', tone: PillTone.warning),
+                      StatusPill(label: 'Cancelled', tone: PillTone.error),
+                    ],
+                  ),
                 ],
               ),
             ),
             const SizedBox(height: AppSpacing.xl),
-            CliniqnovvaTextField(label: l10n.searchClinics, controller: _nameController, hint: 'e.g. Kimihurura'),
+            CliniqnovvaTextField(
+              label: l10n.searchClinics,
+              controller: _nameController,
+              hint: 'e.g. Kimihurura',
+            ),
             const SizedBox(height: AppSpacing.lg),
-            CliniqnovvaButton(label: l10n.bookAppointment, icon: AppIcons.eventAvailableRounded, onPressed: () {}),
+            CliniqnovvaButton(
+              label: l10n.bookAppointment,
+              icon: AppIcons.eventAvailableRounded,
+              onPressed: () {},
+            ),
           ],
         ),
       ),
