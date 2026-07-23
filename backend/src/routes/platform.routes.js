@@ -11,6 +11,7 @@ router.use(verifyToken, attachScope, requireRole(ROLES.SUPER_ADMIN));
 
 router.get('/search', controller.search);
 router.get('/metrics', controller.getMetrics);
+router.get('/revenue-trend', controller.getRevenueTrend);
 router.get('/audit-log', controller.getAuditLog);
 router.get('/record/:collection/:id', controller.viewRecord);
 router.post('/support-view/:organizationId', controller.startSupportView);

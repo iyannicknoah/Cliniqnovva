@@ -167,4 +167,48 @@ async function endSupportView(organizationId, sessionId, actorId) {
   });
 }
 
-module.exports = { search, getMetrics, getAuditLog, viewRecord, startSupportView, endSupportView, VIEWABLE_COLLECTIONS };
+/**
+ * Super Admin Overview page — real monthly revenue growth, aggregated from
+ * every organization's `subscriptionPaymentHistory` (Part 4), grouped by the
+ * calendar month each payment was recorded on. Cash-only bookkeeping, same
+ * as the rest of billing — this is a sum of recorded payments, not a
+ * projection or a gateway feed.
+ */
+async function getRevenueTrend({ months = 12 } = {}) {
+  const monthCount = Math.min(Math.max(Number(months) || 12, 1), 36);
+  const now = new Date();
+  const buckets = new Map();
+  const ordered = [];
+  for (let i = monthCount - 1; i >= 0; i--) {
+    const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i, 1));
+    const key = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
+    buckets.set(key, 0);
+    ordered.push(key);
+  }
+
+  const snapshot = await db.collection('organizations').get();
+  snapshot.docs.forEach((doc) => {
+    const payments = doc.data().subscriptionPaymentHistory || [];
+    payments.forEach((payment) => {
+      const paidAt = new Date(payment.date);
+      if (Number.isNaN(paidAt.getTime())) return;
+      const key = `${paidAt.getUTCFullYear()}-${String(paidAt.getUTCMonth() + 1).padStart(2, '0')}`;
+      if (buckets.has(key)) {
+        buckets.set(key, buckets.get(key) + (payment.amountRwf || 0));
+      }
+    });
+  });
+
+  return ordered.map((key) => ({ month: key, revenueRwf: buckets.get(key) }));
+}
+
+module.exports = {
+  search,
+  getMetrics,
+  getAuditLog,
+  viewRecord,
+  startSupportView,
+  endSupportView,
+  getRevenueTrend,
+  VIEWABLE_COLLECTIONS,
+};

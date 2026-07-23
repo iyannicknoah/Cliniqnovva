@@ -11,7 +11,7 @@ Future<bool> confirmOrganizationStatusChange(
   final confirmed = await showDialog<bool>(
     context: context,
     builder: (dialogContext) => AlertDialog(
-      title: Text(activate ? 'Activate organization?' : 'Suspend organization?'),
+      title: Text(activate ? 'Activate clinic?' : 'Suspend clinic?'),
       content: Text(
         activate
             ? '$organizationName will regain access immediately.'

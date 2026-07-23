@@ -111,3 +111,31 @@ class AuditLogEntry {
     timestamp: json['timestamp'] != null ? DateTime.tryParse(json['timestamp'] as String) : null,
   );
 }
+
+/// One month's worth of real recorded revenue (sum of every organization's
+/// cash payments that month) — backs the Overview page's revenue chart.
+/// `month` is `"YYYY-MM"`.
+class RevenueTrendPoint {
+  const RevenueTrendPoint({required this.month, required this.revenueRwf});
+
+  final String month;
+  final int revenueRwf;
+
+  factory RevenueTrendPoint.fromJson(Map<String, dynamic> json) => RevenueTrendPoint(
+    month: json['month'] as String? ?? '',
+    revenueRwf: json['revenueRwf'] as int? ?? 0,
+  );
+
+  /// Short label for a chart axis, e.g. "2026-07" -> "Jul".
+  String get monthLabel {
+    const names = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+    ];
+    final parts = month.split('-');
+    if (parts.length != 2) return month;
+    final index = int.tryParse(parts[1]);
+    if (index == null || index < 1 || index > 12) return month;
+    return names[index - 1];
+  }
+}

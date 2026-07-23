@@ -22,8 +22,14 @@ extension AppThemeX on BuildContext {
 
   /// A subtle neutral fill, distinct from [appBg]/[appCard] — used for
   /// interactive-state highlights (active nav item, theme-toggle track,
-  /// menu-row hover) where a flat gray reads better than the brand lime.
+  /// menu-row hover) where a flat gray reads better than a colored accent.
   Color get appSecondaryBg => isDark ? Colors.white.withValues(alpha: 0.08) : const Color(0xFFF3F4F6);
+
+  /// The system "primary" color (rule 2026-07-24): black in light mode,
+  /// white in dark mode — retired the brand lime entirely. Use this for
+  /// anything that used to reach for `AppColors.primary` (focus borders,
+  /// avatar rings, spinners) — never reintroduce a colored accent here.
+  Color get appPrimary => isDark ? Colors.white : Colors.black;
 
   BoxDecoration cardDeco([double radius = 18]) => BoxDecoration(
     color: appCard,

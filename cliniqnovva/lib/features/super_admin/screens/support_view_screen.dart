@@ -96,7 +96,7 @@ class _SupportViewScreenState extends ConsumerState<SupportViewScreen> {
           const SizedBox(height: 24),
           detailAsync.when(
             loading: () => const Padding(padding: EdgeInsets.all(40), child: Center(child: CircularProgressIndicator())),
-            error: (err, _) => Text('Failed to load organization: $err'),
+            error: (err, _) => Text('Failed to load clinic: $err'),
             data: (org) {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -117,7 +117,7 @@ class _SupportViewScreenState extends ConsumerState<SupportViewScreen> {
                   ),
                   const SizedBox(height: 24),
                   CliniqnovvaCard(
-                    title: 'Organization info',
+                    title: 'Clinic info',
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [

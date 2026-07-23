@@ -4,11 +4,6 @@ import 'package:flutter/material.dart';
 /// project's design system — do not change them without an explicit
 /// instruction to update the design language.
 abstract final class AppColors {
-  /// Extracted from the reference design language's Overview chart (the
-  /// primary line's translucent area-fill `Color(0x0ACFFF04)`, alpha
-  /// stripped) — confirmed with the user 2026-07-18 before replacing the
-  /// previous teal (#2A9D8F).
-  static const Color primary = Color(0xFFCFFF04);
   static const Color deepNavy = Color(0xFF0B2545);
 
   /// Page/scaffold background, input fill, and container backgrounds across
@@ -35,6 +30,12 @@ abstract final class AppColors {
   static const Color pillRedText = Color(0xFFC81E2C);
   static const Color pillTealBg = Color(0xFFE3F3F1);
   static const Color pillTealText = Color(0xFF1F6F64);
+
+  /// Bright, no-background status text (2026-07-23) — used by [StatusBadge]
+  /// for success/error states (Active/Paid vs Suspended/Overdue) across the
+  /// whole system: no pill fill, just vivid colored text.
+  static const Color brightGreen = Color(0xFF34C759);
+  static const Color brightRed = Color(0xFFFF3B30);
 
   /// One unique 2-color gradient per letter A-Z, used for avatar-initial
   /// circles when a person has no photo. Look up by the first letter of a
@@ -69,5 +70,8 @@ abstract final class AppColors {
   };
 
   /// Fallback gradient for a name that doesn't start with A-Z (rare).
-  static const List<Color> fallbackGradient = [Color(0xFF2A9D8F), Color(0xFF0B2545)];
+  static const List<Color> fallbackGradient = [
+    Color(0xFF2A9D8F),
+    Color(0xFF0B2545),
+  ];
 }

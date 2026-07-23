@@ -60,4 +60,13 @@ async function endSupportView(req, res, next) {
   }
 }
 
-module.exports = { search, getMetrics, getAuditLog, viewRecord, startSupportView, endSupportView };
+async function getRevenueTrend(req, res, next) {
+  try {
+    const revenueTrend = await platformService.getRevenueTrend({ months: req.query.months });
+    res.json({ revenueTrend });
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { search, getMetrics, getAuditLog, viewRecord, startSupportView, endSupportView, getRevenueTrend };

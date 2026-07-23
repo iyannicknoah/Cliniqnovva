@@ -34,6 +34,7 @@ import '../../features/super_admin/screens/billing_screen.dart';
 import '../../features/super_admin/screens/organization_detail_screen.dart';
 import '../../features/super_admin/screens/organizations_screen.dart';
 import '../../features/super_admin/screens/oversight_screen.dart';
+import '../../features/super_admin/screens/overview_screen.dart';
 import '../../features/super_admin/screens/support_view_screen.dart';
 import '../constants/app_constants.dart';
 
@@ -53,7 +54,7 @@ const _orgScopedRolesForSuspension = [
 String _homeRouteForRole(String role) {
   switch (role) {
     case AppConstants.roleSuperAdmin:
-      return '/super-admin/organizations';
+      return '/super-admin/overview';
     case AppConstants.roleDoctor:
     case AppConstants.roleNurse:
       return '/staff-home';
@@ -149,6 +150,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/suspended', builder: (context, state) => const SuspendedScreen()),
       GoRoute(path: '/dashboard', builder: (context, state) => const DashboardScreen()),
 
+      GoRoute(
+        path: '/super-admin/overview',
+        builder: (context, state) => const OverviewScreen(),
+      ),
       GoRoute(
         path: '/super-admin/organizations',
         builder: (context, state) => const OrganizationsScreen(),

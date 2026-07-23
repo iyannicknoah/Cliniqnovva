@@ -70,6 +70,61 @@ async function createStaffInvite({ email, phone, name, role, organizationId, bra
 }
 
 /**
+ * Creates the Firebase Auth user + Firestore /users doc for a new clinic
+ * (organization) admin using a password the Super Admin sets directly —
+ * no invite link, no email. Used by organizations.controller.js's create()
+ * so the Super Admin can hand the clinic admin working credentials on the spot.
+ */
+async function createStaffAccountWithPassword({ email, password, name, role, organizationId, branchId, invitedBy }) {
+  if (!ALL_ROLES.includes(role)) {
+    const err = new Error(`Unknown role "${role}"`);
+    err.status = 400;
+    throw err;
+  }
+  if (!email || !password) {
+    const err = new Error('Email and password are required');
+    err.status = 400;
+    throw err;
+  }
+
+  const userRecord = await auth.createUser({
+    email,
+    password,
+    displayName: name,
+  });
+
+  await auth.setCustomUserClaims(userRecord.uid, { role, organizationId, branchId: branchId || null });
+
+  await db
+    .collection('users')
+    .doc(userRecord.uid)
+    .set({
+      role,
+      organizationId,
+      branchId: branchId || null,
+      name,
+      email,
+      phone: null,
+      preferredLanguage: 'en',
+      isActive: true,
+      inviteStatus: 'active',
+      createdAt: new Date().toISOString(),
+    });
+
+  await db.collection('auditLogs').add({
+    actorId: invitedBy || null,
+    actorRole: 'system',
+    action: 'staff.accountCreated',
+    targetCollection: 'users',
+    targetId: userRecord.uid,
+    organizationId,
+    timestamp: new Date().toISOString(),
+  });
+
+  return { uid: userRecord.uid };
+}
+
+/**
  * Sets/updates a user's Firebase custom claims AND keeps the mirrored
  * Firestore /users doc fields in sync (Part 2 Task 6: POST /api/auth/set-claims).
  */
@@ -91,4 +146,4 @@ async function setUserClaims({ uid, role, organizationId, branchId }) {
   return claims;
 }
 
-module.exports = { createStaffInvite, setUserClaims };
+module.exports = { createStaffInvite, createStaffAccountWithPassword, setUserClaims };

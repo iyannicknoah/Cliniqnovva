@@ -23,14 +23,23 @@ async function getById(req, res, next) {
   }
 }
 
-// Part 3 Task 2: creates the organization, then invites its Organization
-// Admin (Part 2 Task 6's staff-invite flow) — no password is set here.
+// Part 3 Task 2 (updated): creates the organization, then creates its
+// Organization Admin account directly with the password the Super Admin
+// set — no invite email, no password-reset link.
 async function create(req, res, next) {
   try {
-    const { name, subscriptionPlan, ownerContactName, ownerContactPhone, adminEmail, billingCycle, subscriptionAmountRwf } =
-      req.body;
-    if (!name || !subscriptionPlan || !adminEmail) {
-      return res.status(400).json({ error: 'name, subscriptionPlan, and adminEmail are required' });
+    const {
+      name,
+      subscriptionPlan,
+      ownerContactName,
+      ownerContactPhone,
+      adminEmail,
+      adminPassword,
+      billingCycle,
+      subscriptionAmountRwf,
+    } = req.body;
+    if (!name || !subscriptionPlan || !adminEmail || !adminPassword) {
+      return res.status(400).json({ error: 'name, subscriptionPlan, adminEmail, and adminPassword are required' });
     }
 
     const organization = await organizationsService.create({
@@ -42,8 +51,9 @@ async function create(req, res, next) {
       subscriptionAmountRwf,
     });
 
-    const invite = await authService.createStaffInvite({
+    const account = await authService.createStaffAccountWithPassword({
       email: adminEmail,
+      password: adminPassword,
       name: ownerContactName || name,
       role: ROLES.ORGANIZATION_ADMIN,
       organizationId: organization.id,
@@ -51,7 +61,7 @@ async function create(req, res, next) {
       invitedBy: req.user?.uid,
     });
 
-    res.status(201).json({ organization, invite });
+    res.status(201).json({ organization, account });
   } catch (err) {
     next(err);
   }
@@ -83,6 +93,19 @@ async function remove(req, res) {
   res.status(501).json({ error: 'Not implemented yet: remove organizations' });
 }
 
+async function setBillingStatus(req, res, next) {
+  try {
+    const { billingStatus } = req.body;
+    if (!billingStatus) {
+      return res.status(400).json({ error: 'billingStatus is required' });
+    }
+    const organization = await organizationsService.setBillingStatus(req.params.id, billingStatus, req.user?.uid);
+    res.json({ organization });
+  } catch (err) {
+    next(err);
+  }
+}
+
 // Part 4 Task 3 — cash-only record-keeping, no payment gateway involved.
 async function recordPayment(req, res, next) {
   try {
@@ -108,4 +131,14 @@ async function getPaymentHistory(req, res, next) {
   }
 }
 
-module.exports = { list, getById, create, update, setStatus, remove, recordPayment, getPaymentHistory };
+module.exports = {
+  list,
+  getById,
+  create,
+  update,
+  setStatus,
+  setBillingStatus,
+  remove,
+  recordPayment,
+  getPaymentHistory,
+};

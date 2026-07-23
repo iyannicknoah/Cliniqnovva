@@ -25,10 +25,9 @@ class SuperAdminBillingScreen extends ConsumerWidget {
 
   (String, BadgeType) _statusLabel(String billingStatus) {
     return switch (billingStatus) {
-      'overdue' => ('Overdue', BadgeType.error),
-      'dueSoon' => ('Due soon', BadgeType.warning),
       'paid' => ('Paid', BadgeType.success),
-      _ => ('Unknown', BadgeType.info),
+      'pending' => ('Pending', BadgeType.warning),
+      _ => ('Not Paid', BadgeType.error),
     };
   }
 
@@ -40,24 +39,59 @@ class SuperAdminBillingScreen extends ConsumerWidget {
       currentRoute: '/super-admin/billing',
       title: 'Platform Billing',
       body: organizationsAsync.when(
-        loading: () => const Padding(padding: EdgeInsets.all(40), child: Center(child: CircularProgressIndicator())),
-        error: (err, _) => Text('Failed to load organizations: $err'),
+        loading: () => const Padding(
+          padding: EdgeInsets.all(40),
+          child: Center(child: CircularProgressIndicator()),
+        ),
+        error: (err, _) => Text('Failed to load clinics: $err'),
         data: (organizations) {
           final active = organizations.where((o) => o.isActive).toList();
-          final totalMonthlyRevenue = active.fold<double>(0, (sum, o) => sum + o.monthlyEquivalentRwf);
-          final paidThisCycle = active.where((o) => o.billingStatus == 'paid').length;
-          final overdue = active.where((o) => o.billingStatus == 'overdue').length;
+          final totalMonthlyRevenue = active.fold<double>(
+            0,
+            (sum, o) => sum + o.monthlyEquivalentRwf,
+          );
+          final paidThisCycle = active
+              .where((o) => o.billingStatus == 'paid')
+              .length;
+          final pending = active
+              .where((o) => o.billingStatus == 'pending')
+              .length;
+          final notPaid = active
+              .where((o) => o.billingStatus == 'notPaid')
+              .length;
 
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 children: [
-                  Expanded(child: MetricCard(value: formatRwf(totalMonthlyRevenue), label: 'Total monthly revenue')),
+                  Expanded(
+                    child: MetricCard(
+                      value: formatRwf(totalMonthlyRevenue),
+                      label: 'Total monthly revenue',
+                    ),
+                  ),
                   const SizedBox(width: 16),
-                  Expanded(child: MetricCard(value: '$paidThisCycle', label: 'Organizations paid this cycle')),
+                  Expanded(
+                    child: MetricCard(
+                      value: '$paidThisCycle',
+                      label: 'Clinics paid this cycle',
+                    ),
+                  ),
                   const SizedBox(width: 16),
-                  Expanded(child: MetricCard(value: '$overdue', label: 'Organizations overdue')),
+                  Expanded(
+                    child: MetricCard(
+                      value: '$pending',
+                      label: 'Clinics pending',
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: MetricCard(
+                      value: '$notPaid',
+                      label: 'Clinics not paid',
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: 24),
@@ -65,11 +99,22 @@ class SuperAdminBillingScreen extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const CliniqnovvaTableHeader(columns: ['Organization', 'Plan', 'Amount (RWF)', 'Next due', 'Status']),
+                    const CliniqnovvaTableHeader(
+                      columns: [
+                        'Clinic',
+                        'Plan',
+                        'Amount (RWF)',
+                        'Next due',
+                        'Status',
+                      ],
+                    ),
                     if (organizations.isEmpty)
                       Padding(
                         padding: const EdgeInsets.symmetric(vertical: 24),
-                        child: Text('No organizations yet.', style: TextStyle(color: context.appSubtext)),
+                        child: Text(
+                          'No clinics yet.',
+                          style: TextStyle(color: context.appSubtext),
+                        ),
                       )
                     else
                       for (final org in organizations)
@@ -90,8 +135,13 @@ class SuperAdminBillingScreen extends ConsumerWidget {
   List<Widget> _buildRowCells(BuildContext context, Organization org) {
     final (label, type) = _statusLabel(org.billingStatus);
     return [
-      Text(org.name, style: TextStyle(color: context.appText, fontWeight: FontWeight.w600)),
-      Text('${org.subscriptionPlan[0].toUpperCase()}${org.subscriptionPlan.substring(1)}'),
+      Text(
+        org.name,
+        style: TextStyle(color: context.appText, fontWeight: FontWeight.w600),
+      ),
+      Text(
+        '${org.subscriptionPlan[0].toUpperCase()}${org.subscriptionPlan.substring(1)}',
+      ),
       Text(formatRwf(org.subscriptionAmountRwf)),
       Text(_formatDate(org.nextDueDate)),
       StatusBadge(text: label, type: type),

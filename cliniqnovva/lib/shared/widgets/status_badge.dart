@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 
 import '../../core/theme/app_colors.dart';
 
-/// Semantic type for a [StatusBadge] — picks a pill color pair from
+/// Semantic type for a [StatusBadge] — picks a text color from
 /// app_colors.dart.
 enum BadgeType { success, warning, error, info }
 
-/// The single status-pill component (appointment status, invoice status,
-/// active/inactive, etc.) — radius 100px, colors from AppColors.
+/// The single status-label component (appointment status, invoice status,
+/// active/inactive, paid/overdue, etc.) — plain colored text, no pill
+/// background (2026-07-23: dropped the filled-pill style system-wide in
+/// favor of bright, no-background status text).
 class StatusBadge extends StatelessWidget {
   const StatusBadge({super.key, required this.text, required this.type});
 
@@ -16,17 +18,16 @@ class StatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final (bg, fg) = switch (type) {
-      BadgeType.success => (AppColors.pillGreenBg, AppColors.pillGreenText),
-      BadgeType.warning => (AppColors.pillAmberBg, AppColors.pillAmberText),
-      BadgeType.error => (AppColors.pillRedBg, AppColors.pillRedText),
-      BadgeType.info => (AppColors.pillTealBg, AppColors.pillTealText),
+    final color = switch (type) {
+      BadgeType.success => AppColors.brightGreen,
+      BadgeType.warning => AppColors.pillAmberText,
+      BadgeType.error => AppColors.brightRed,
+      BadgeType.info => AppColors.pillTealText,
     };
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(100)),
-      child: Text(text, style: TextStyle(color: fg, fontSize: 13, fontWeight: FontWeight.w500)),
+    return Text(
+      text,
+      style: TextStyle(color: color, fontSize: 13, fontWeight: FontWeight.w600),
     );
   }
 }

@@ -14,7 +14,13 @@ import '../../auth/providers/auth_provider.dart';
 /// once Parts 4-5 build them) so the sidebar/topbar aren't duplicated per screen.
 const superAdminNavItems = [
   SidebarNavItem(
-    label: 'Organizations',
+    label: 'Overview',
+    icon: AppIcons.overview,
+    route: '/super-admin/overview',
+    allowedRoles: [AppConstants.roleSuperAdmin],
+  ),
+  SidebarNavItem(
+    label: 'Clinics',
     icon: AppIcons.organizations,
     route: '/super-admin/organizations',
     allowedRoles: [AppConstants.roleSuperAdmin],

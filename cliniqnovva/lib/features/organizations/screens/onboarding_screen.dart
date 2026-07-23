@@ -16,7 +16,7 @@ class OnboardingScreen extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             const Text(
-              'Organization Onboarding',
+              'Clinic Onboarding',
               style: TextStyle(color: AppColors.textPrimary, fontSize: 20, fontWeight: FontWeight.w600),
             ),
           ],

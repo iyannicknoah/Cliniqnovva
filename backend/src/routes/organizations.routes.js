@@ -13,6 +13,7 @@ router.get('/:id', requireRole(ROLES.SUPER_ADMIN, ROLES.ORGANIZATION_ADMIN), con
 router.post('/', requireRole(ROLES.SUPER_ADMIN), controller.create);
 router.put('/:id', requireRole(ROLES.SUPER_ADMIN), controller.update);
 router.put('/:id/status', requireRole(ROLES.SUPER_ADMIN), controller.setStatus);
+router.put('/:id/billing-status', requireRole(ROLES.SUPER_ADMIN), controller.setBillingStatus);
 router.post('/:id/record-payment', requireRole(ROLES.SUPER_ADMIN), controller.recordPayment);
 router.get('/:id/payment-history', requireRole(ROLES.SUPER_ADMIN), controller.getPaymentHistory);
 router.delete('/:id', requireRole(ROLES.SUPER_ADMIN), controller.remove);

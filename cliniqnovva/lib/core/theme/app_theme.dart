@@ -28,18 +28,102 @@ abstract final class AppTheme {
     return Theme.of(context).brightness == Brightness.dark ? AppColors.pageBackgroundDark : AppColors.pageBackground;
   }
 
+  /// `showDatePicker`'s default Material 3 styling derives its colors from
+  /// `ColorScheme.fromSeed(seedColor: AppColors.primary)` — since our seed is
+  /// the brand lime, that produced a beige/olive-tinted calendar completely
+  /// off the app's black/white design system. Themed explicitly instead
+  /// (2026-07-24): white/black background+text, black/white circle for the
+  /// selected day, and a bordered (not filled) circle for today — same
+  /// light/dark inversion `CliniqnovvaButton` already uses.
+  static DatePickerThemeData _datePickerTheme({required bool isDark}) {
+    final bg = isDark ? AppColors.pageBackgroundDark : AppColors.pageBackground;
+    final fg = isDark ? Colors.white : Colors.black;
+    final selectedBg = isDark ? Colors.white : Colors.black;
+    final selectedFg = isDark ? Colors.black : Colors.white;
+    final borderColor = isDark ? const Color(0xFF2A2A2A) : AppColors.cardBorder;
+
+    Color dayColor(Set<WidgetState> states, {required Color selected, required Color normal}) {
+      if (states.contains(WidgetState.selected)) return selected;
+      if (states.contains(WidgetState.disabled)) return normal.withValues(alpha: 0.35);
+      return normal;
+    }
+
+    return DatePickerThemeData(
+      backgroundColor: bg,
+      surfaceTintColor: Colors.transparent,
+      headerBackgroundColor: bg,
+      headerForegroundColor: fg,
+      weekdayStyle: TextStyle(color: fg),
+      dayForegroundColor: WidgetStateProperty.resolveWith(
+        (states) => dayColor(states, selected: selectedFg, normal: fg),
+      ),
+      dayBackgroundColor: WidgetStateProperty.resolveWith(
+        (states) => states.contains(WidgetState.selected) ? selectedBg : Colors.transparent,
+      ),
+      dayOverlayColor: WidgetStateProperty.resolveWith(
+        (states) => states.contains(WidgetState.hovered) || states.contains(WidgetState.pressed)
+            ? fg.withValues(alpha: 0.08)
+            : Colors.transparent,
+      ),
+      // Today: a bordered circle, filled only if also selected.
+      todayForegroundColor: WidgetStateProperty.resolveWith(
+        (states) => dayColor(states, selected: selectedFg, normal: fg),
+      ),
+      todayBackgroundColor: WidgetStateProperty.resolveWith(
+        (states) => states.contains(WidgetState.selected) ? selectedBg : Colors.transparent,
+      ),
+      todayBorder: BorderSide(color: fg, width: 1),
+      yearForegroundColor: WidgetStateProperty.resolveWith(
+        (states) => dayColor(states, selected: selectedFg, normal: fg),
+      ),
+      yearBackgroundColor: WidgetStateProperty.resolveWith(
+        (states) => states.contains(WidgetState.selected) ? selectedBg : Colors.transparent,
+      ),
+      dividerColor: borderColor,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: BorderSide(color: borderColor)),
+      cancelButtonStyle: TextButton.styleFrom(foregroundColor: fg),
+      confirmButtonStyle: TextButton.styleFrom(foregroundColor: fg),
+    );
+  }
+
+  /// Every dialog (`AlertDialog`/`SimpleDialog`) in the app was inheriting
+  /// ad-hoc Material defaults — no shared title/body text scale, and a beige
+  /// wash from the same M3 elevation-tint issue as the date picker. Themed
+  /// globally (2026-07-24) so every dialog automatically matches: page-flat
+  /// background (no shadow, border only — "no mixing colors"), ONE title
+  /// style and ONE content style used everywhere.
+  static DialogThemeData _dialogTheme({required bool isDark}) {
+    final bg = isDark ? AppColors.pageBackgroundDark : AppColors.pageBackground;
+    final fg = isDark ? Colors.white : AppColors.textPrimary;
+    final sub = isDark ? const Color(0xFF8A9BBC) : AppColors.textSecondary;
+    final borderColor = isDark ? const Color(0xFF2A2A2A) : AppColors.cardBorder;
+
+    return DialogThemeData(
+      backgroundColor: bg,
+      surfaceTintColor: Colors.transparent,
+      elevation: 0,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18), side: BorderSide(color: borderColor)),
+      titleTextStyle: TextStyle(color: fg, fontFamily: fontFamily, fontSize: 18, fontWeight: FontWeight.w600),
+      contentTextStyle: TextStyle(color: sub, fontFamily: fontFamily, fontSize: 14, height: 1.4),
+    );
+  }
+
   static ThemeData lightTheme() {
+    // Seeded from black, not the old brand lime (retired 2026-07-24) — the
+    // system "primary" is black in light mode, white in dark. This also
+    // fixes every default-Material-styled control (dialog action buttons,
+    // etc.) that reads `colorScheme.primary` without us touching it directly.
     final colorScheme = ColorScheme.fromSeed(
-      seedColor: AppColors.primary,
+      seedColor: Colors.black,
       brightness: Brightness.light,
     );
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.light,
-      colorScheme: colorScheme.copyWith(primary: AppColors.primary),
+      colorScheme: colorScheme.copyWith(primary: Colors.black),
       scaffoldBackgroundColor: AppColors.pageBackground,
       cardColor: Colors.white,
-      primaryColor: AppColors.primary,
+      primaryColor: Colors.black,
       fontFamily: fontFamily,
       textTheme: const TextTheme().apply(
         fontFamily: fontFamily,
@@ -47,21 +131,23 @@ abstract final class AppTheme {
         displayColor: AppColors.textPrimary,
       ),
       dividerColor: AppColors.cardBorder,
+      datePickerTheme: _datePickerTheme(isDark: false),
+      dialogTheme: _dialogTheme(isDark: false),
     );
   }
 
   static ThemeData darkTheme() {
     final colorScheme = ColorScheme.fromSeed(
-      seedColor: AppColors.primary,
+      seedColor: Colors.white,
       brightness: Brightness.dark,
     );
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.dark,
-      colorScheme: colorScheme.copyWith(primary: AppColors.primary),
+      colorScheme: colorScheme.copyWith(primary: Colors.white),
       scaffoldBackgroundColor: AppColors.pageBackgroundDark,
       cardColor: AppColors.pageBackgroundDark,
-      primaryColor: AppColors.primary,
+      primaryColor: Colors.white,
       fontFamily: fontFamily,
       textTheme: const TextTheme().apply(
         fontFamily: fontFamily,
@@ -69,6 +155,8 @@ abstract final class AppTheme {
         displayColor: Colors.white,
       ),
       dividerColor: const Color(0xFF2A2A2A),
+      datePickerTheme: _datePickerTheme(isDark: true),
+      dialogTheme: _dialogTheme(isDark: true),
     );
   }
 }

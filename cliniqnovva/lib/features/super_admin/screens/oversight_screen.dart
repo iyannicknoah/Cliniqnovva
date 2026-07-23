@@ -126,7 +126,7 @@ class _OversightScreenState extends ConsumerState<OversightScreen> {
             error: (err, _) => Text('Failed to load metrics: $err'),
             data: (metrics) => Row(
               children: [
-                Expanded(child: MetricCard(value: '${metrics.totalOrganizations}', label: 'Organizations')),
+                Expanded(child: MetricCard(value: '${metrics.totalOrganizations}', label: 'Clinics')),
                 const SizedBox(width: 12),
                 Expanded(child: MetricCard(value: '${metrics.totalBranches}', label: 'Branches')),
                 const SizedBox(width: 12),
@@ -141,7 +141,7 @@ class _OversightScreenState extends ConsumerState<OversightScreen> {
           const SizedBox(height: 24),
 
           CliniqnovvaCard(
-            title: 'Search branches & staff (all organizations)',
+            title: 'Search branches & staff (all clinics)',
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -168,7 +168,7 @@ class _OversightScreenState extends ConsumerState<OversightScreen> {
                         children: [
                           if (results.branches.isNotEmpty) ...[
                             Text('Branches', style: TextStyle(color: context.appText, fontWeight: FontWeight.w600)),
-                            const CliniqnovvaTableHeader(columns: ['Name', 'Organization', 'Address']),
+                            const CliniqnovvaTableHeader(columns: ['Name', 'Clinic', 'Address']),
                             for (final b in results.branches)
                               CliniqnovvaTableRow(
                                 cells: [
@@ -181,7 +181,7 @@ class _OversightScreenState extends ConsumerState<OversightScreen> {
                           ],
                           if (results.staff.isNotEmpty) ...[
                             Text('Staff', style: TextStyle(color: context.appText, fontWeight: FontWeight.w600)),
-                            const CliniqnovvaTableHeader(columns: ['Name', 'Role', 'Organization', 'Email']),
+                            const CliniqnovvaTableHeader(columns: ['Name', 'Role', 'Clinic', 'Email']),
                             for (final s in results.staff)
                               CliniqnovvaTableRow(
                                 cells: [
@@ -203,7 +203,7 @@ class _OversightScreenState extends ConsumerState<OversightScreen> {
           const SizedBox(height: 24),
 
           CliniqnovvaCard(
-            title: 'View a record (any organization) — read-only, every view is logged',
+            title: 'View a record (any clinic) — read-only, every view is logged',
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -276,7 +276,7 @@ class _OversightScreenState extends ConsumerState<OversightScreen> {
           const SizedBox(height: 24),
 
           CliniqnovvaCard(
-            title: 'Platform audit log (all organizations)',
+            title: 'Platform audit log (all clinics)',
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -290,7 +290,7 @@ class _OversightScreenState extends ConsumerState<OversightScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Organization',
+                            'Clinic',
                             style: TextStyle(color: context.appText, fontSize: 14, fontWeight: FontWeight.w500),
                           ),
                           const SizedBox(height: 8),
@@ -301,7 +301,7 @@ class _OversightScreenState extends ConsumerState<OversightScreen> {
                               initialValue: _filterOrgId,
                               decoration: _dropdownDecoration(context),
                               items: [
-                                const DropdownMenuItem(value: null, child: Text('All organizations')),
+                                const DropdownMenuItem(value: null, child: Text('All clinics')),
                                 for (final org in orgs) DropdownMenuItem(value: org.id, child: Text(org.name)),
                               ],
                               onChanged: (value) => setState(() => _filterOrgId = value),
@@ -372,7 +372,7 @@ class _OversightScreenState extends ConsumerState<OversightScreen> {
                   ],
                 ),
                 const SizedBox(height: 20),
-                const CliniqnovvaTableHeader(columns: ['Time', 'Action', 'Actor', 'Organization', 'Target']),
+                const CliniqnovvaTableHeader(columns: ['Time', 'Action', 'Actor', 'Clinic', 'Target']),
                 auditLogAsync.when(
                   loading: () => const Padding(padding: EdgeInsets.all(24), child: Center(child: CircularProgressIndicator())),
                   error: (err, _) => Padding(

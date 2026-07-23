@@ -60,7 +60,7 @@ class CliniqnovvaTextField extends StatelessWidget {
             contentPadding: const EdgeInsetsDirectional.fromSTEB(14, 15, 15, 15),
             border: _border(context.appBorder),
             enabledBorder: _border(context.appBorder),
-            focusedBorder: _border(AppColors.primary),
+            focusedBorder: _border(context.appPrimary),
             errorBorder: _border(AppColors.errorRed),
             focusedErrorBorder: _border(AppColors.errorRed),
           ),

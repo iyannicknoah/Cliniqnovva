@@ -17,24 +17,25 @@ const _planBranchLimitLabels = {
   AppConstants.planEnterprise: 'Unlimited branches',
 };
 
-/// Part 3 Task 2 — 480px slide-out panel from the right.
+/// Part 3 Task 2 — 480px centered modal.
 Future<void> showAddOrganizationPanel(BuildContext context) {
   return showGeneralDialog(
     context: context,
     barrierDismissible: true,
-    barrierLabel: 'Add Organization',
+    barrierLabel: 'Add Clinic',
     barrierColor: Colors.black45,
-    transitionDuration: const Duration(milliseconds: 250),
-    pageBuilder: (context, animation, secondaryAnimation) => const Align(
-      alignment: Alignment.centerRight,
-      child: _AddOrganizationPanel(),
-    ),
+    transitionDuration: const Duration(milliseconds: 200),
+    pageBuilder: (context, animation, secondaryAnimation) =>
+        const Center(child: _AddOrganizationPanel()),
     transitionBuilder: (context, animation, secondaryAnimation, child) {
-      final offset = Tween<Offset>(
-        begin: const Offset(1, 0),
-        end: Offset.zero,
-      ).animate(CurvedAnimation(parent: animation, curve: Curves.easeOut));
-      return SlideTransition(position: offset, child: child);
+      final curved = CurvedAnimation(parent: animation, curve: Curves.easeOut);
+      return FadeTransition(
+        opacity: curved,
+        child: ScaleTransition(
+          scale: Tween<double>(begin: 0.96, end: 1).animate(curved),
+          child: child,
+        ),
+      );
     },
   );
 }
@@ -43,7 +44,8 @@ class _AddOrganizationPanel extends ConsumerStatefulWidget {
   const _AddOrganizationPanel();
 
   @override
-  ConsumerState<_AddOrganizationPanel> createState() => _AddOrganizationPanelState();
+  ConsumerState<_AddOrganizationPanel> createState() =>
+      _AddOrganizationPanelState();
 }
 
 class _AddOrganizationPanelState extends ConsumerState<_AddOrganizationPanel> {
@@ -51,7 +53,10 @@ class _AddOrganizationPanelState extends ConsumerState<_AddOrganizationPanel> {
   final _ownerNameController = TextEditingController();
   final _ownerPhoneController = TextEditingController();
   final _adminEmailController = TextEditingController();
+  final _adminPasswordController = TextEditingController();
+  final _subscriptionAmountController = TextEditingController();
   String _plan = AppConstants.planBasic;
+  bool _obscurePassword = true;
   bool _saving = false;
   String? _error;
 
@@ -61,14 +66,24 @@ class _AddOrganizationPanelState extends ConsumerState<_AddOrganizationPanel> {
     _ownerNameController.dispose();
     _ownerPhoneController.dispose();
     _adminEmailController.dispose();
+    _adminPasswordController.dispose();
+    _subscriptionAmountController.dispose();
     super.dispose();
   }
 
   Future<void> _save() async {
     final name = _nameController.text.trim();
     final adminEmail = _adminEmailController.text.trim();
-    if (name.isEmpty || adminEmail.isEmpty) {
-      setState(() => _error = 'Organization name and Organization Admin email are required.');
+    final adminPassword = _adminPasswordController.text;
+    if (name.isEmpty || adminEmail.isEmpty || adminPassword.isEmpty) {
+      setState(
+        () => _error =
+            'Clinic name, Clinic Admin email, and password are required.',
+      );
+      return;
+    }
+    if (adminPassword.length < 6) {
+      setState(() => _error = 'Password must be at least 6 characters.');
       return;
     }
 
@@ -84,17 +99,32 @@ class _AddOrganizationPanelState extends ConsumerState<_AddOrganizationPanel> {
             name: name,
             subscriptionPlan: _plan,
             adminEmail: adminEmail,
-            ownerContactName: _ownerNameController.text.trim().isEmpty ? null : _ownerNameController.text.trim(),
-            ownerContactPhone: _ownerPhoneController.text.trim().isEmpty ? null : _ownerPhoneController.text.trim(),
+            adminPassword: adminPassword,
+            ownerContactName: _ownerNameController.text.trim().isEmpty
+                ? null
+                : _ownerNameController.text.trim(),
+            ownerContactPhone: _ownerPhoneController.text.trim().isEmpty
+                ? null
+                : _ownerPhoneController.text.trim(),
+            subscriptionAmountRwf: int.tryParse(
+              _subscriptionAmountController.text.trim(),
+            ),
           );
       if (!mounted) return;
       Navigator.of(context).pop();
       await showDialog<void>(
         context: context,
         builder: (dialogContext) => AlertDialog(
-          title: const Text('Organization created'),
-          content: Text('$name was created and an invite was sent to $adminEmail.'),
-          actions: [TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('OK'))],
+          title: const Text('Clinic created'),
+          content: Text(
+            '$name was created. The clinic admin can sign in with $adminEmail and the password you set.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('OK'),
+            ),
+          ],
         ),
       );
     } catch (e) {
@@ -110,101 +140,151 @@ class _AddOrganizationPanelState extends ConsumerState<_AddOrganizationPanel> {
   Widget build(BuildContext context) {
     return Material(
       color: context.appCard,
-      child: SafeArea(
-        child: SizedBox(
-          width: 480,
-          height: double.infinity,
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          'Add Organization',
-                          style: TextStyle(color: context.appText, fontSize: 18, fontWeight: FontWeight.w600),
+      borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+      clipBehavior: Clip.antiAlias,
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+          border: Border.all(color: context.appBorder),
+        ),
+        constraints: BoxConstraints(
+          maxWidth: 480,
+          maxHeight: MediaQuery.of(context).size.height * 0.85,
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'Add Clinic',
+                        style: TextStyle(
+                          color: context.appText,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
-                      IconButton(
-                        icon: const AppIcon(AppIcons.close),
-                        onPressed: () => Navigator.of(context).pop(),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
-                  CliniqnovvaTextField(
-                    label: 'Organization name',
-                    controller: _nameController,
-                    hint: 'e.g. Kigali Family Clinic',
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Subscription plan',
-                    style: TextStyle(color: context.appText, fontSize: 14, fontWeight: FontWeight.w500),
-                  ),
-                  const SizedBox(height: 8),
-                  DropdownButtonFormField<String>(
-                    initialValue: _plan,
-                    decoration: InputDecoration(
-                      isDense: true,
-                      filled: true,
-                      fillColor: context.appCard,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(AppTheme.inputRadius),
-                        borderSide: BorderSide(color: context.appBorder),
-                      ),
                     ),
-                    items: AppConstants.subscriptionPlans
-                        .map(
-                          (plan) => DropdownMenuItem(
-                            value: plan,
-                            child: Text('${plan[0].toUpperCase()}${plan.substring(1)} — ${_planBranchLimitLabels[plan]}'),
-                          ),
-                        )
-                        .toList(),
-                    onChanged: (value) => setState(() => _plan = value ?? _plan),
-                  ),
-                  const SizedBox(height: 16),
-                  CliniqnovvaTextField(label: 'Owner contact name', controller: _ownerNameController, hint: 'Optional'),
-                  const SizedBox(height: 16),
-                  CliniqnovvaTextField(
-                    label: 'Owner contact phone',
-                    controller: _ownerPhoneController,
-                    hint: '+250 7XX XXX XXX',
-                    keyboardType: TextInputType.phone,
-                  ),
-                  const SizedBox(height: 16),
-                  CliniqnovvaTextField(
-                    label: 'Organization Admin email',
-                    controller: _adminEmailController,
-                    hint: 'admin@clinic.rw',
-                    keyboardType: TextInputType.emailAddress,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'A temporary password is not set here — an invite email is sent instead.',
-                    style: TextStyle(color: context.appSubtext, fontSize: 12.5),
-                  ),
-                  if (_error != null) ...[
-                    const SizedBox(height: 16),
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: AppColors.pillRedBg,
-                        borderRadius: BorderRadius.circular(AppTheme.inputRadius),
-                      ),
-                      child: Text(_error!, style: const TextStyle(color: AppColors.pillRedText, fontSize: 13)),
+                    IconButton(
+                      icon: const AppIcon(AppIcons.close),
+                      onPressed: () => Navigator.of(context).pop(),
                     ),
                   ],
-                  const SizedBox(height: 24),
-                  CliniqnovvaButton(label: 'Save', isLoading: _saving, onPressed: _saving ? null : _save),
+                ),
+                const SizedBox(height: 20),
+                CliniqnovvaTextField(
+                  label: 'Clinic name',
+                  controller: _nameController,
+                  hint: 'e.g. Kigali Family Clinic',
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Subscription plan',
+                  style: TextStyle(
+                    color: context.appText,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                DropdownButtonFormField<String>(
+                  initialValue: _plan,
+                  decoration: InputDecoration(
+                    isDense: true,
+                    filled: true,
+                    fillColor: context.appCard,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 12,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(AppTheme.inputRadius),
+                      borderSide: BorderSide(color: context.appBorder),
+                    ),
+                  ),
+                  items: AppConstants.subscriptionPlans
+                      .map(
+                        (plan) => DropdownMenuItem(
+                          value: plan,
+                          child: Text(
+                            '${plan[0].toUpperCase()}${plan.substring(1)} — ${_planBranchLimitLabels[plan]}',
+                          ),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (value) => setState(() => _plan = value ?? _plan),
+                ),
+                const SizedBox(height: 16),
+                CliniqnovvaTextField(
+                  label: 'Subscription amount (RWF)',
+                  controller: _subscriptionAmountController,
+                  hint: 'Amount they\'re paying per billing cycle',
+                  keyboardType: TextInputType.number,
+                ),
+                const SizedBox(height: 16),
+                CliniqnovvaTextField(
+                  label: 'Owner contact name',
+                  controller: _ownerNameController,
+                  hint: 'Optional',
+                ),
+                const SizedBox(height: 16),
+                CliniqnovvaTextField(
+                  label: 'Owner contact phone',
+                  controller: _ownerPhoneController,
+                  hint: '+250 7XX XXX XXX',
+                  keyboardType: TextInputType.phone,
+                ),
+                const SizedBox(height: 16),
+                CliniqnovvaTextField(
+                  label: 'Clinic Admin email',
+                  controller: _adminEmailController,
+                  hint: 'admin@clinic.rw',
+                  keyboardType: TextInputType.emailAddress,
+                ),
+                const SizedBox(height: 16),
+                CliniqnovvaTextField(
+                  label: 'Clinic Admin password',
+                  controller: _adminPasswordController,
+                  hint: 'At least 6 characters',
+                  obscureText: _obscurePassword,
+                  suffixIcon: IconButton(
+                    icon: AppIcon(
+                      _obscurePassword ? AppIcons.view : AppIcons.eyeSlash,
+                    ),
+                    onPressed: () =>
+                        setState(() => _obscurePassword = !_obscurePassword),
+                  ),
+                ),
+                if (_error != null) ...[
+                  const SizedBox(height: 16),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppColors.pillRedBg,
+                      borderRadius: BorderRadius.circular(AppTheme.inputRadius),
+                    ),
+                    child: Text(
+                      _error!,
+                      style: const TextStyle(
+                        color: AppColors.pillRedText,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
                 ],
-              ),
+                const SizedBox(height: 24),
+                CliniqnovvaButton(
+                  label: 'Save',
+                  isLoading: _saving,
+                  onPressed: _saving ? null : _save,
+                ),
+              ],
             ),
           ),
         ),

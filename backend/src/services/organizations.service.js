@@ -33,15 +33,17 @@ function computeNextDueDate(fromDate, billingCycle) {
   return d.toISOString();
 }
 
-// Part 4 Task 4: computed-on-read overdue detection — NEVER auto-suspends,
-// that stays a manual Super Admin decision (Part 3's suspend toggle). This
-// only surfaces a status for the UI.
-function computeBillingStatus(org) {
-  if (!org.nextDueDate) return 'unknown';
-  const daysUntilDue = (new Date(org.nextDueDate).getTime() - Date.now()) / 86400000;
-  if (daysUntilDue < 0) return 'overdue';
-  if (daysUntilDue <= 7) return 'dueSoon';
-  return 'paid';
+// Manually set by the Super Admin (not auto-suspends — that stays a separate
+// manual decision, Part 3's suspend toggle). Recording a payment requires
+// the clinic to already be marked 'paid'.
+const BILLING_STATUSES = ['notPaid', 'pending', 'paid'];
+
+function validateBillingStatus(status) {
+  if (!BILLING_STATUSES.includes(status)) {
+    const err = new Error(`Unknown billing status "${status}"`);
+    err.status = 400;
+    throw err;
+  }
 }
 
 async function branchCountFor(organizationId) {
@@ -66,9 +68,10 @@ async function create({ name, subscriptionPlan, ownerContactName, ownerContactPh
     subscriptionAmountRwf: subscriptionAmountRwf ?? 0,
     nextDueDate: computeNextDueDate(new Date(), cycle),
     subscriptionPaymentHistory: [],
+    billingStatus: 'notPaid',
   };
   const ref = await db.collection('organizations').add(doc);
-  return { id: ref.id, ...doc, branchCount: 0, billingStatus: computeBillingStatus(doc) };
+  return { id: ref.id, ...doc, branchCount: 0 };
 }
 
 async function list() {
@@ -76,7 +79,7 @@ async function list() {
   return Promise.all(
     snapshot.docs.map(async (doc) => {
       const data = doc.data();
-      return { id: doc.id, ...data, branchCount: await branchCountFor(doc.id), billingStatus: computeBillingStatus(data) };
+      return { id: doc.id, ...data, branchCount: await branchCountFor(doc.id), billingStatus: data.billingStatus || 'notPaid' };
     })
   );
 }
@@ -89,7 +92,33 @@ async function getById(id) {
   const branchesSnapshot = await db.collection('branches').where('organizationId', '==', id).get();
   const branches = branchesSnapshot.docs.map((b) => ({ id: b.id, ...b.data() }));
 
-  return { id: doc.id, ...data, branchCount: branches.length, branches, billingStatus: computeBillingStatus(data) };
+  return {
+    id: doc.id,
+    ...data,
+    branchCount: branches.length,
+    branches,
+    billingStatus: data.billingStatus || 'notPaid',
+  };
+}
+
+/**
+ * Super Admin manually flips a clinic's billing status between notPaid,
+ * pending, and paid — recording an actual payment (below) is only allowed
+ * once a clinic is marked 'paid'.
+ */
+async function setBillingStatus(id, billingStatus, actorId) {
+  validateBillingStatus(billingStatus);
+  await db.collection('organizations').doc(id).update({ billingStatus });
+  await db.collection('auditLogs').add({
+    actorId: actorId || null,
+    actorRole: 'super_admin',
+    action: 'organization.billingStatusChanged',
+    targetCollection: 'organizations',
+    targetId: id,
+    organizationId: id,
+    timestamp: new Date().toISOString(),
+  });
+  return getById(id);
 }
 
 const EDITABLE_FIELDS = [
@@ -141,12 +170,19 @@ async function setStatus(id, isActive, actorId) {
 /**
  * Part 4 Task 3 — records that a cash payment happened (no gateway, this is
  * pure bookkeeping) and recalculates nextDueDate from the payment's own date
- * under the organization's current billingCycle.
+ * under the organization's current billingCycle. Only allowed once the
+ * clinic's billingStatus has been manually marked 'paid'.
  */
 async function recordPayment(id, { amountRwf, date, note }, actorId) {
   const doc = await db.collection('organizations').doc(id).get();
   if (!doc.exists) return null;
   const data = doc.data();
+
+  if ((data.billingStatus || 'notPaid') !== 'paid') {
+    const err = new Error('Clinic must be marked Paid before recording a payment.');
+    err.status = 400;
+    throw err;
+  }
 
   const payment = {
     date: date || new Date().toISOString(),
@@ -187,11 +223,12 @@ module.exports = {
   getById,
   update,
   setStatus,
+  setBillingStatus,
   recordPayment,
   getPaymentHistory,
   branchLimitForPlan,
   computeNextDueDate,
-  computeBillingStatus,
+  BILLING_STATUSES,
   PLAN_BRANCH_LIMITS,
   BILLING_CYCLE_MONTHS,
 };

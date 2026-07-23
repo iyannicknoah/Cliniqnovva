@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
-import '../../core/theme/app_colors.dart';
+import '../../core/theme/theme_ext.dart';
 
-/// The single loading indicator used everywhere — centered spinner in
-/// primary, with an optional message underneath.
+/// The single loading indicator used everywhere — centered spinner in the
+/// system primary color, with an optional message underneath.
 class LoadingWidget extends StatelessWidget {
   const LoadingWidget({super.key, this.message});
 
@@ -15,10 +15,10 @@ class LoadingWidget extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const CircularProgressIndicator(color: AppColors.primary),
+          CircularProgressIndicator(color: context.appPrimary),
           if (message != null) ...[
             const SizedBox(height: 16),
-            Text(message!, style: const TextStyle(color: AppColors.textSecondary, fontSize: 14)),
+            Text(message!, style: TextStyle(color: context.appSubtext, fontSize: 14)),
           ],
         ],
       ),

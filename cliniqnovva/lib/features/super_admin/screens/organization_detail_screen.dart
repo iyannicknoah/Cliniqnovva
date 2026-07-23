@@ -77,7 +77,7 @@ class _OrganizationDetailScreenState extends ConsumerState<OrganizationDetailScr
             'subscriptionAmountRwf': int.tryParse(_subscriptionAmountController.text.trim()) ?? 0,
           });
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Organization updated.')));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Clinic updated.')));
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -98,7 +98,7 @@ class _OrganizationDetailScreenState extends ConsumerState<OrganizationDetailScr
     final created = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Create branch on this org\'s behalf'),
+        title: const Text('Create branch on this clinic\'s behalf'),
         content: SizedBox(
           width: 360,
           child: Column(
@@ -141,7 +141,7 @@ class _OrganizationDetailScreenState extends ConsumerState<OrganizationDetailScr
     if (!mounted) return;
     ScaffoldMessenger.of(
       context,
-    ).showSnackBar(const SnackBar(content: Text('Branch created on this organization\'s behalf — logged in the audit trail.')));
+    ).showSnackBar(const SnackBar(content: Text('Branch created on this clinic\'s behalf — logged in the audit trail.')));
   }
 
   @override
@@ -150,10 +150,10 @@ class _OrganizationDetailScreenState extends ConsumerState<OrganizationDetailScr
 
     return SuperAdminScaffold(
       currentRoute: '/super-admin/organizations',
-      title: 'Organization detail',
+      title: 'Clinic detail',
       body: detailAsync.when(
         loading: () => const Padding(padding: EdgeInsets.all(40), child: Center(child: CircularProgressIndicator())),
-        error: (err, _) => Text('Failed to load organization: $err'),
+        error: (err, _) => Text('Failed to load clinic: $err'),
         data: (org) {
           _loadFields(org);
 
@@ -174,7 +174,7 @@ class _OrganizationDetailScreenState extends ConsumerState<OrganizationDetailScr
                   ),
                   const SizedBox(width: 12),
                   CliniqnovvaButton.text(
-                    label: 'View as Organization Admin',
+                    label: 'View as Clinic Admin',
                     onPressed: () => context.push('/super-admin/organizations/${org.id}/support-view'),
                   ),
                   const SizedBox(width: 4),
@@ -187,11 +187,11 @@ class _OrganizationDetailScreenState extends ConsumerState<OrganizationDetailScr
               ),
               const SizedBox(height: 24),
               CliniqnovvaCard(
-                title: 'Organization info',
+                title: 'Clinic info',
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    CliniqnovvaTextField(label: 'Organization name', controller: _nameController),
+                    CliniqnovvaTextField(label: 'Clinic name', controller: _nameController),
                     const SizedBox(height: 16),
                     Text(
                       'Subscription plan',
@@ -278,7 +278,7 @@ class _OrganizationDetailScreenState extends ConsumerState<OrganizationDetailScr
                           ),
                         ),
                         CliniqnovvaButton.text(
-                          label: '+ Create branch on this org\'s behalf',
+                          label: '+ Create branch on this clinic\'s behalf',
                           onPressed: _createBranchOnBehalf,
                         ),
                       ],

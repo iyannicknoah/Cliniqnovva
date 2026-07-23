@@ -23,7 +23,8 @@ class OrganizationsScreen extends ConsumerStatefulWidget {
   const OrganizationsScreen({super.key});
 
   @override
-  ConsumerState<OrganizationsScreen> createState() => _OrganizationsScreenState();
+  ConsumerState<OrganizationsScreen> createState() =>
+      _OrganizationsScreenState();
 }
 
 class _OrganizationsScreenState extends ConsumerState<OrganizationsScreen> {
@@ -37,9 +38,15 @@ class _OrganizationsScreenState extends ConsumerState<OrganizationsScreen> {
   }
 
   Future<void> _confirmSetStatus(Organization org, bool activate) async {
-    final confirmed = await confirmOrganizationStatusChange(context, organizationName: org.name, activate: activate);
+    final confirmed = await confirmOrganizationStatusChange(
+      context,
+      organizationName: org.name,
+      activate: activate,
+    );
     if (!confirmed) return;
-    await ref.read(organizationsNotifierProvider.notifier).setStatus(org.id, activate);
+    await ref
+        .read(organizationsNotifierProvider.notifier)
+        .setStatus(org.id, activate);
   }
 
   String _formatDate(DateTime? date) {
@@ -53,28 +60,42 @@ class _OrganizationsScreenState extends ConsumerState<OrganizationsScreen> {
 
     return SuperAdminScaffold(
       currentRoute: '/super-admin/organizations',
-      title: 'Organizations',
+      title: 'Clinics',
       body: organizationsAsync.when(
-        loading: () => const Padding(padding: EdgeInsets.all(40), child: Center(child: CircularProgressIndicator())),
-        error: (err, _) => Text('Failed to load organizations: $err'),
+        loading: () => const Padding(
+          padding: EdgeInsets.all(40),
+          child: Center(child: CircularProgressIndicator()),
+        ),
+        error: (err, _) => Text('Failed to load clinics: $err'),
         data: (organizations) {
           final total = organizations.length;
           final active = organizations.where((o) => o.isActive).length;
           final suspended = total - active;
           final filtered = _search.isEmpty
               ? organizations
-              : organizations.where((o) => o.name.toLowerCase().contains(_search.toLowerCase())).toList();
+              : organizations
+                    .where(
+                      (o) =>
+                          o.name.toLowerCase().contains(_search.toLowerCase()),
+                    )
+                    .toList();
 
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 children: [
-                  Expanded(child: MetricCard(value: '$total', label: 'Total organizations')),
+                  Expanded(
+                    child: MetricCard(value: '$total', label: 'Total clinics'),
+                  ),
                   const SizedBox(width: 16),
-                  Expanded(child: MetricCard(value: '$active', label: 'Active')),
+                  Expanded(
+                    child: MetricCard(value: '$active', label: 'Active'),
+                  ),
                   const SizedBox(width: 16),
-                  Expanded(child: MetricCard(value: '$suspended', label: 'Suspended')),
+                  Expanded(
+                    child: MetricCard(value: '$suspended', label: 'Suspended'),
+                  ),
                 ],
               ),
               const SizedBox(height: 24),
@@ -91,7 +112,7 @@ class _OrganizationsScreenState extends ConsumerState<OrganizationsScreen> {
                   ),
                   const SizedBox(width: 16),
                   CliniqnovvaButton(
-                    label: '+ Add Organization',
+                    label: '+ Add Clinic',
                     isFullWidth: false,
                     onPressed: () => showAddOrganizationPanel(context),
                   ),
@@ -102,26 +123,47 @@ class _OrganizationsScreenState extends ConsumerState<OrganizationsScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const CliniqnovvaTableHeader(columns: ['Name', 'Plan', 'Branches', 'Status', 'Created', 'Actions']),
+                    const CliniqnovvaTableHeader(
+                      columns: [
+                        'Name',
+                        'Plan',
+                        'Branches',
+                        'Status',
+                        'Created',
+                        'Actions',
+                      ],
+                    ),
                     if (filtered.isEmpty)
                       Padding(
                         padding: const EdgeInsets.symmetric(vertical: 24),
-                        child: Text('No organizations yet.', style: TextStyle(color: context.appSubtext)),
+                        child: Text(
+                          'No clinics yet.',
+                          style: TextStyle(color: context.appSubtext),
+                        ),
                       )
                     else
                       for (final org in filtered)
                         CliniqnovvaTableRow(
-                          onTap: () => context.push('/super-admin/organizations/${org.id}'),
+                          onTap: () => context.push(
+                            '/super-admin/organizations/${org.id}',
+                          ),
                           cells: [
                             Text(
                               org.name,
-                              style: TextStyle(color: context.appText, fontWeight: FontWeight.w600),
+                              style: TextStyle(
+                                color: context.appText,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
-                            Text('${org.subscriptionPlan[0].toUpperCase()}${org.subscriptionPlan.substring(1)}'),
+                            Text(
+                              '${org.subscriptionPlan[0].toUpperCase()}${org.subscriptionPlan.substring(1)}',
+                            ),
                             Text(org.branchLimitLabel),
                             StatusBadge(
                               text: org.isActive ? 'Active' : 'Suspended',
-                              type: org.isActive ? BadgeType.success : BadgeType.error,
+                              type: org.isActive
+                                  ? BadgeType.success
+                                  : BadgeType.error,
                             ),
                             Text(_formatDate(org.createdAt)),
                             Row(
@@ -129,12 +171,22 @@ class _OrganizationsScreenState extends ConsumerState<OrganizationsScreen> {
                                 IconButton(
                                   icon: const AppIcon(AppIcons.view, size: 18),
                                   tooltip: 'View',
-                                  onPressed: () => context.push('/super-admin/organizations/${org.id}'),
+                                  onPressed: () => context.push(
+                                    '/super-admin/organizations/${org.id}',
+                                  ),
                                 ),
                                 IconButton(
-                                  icon: AppIcon(org.isActive ? AppIcons.pause : AppIcons.play, size: 18),
-                                  tooltip: org.isActive ? 'Suspend' : 'Activate',
-                                  onPressed: () => _confirmSetStatus(org, !org.isActive),
+                                  icon: AppIcon(
+                                    org.isActive
+                                        ? AppIcons.pause
+                                        : AppIcons.play,
+                                    size: 18,
+                                  ),
+                                  tooltip: org.isActive
+                                      ? 'Suspend'
+                                      : 'Activate',
+                                  onPressed: () =>
+                                      _confirmSetStatus(org, !org.isActive),
                                 ),
                               ],
                             ),

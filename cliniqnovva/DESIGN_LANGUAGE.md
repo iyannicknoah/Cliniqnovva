@@ -16,15 +16,23 @@ components, never raw Material widgets (`ElevatedButton`, `TextField`, etc.).
 
 ## Colors (`AppColors`)
 
+**The brand lime (`#CFFF04`) is retired as of 2026-07-24 — `AppColors.primary`
+no longer exists.** The system "primary" is now `context.appPrimary`
+(`theme_ext.dart`): **black in light mode, white in dark mode.** This also
+seeds the app's `ColorScheme` (`ColorScheme.fromSeed(seedColor: Colors.black`
+/`Colors.white)`), so any default-Material-styled control (dialog action
+buttons, etc.) that reads `colorScheme.primary` automatically follows suit —
+don't reintroduce a colored accent as "primary" anywhere.
+
 | Token | Value | Use |
 |---|---|---|
-| `primary` | `#CFFF04` (lime) | Brand accent: focus borders, highlights, charts, active-nav tint. **Never as body text/icon color** — too pale to read on white, see Sidebar below. |
 | `pageBackground` | `#FFFFFF` (pure white) | Every page/scaffold background, input fills, containers (light mode) |
 | `pageBackgroundDark` | `#000000` (pure black) | Same role as `pageBackground`, dark mode (rule set 2026-07-23) |
 | `textPrimary` | `#0B2545` | Headings/body text, light mode only — use `context.appText` (theme-aware) for anything that also renders in dark mode |
 | `textSecondary` | `#5B6B73` | Labels/captions, light mode only — use `context.appSubtext` for theme-aware text |
 | `successGreen` / `warningAmber` / `errorRed` | `#2ECC71` / `#F4A261` / `#E63946` | Status semantics |
-| Pill pairs (`pillGreenBg/Text` etc.) | — | Status badges and inline banners |
+| Pill pairs (`pillGreenBg/Text` etc.) | — | Inline banners only (e.g. login error, Add Clinic error box) — no longer used for `StatusBadge` |
+| `brightGreen` / `brightRed` | `#34C759` / `#FF3B30` | `StatusBadge` success/error text (2026-07-23) — bright, no background |
 | `avatarGradients` | 26 letter-keyed gradients | Avatar initials |
 
 `deepNavy` (`#0B2545`) still exists but is no longer used for any page/sidebar
@@ -172,12 +180,19 @@ left, a topbar (screen title + the chat/notification icon row — see Topbar
 above) on the right, body content scrolls underneath. New Super Admin screens
 should use this instead of building their own Scaffold/Row/sidebar boilerplate.
 
-## Slide-out panel
+## Centered modal panel
 
-A right-side 480px panel (`Add Organization`, `features/super_admin/widgets/
-add_organization_panel.dart`) — `showGeneralDialog` + `Align(alignment:
-centerRight)` + a `SlideTransition` from `Offset(1,0)` to `Offset.zero`. Reuse
+A 480px-wide centered modal (`Add Clinic`, `features/super_admin/widgets/
+add_organization_panel.dart`) — `showGeneralDialog` + `Center` + a combined
+`FadeTransition`/`ScaleTransition` (0.96 → 1.0). Rounded with `AppTheme.cardRadius`
+(18px) and a `context.appBorder` border, same as every other card/dialog surface
+(`Material(borderRadius: ..., clipBehavior: Clip.antiAlias)` wrapping a bordered
+`Container`) — no shadow, per the "no mixing colors" rule. Capped at 85% of
+screen height with an internal `SingleChildScrollView` for tall forms. Reuse
 this pattern for any future "quick add" form that shouldn't be a full page.
+(Changed 2026-07-23 from an earlier right-side slide-out panel — centered +
+rounded matches the rest of the system's dialog language better than a
+flush-edge sheet.)
 
 ## Theme mode
 
@@ -190,9 +205,18 @@ is an explicit in-app choice via `ThemeNotifier.setThemeMode`/`toggle`.
 
 `CliniqnovvaButton`, `CliniqnovvaTextField`, `CliniqnovvaCard`, `MetricCard`
 (label over 18px w600 value), `CliniqnovvaTableHeader` + `CliniqnovvaTableRow`
-(divider-bracketed header, `Expanded`-per-cell rows), `StatusBadge`,
-`AvatarWidget`, `CliniqnovvaSidebar` (background matches the page, see Sidebar
-above), `AppIcon` (Heroicons wrapper, see Icons above).
+(divider-bracketed header, `Expanded`-per-cell rows), `StatusBadge` (plain
+colored text, no pill background — `brightGreen`/`brightRed` for
+success/error, see Colors above), `AvatarWidget`, `CliniqnovvaSidebar`
+(background matches the page, see Sidebar above), `AppIcon` (Heroicons
+wrapper, see Icons above).
+
+**Selectable-option chip** (`_BillingStatusChip`, `payment_history_panel.dart`,
+2026-07-23) — for a small set of mutually-exclusive options (billing status,
+etc.): pill-shaped (`borderRadius: 100`), filled `context.appPrimary` with
+inverse text when selected, border-only (`context.appBorder`) with
+`context.appText` otherwise. Not yet promoted to `shared/widgets/` since it
+only has one caller — promote it if a second one shows up.
 
 ## Brand assets
 
@@ -210,8 +234,117 @@ above), `AppIcon` (Heroicons wrapper, see Icons above).
   un-rounded square — the OS applies its own mask. Web favicon/PWA icons are
   pre-rounded (browsers don't mask); maskable PWA variants stay full-bleed.
 
+## Dialogs
+
+Every `AlertDialog`/`SimpleDialog` in the app is themed globally via
+`AppTheme._dialogTheme()` (`dialogTheme:` on both `lightTheme()`/
+`darkTheme()`) — **never style an individual dialog's title/content text or
+background directly**; that's exactly what produced the inconsistent-looking
+dialogs this rule fixes (2026-07-24). One title style (18px, w600) and one
+content style (14px, `appSubtext`-equivalent) used everywhere, background
+matches the page (white/black, no shadow, border only — same "no mixing
+colors" + `surfaceTintColor: Colors.transparent` treatment as cards and the
+date picker), so a plain `AlertDialog(title: Text(...), content: Text(...))`
+with no manual styling is always correct.
+
+## Date pickers
+
+`showDatePicker` is themed explicitly via `AppTheme._datePickerTheme()`
+(`datePickerTheme:` on both `lightTheme()`/`darkTheme()`) — **never leave it
+on Material 3 defaults**. Left un-themed, Flutter derives the calendar's
+colors from `ColorScheme.fromSeed(seedColor: AppColors.primary)`, which
+produced a beige/olive-tinted calendar (the lime seed's tonal palette) with
+zero relation to the app's actual black/white design system — a real bug,
+not a deliberate look. Fixed 2026-07-24:
+
+- Background/header/text: white+black in light mode, black+white in dark
+  (`context.appBg`/`appText` equivalents, hardcoded via `AppColors.*` since
+  this builder has no `BuildContext`).
+- **No primary lime anywhere in the calendar** — selection uses the same
+  black/white inversion `CliniqnovvaButton` already uses, not brand color.
+- Selected day: solid circle, `black bg + white text` (light) /
+  `white bg + black text` (dark).
+- Today: a **bordered** (not filled) circle in the text color — filled only
+  if today also happens to be selected.
+- `surfaceTintColor: Colors.transparent` — this is the actual fix for the
+  beige wash: Material 3's elevation tonal-overlay defaults to a
+  primary-derived tint, and that's what was bleeding the lime hue into the
+  whole dialog surface, not just the selected-day chip.
+- Cancel/OK buttons: plain black/white text, no primary tint.
+
+## Overview page (Super Admin landing page)
+
+`OverviewScreen` (`/super-admin/overview`, `features/super_admin/screens/
+overview_screen.dart`) is now the first page a Super Admin reaches — added
+2026-07-24, structurally modeled on a typical admin-dashboard overview (KPI
+row → growth chart → two recent-activity list panels) but built entirely on
+Cliniqnovva's own real data, not copied reference content. The two list
+panels (`_OverviewListRow`) use tinted rounded rows (`context.appSecondaryBg`)
+rather than the formal `CliniqnovvaTableRow` — reads as a lighter "recent
+activity" feed, distinct from a data table.
+
+**Chart**: `fl_chart`'s `LineChart`, one series (real monthly revenue,
+summed server-side from every organization's recorded cash payments — see
+`GET /api/v1/platform/revenue-trend`), colored with `context.appPrimary` and
+a soft area fill beneath — **no primary/lime, matches the black/white rule**.
+Reuse this pattern (single-series `LineChart`, `context.appPrimary` line +
+low-alpha `belowBarData` fill, month labels via `RevenueTrendPoint.monthLabel`)
+for any future growth/trend chart rather than introducing a new chart style.
+
 ## Change log
 
+- **2026-07-23 (Manual billing status + payment gate)** — `billingStatus` is
+  now a manually-set field (`notPaid` | `pending` | `paid`, default `notPaid`
+  on clinic creation) instead of computed from `nextDueDate` — the Super
+  Admin sets it via a new 3-option chip selector (`_BillingStatusChip`,
+  `payment_history_panel.dart`): filled black/white (`context.appPrimary`)
+  when selected, border-only otherwise — same selection-state pattern as
+  everywhere else in the system. **Recording a payment is only allowed once
+  a clinic is marked `paid`** — the "+ Record Payment" button is disabled
+  (with a one-line explanation) otherwise, enforced both client-side and
+  server-side (`PUT /api/v1/organizations/:id/billing-status`,
+  `POST .../record-payment` now 400s if not yet marked paid). The Billing
+  screen's metric row changed from 2 cards (paid/overdue) to 3 (paid /
+  pending / not paid) to match.
+- **2026-07-23 (StatusBadge → bright, no background)** — `StatusBadge` no
+  longer renders a pill/background at all (the `filled` toggle from the
+  previous change is gone — always plain text now). Success/error status
+  text (Active/Suspended, Paid/Overdue, etc.) uses new bright, no-background
+  colors `AppColors.brightGreen` (`#34C759`) / `brightRed` (`#FF3B30`) instead
+  of the muted `pillGreenText`/`pillRedText`, which remain only for inline
+  banners with a tinted background. Applies everywhere `StatusBadge` is used
+  (Clinics list, Clinic detail, Billing, Support View).
+- **2026-07-23 (Add Clinic → centered modal)** — The "Add Clinic" panel
+  (`add_organization_panel.dart`) changed from a right-side 480px slide-out
+  sheet to a centered 480px modal: `Center` + fade/scale transition, rounded
+  `AppTheme.cardRadius` (18px) with a `context.appBorder` border, capped at
+  85% of screen height. See "Centered modal panel" above — this is now the
+  reference pattern for future quick-add forms (the slide-out pattern is
+  retired). Also: "Organization" renamed to "Clinic" throughout Super Admin
+  UI text (nav label, screen titles, button/field labels, dialogs) — internal
+  Dart identifiers, routes, and backend/Firestore field names (`organizationId`,
+  `organizations` collection) intentionally kept as-is.
+- **2026-07-24 (Overview page + chart)** — New Super Admin landing page,
+  `/super-admin/overview`, first sidebar item, first page reached after
+  login. Real revenue-growth `LineChart` (single series, `appPrimary` +
+  low-alpha fill, no color accent). Add Organization panel gained a
+  "Subscription amount (RWF)" field (was previously only settable after
+  creation, on the detail page).
+- **2026-07-24 (primary retired + dialogs)** — `AppColors.primary` (brand
+  lime) deleted entirely; the system "primary" is now `context.appPrimary`
+  (black light / white dark), and the app's `ColorScheme` is seeded from
+  black/white instead of lime. Every dialog themed globally
+  (`AppTheme._dialogTheme()`) — one title style, one content style, page-flat
+  background, no shadow — fixing both the beige wash and the previously
+  inconsistent per-dialog text styling. `StatusBadge` gained a `filled: false`
+  mode (plain colored text, no pill background); used for the Organizations
+  table's Status column.
+- **2026-07-24 (date picker)** — `showDatePicker` explicitly themed
+  black/white in both modes (`AppTheme._datePickerTheme()`) — was silently
+  inheriting a beige/olive Material 3 default from the lime `ColorScheme`
+  seed. `surfaceTintColor: Colors.transparent` was the key fix for the
+  background wash; selected-day/today styling matches the button inversion
+  rule. No primary color anywhere in the calendar.
 - **2026-07-24 (language submenu)** — Language row in the profile menu now
   opens a second floating panel (same styling, positioned beside the main
   menu to its right) instead of a dialog — design-only, no `setLocale()` call

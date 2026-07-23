@@ -10,10 +10,21 @@ import '../../../shared/widgets/cliniqnovva_text_field.dart';
 import '../../organizations/models/organization.dart';
 import '../../organizations/providers/organizations_provider.dart';
 
+const _billingStatuses = ['notPaid', 'pending', 'paid'];
+
+String _billingStatusLabel(String status) => switch (status) {
+  'paid' => 'Paid',
+  'pending' => 'Pending',
+  _ => 'Not Paid',
+};
+
 /// Part 4 Task 2 — clicking a billing row opens this: past payments plus a
 /// "Record Payment" action. Same 480px slide-out pattern as Add Organization
 /// (see DESIGN_LANGUAGE.md's "Slide-out panel" section).
-Future<void> showPaymentHistoryPanel(BuildContext context, Organization organization) {
+Future<void> showPaymentHistoryPanel(
+  BuildContext context,
+  Organization organization,
+) {
   return showGeneralDialog(
     context: context,
     barrierDismissible: true,
@@ -55,7 +66,9 @@ class _PaymentHistoryPanel extends ConsumerWidget {
   final Organization organization;
 
   Future<void> _recordPayment(BuildContext context, WidgetRef ref) async {
-    final amountController = TextEditingController(text: organization.subscriptionAmountRwf.toString());
+    final amountController = TextEditingController(
+      text: organization.subscriptionAmountRwf.toString(),
+    );
     final noteController = TextEditingController();
     DateTime date = DateTime.now();
 
@@ -91,13 +104,23 @@ class _PaymentHistoryPanel extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(height: 16),
-                CliniqnovvaTextField(label: 'Note', controller: noteController, hint: 'Optional'),
+                CliniqnovvaTextField(
+                  label: 'Note',
+                  controller: noteController,
+                  hint: 'Optional',
+                ),
               ],
             ),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Cancel')),
-            TextButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('Save')),
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text('Save'),
+            ),
           ],
         ),
       ),
@@ -113,13 +136,18 @@ class _PaymentHistoryPanel extends ConsumerWidget {
           organization.id,
           amountRwf: amount,
           date: date,
-          note: noteController.text.trim().isEmpty ? null : noteController.text.trim(),
+          note: noteController.text.trim().isEmpty
+              ? null
+              : noteController.text.trim(),
         );
   }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final historyAsync = ref.watch(paymentHistoryProvider(organization.id));
+    final orgAsync = ref.watch(organizationDetailProvider(organization.id));
+    final currentOrg = orgAsync.valueOrNull ?? organization;
+    final canRecordPayment = currentOrg.billingStatus == 'paid';
 
     return Material(
       color: context.appCard,
@@ -137,32 +165,92 @@ class _PaymentHistoryPanel extends ConsumerWidget {
                     Expanded(
                       child: Text(
                         organization.name,
-                        style: TextStyle(color: context.appText, fontSize: 18, fontWeight: FontWeight.w600),
+                        style: TextStyle(
+                          color: context.appText,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
-                    IconButton(icon: const AppIcon(AppIcons.close), onPressed: () => Navigator.of(context).pop()),
+                    IconButton(
+                      icon: const AppIcon(AppIcons.close),
+                      onPressed: () => Navigator.of(context).pop(),
+                    ),
                   ],
                 ),
-                Text('Payment history', style: TextStyle(color: context.appSubtext, fontSize: 13)),
+                const SizedBox(height: 16),
+                Text(
+                  'Billing status',
+                  style: TextStyle(
+                    color: context.appText,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    for (final status in _billingStatuses) ...[
+                      _BillingStatusChip(
+                        label: _billingStatusLabel(status),
+                        selected: currentOrg.billingStatus == status,
+                        onTap: () => ref
+                            .read(organizationsNotifierProvider.notifier)
+                            .setBillingStatus(organization.id, status),
+                      ),
+                      const SizedBox(width: 8),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  'Payment history',
+                  style: TextStyle(color: context.appSubtext, fontSize: 13),
+                ),
                 const SizedBox(height: 16),
                 CliniqnovvaButton(
                   label: '+ Record Payment',
                   isFullWidth: false,
-                  onPressed: () => _recordPayment(context, ref),
+                  onPressed: canRecordPayment
+                      ? () => _recordPayment(context, ref)
+                      : null,
                 ),
+                if (!canRecordPayment) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    'Mark this clinic Paid before recording a payment.',
+                    style: TextStyle(color: context.appSubtext, fontSize: 12.5),
+                  ),
+                ],
                 const SizedBox(height: 16),
-                const CliniqnovvaTableHeader(columns: ['Date', 'Amount', 'Recorded by']),
+                const CliniqnovvaTableHeader(
+                  columns: ['Date', 'Amount', 'Recorded by'],
+                ),
                 Expanded(
                   child: historyAsync.when(
-                    loading: () => const Center(child: CircularProgressIndicator()),
-                    error: (err, _) => Center(child: Text('Failed to load: $err', style: TextStyle(color: context.appSubtext))),
+                    loading: () =>
+                        const Center(child: CircularProgressIndicator()),
+                    error: (err, _) => Center(
+                      child: Text(
+                        'Failed to load: $err',
+                        style: TextStyle(color: context.appSubtext),
+                      ),
+                    ),
                     data: (payments) {
                       if (payments.isEmpty) {
                         return Center(
-                          child: Text('No payments recorded yet.', style: TextStyle(color: context.appSubtext)),
+                          child: Text(
+                            'No payments recorded yet.',
+                            style: TextStyle(color: context.appSubtext),
+                          ),
                         );
                       }
-                      final sorted = [...payments]..sort((a, b) => (b.date ?? DateTime(0)).compareTo(a.date ?? DateTime(0)));
+                      final sorted = [...payments]
+                        ..sort(
+                          (a, b) => (b.date ?? DateTime(0)).compareTo(
+                            a.date ?? DateTime(0),
+                          ),
+                        );
                       return ListView(
                         children: [
                           for (final payment in sorted)
@@ -170,7 +258,10 @@ class _PaymentHistoryPanel extends ConsumerWidget {
                               cells: [
                                 Text(_formatDate(payment.date)),
                                 Text(formatRwf(payment.amountRwf)),
-                                Text(payment.recordedBy ?? '—', overflow: TextOverflow.ellipsis),
+                                Text(
+                                  payment.recordedBy ?? '—',
+                                  overflow: TextOverflow.ellipsis,
+                                ),
                               ],
                             ),
                         ],
@@ -180,6 +271,50 @@ class _PaymentHistoryPanel extends ConsumerWidget {
                 ),
               ],
             ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// A selectable billing-status option (Not Paid / Pending / Paid) — filled
+/// black/white when selected (system primary), border-only otherwise, same
+/// inversion rule as `CliniqnovvaButton`.
+class _BillingStatusChip extends StatelessWidget {
+  const _BillingStatusChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final bg = selected ? context.appPrimary : Colors.transparent;
+    final fg = selected
+        ? (context.isDark ? Colors.black : Colors.white)
+        : context.appText;
+
+    return InkWell(
+      borderRadius: BorderRadius.circular(100),
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: BorderRadius.circular(100),
+          border: Border.all(color: selected ? bg : context.appBorder),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: fg,
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
           ),
         ),
       ),

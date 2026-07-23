@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/theme_ext.dart';
 
 /// The single avatar component — shows a photo if [photoUrl] is given,
 /// otherwise a gradient-initials circle keyed off the first letter of
@@ -38,7 +39,7 @@ class AvatarWidget extends StatelessWidget {
       height: size,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        border: Border.all(color: AppColors.primary, width: 1.5),
+        border: Border.all(color: context.appPrimary, width: 1.5),
       ),
       padding: const EdgeInsets.all(1.5),
       child: ClipOval(

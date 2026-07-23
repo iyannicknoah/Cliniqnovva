@@ -29,4 +29,5 @@ class AppIcons {
   static const chat = IconRef.hero(HeroIcons.chatBubbleOvalLeftEllipsis);
   static const notification = IconRef.hero(HeroIcons.bell);
   static const search = IconRef.hero(HeroIcons.magnifyingGlass);
+  static const overview = IconRef.hero(HeroIcons.squares2x2);
 }

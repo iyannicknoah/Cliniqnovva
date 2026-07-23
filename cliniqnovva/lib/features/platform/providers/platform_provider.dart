@@ -8,6 +8,14 @@ final platformMetricsProvider = FutureProvider.autoDispose<PlatformMetrics>((ref
   return PlatformMetrics.fromJson(response.data!['metrics'] as Map<String, dynamic>);
 });
 
+/// Real monthly revenue growth (sum of recorded cash payments per month,
+/// across every organization) — backs the Overview page's chart.
+final platformRevenueTrendProvider = FutureProvider.autoDispose<List<RevenueTrendPoint>>((ref) async {
+  final response = await ApiService.instance.get<Map<String, dynamic>>('/api/v1/platform/revenue-trend');
+  final data = response.data!['revenueTrend'] as List<dynamic>;
+  return data.map((e) => RevenueTrendPoint.fromJson(e as Map<String, dynamic>)).toList();
+});
+
 final platformSearchProvider = FutureProvider.autoDispose.family<PlatformSearchResults, String>((ref, query) async {
   if (query.trim().isEmpty) return const PlatformSearchResults(branches: [], staff: []);
   final response = await ApiService.instance.get<Map<String, dynamic>>(
