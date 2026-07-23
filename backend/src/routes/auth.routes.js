@@ -6,16 +6,18 @@ const { attachScope } = require('../middleware/branchScope.middleware');
 const { authRateLimiter } = require('../middleware/rateLimiter.middleware');
 const controller = require('../controllers/auth.controller');
 
-// Part 2 Task 6 — staff invite + custom-claims assignment. Rate-limited
-// (Task 8) since these are auth-adjacent endpoints worth protecting from
-// brute-force/abuse same as login.
+// PATCH (2026-07-23): the invite-link flow (POST /invite-staff,
+// /complete-invite) is removed entirely. create-user is now the ONLY
+// account-creation path — direct, active immediately, no email/SMS ever
+// sent. Rate-limited (Task 8) since this is an auth-adjacent endpoint worth
+// protecting from brute-force/abuse same as login.
 router.post(
-  '/invite-staff',
+  '/create-user',
   authRateLimiter,
   verifyToken,
   attachScope,
   requireRole(ROLES.SUPER_ADMIN, ROLES.ORGANIZATION_ADMIN, ROLES.BRANCH_ADMIN),
-  controller.inviteStaff
+  controller.createUser
 );
 router.post(
   '/set-claims',
@@ -34,8 +36,8 @@ router.post(
   controller.deactivateAccount
 );
 
-// Public (no prior Firebase session) — used during onboarding / forgotten password.
-router.post('/complete-invite', authRateLimiter, controller.completeInvite);
+// Public (no prior Firebase session) — forgot-password flow, separate from
+// account creation.
 router.post('/request-password-reset', authRateLimiter, controller.requestPasswordReset);
 
 // Any authenticated user reading their own profile.

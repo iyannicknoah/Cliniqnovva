@@ -11,6 +11,7 @@ router.use(verifyToken, attachScope);
 router.get('/', requireRole(ROLES.ORGANIZATION_ADMIN, ROLES.BRANCH_ADMIN, ROLES.DOCTOR, ROLES.RECEPTIONIST, ROLES.PATIENT), controller.list);
 router.get('/:id', requireRole(ROLES.ORGANIZATION_ADMIN, ROLES.BRANCH_ADMIN, ROLES.DOCTOR, ROLES.RECEPTIONIST, ROLES.PATIENT), controller.getById);
 router.post('/', requireRole(ROLES.ORGANIZATION_ADMIN, ROLES.BRANCH_ADMIN), controller.create);
+router.put('/:id', requireRole(ROLES.ORGANIZATION_ADMIN, ROLES.BRANCH_ADMIN), controller.update);
 router.patch('/:id', requireRole(ROLES.ORGANIZATION_ADMIN, ROLES.BRANCH_ADMIN), controller.update);
 router.delete('/:id', requireRole(ROLES.ORGANIZATION_ADMIN, ROLES.BRANCH_ADMIN), controller.remove);
 

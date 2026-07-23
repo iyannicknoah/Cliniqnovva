@@ -36,6 +36,7 @@ class BranchFormState extends State<BranchForm> {
 
   String? _province;
   String? _district;
+  bool _open24Hours = false;
   TimeOfDay? _openTime;
   TimeOfDay? _closeTime;
   bool _umugandaOverride = false;
@@ -54,6 +55,7 @@ class BranchFormState extends State<BranchForm> {
       _phoneController.text = initial.phone ?? '';
       _province = initial.location?.province;
       _district = initial.location?.district;
+      _open24Hours = initial.workingHours?.is24Hours ?? false;
       _openTime = _parseTime(initial.workingHours?.start);
       _closeTime = _parseTime(initial.workingHours?.end);
       _umugandaOverride = initial.umugandaSaturdayHours != null;
@@ -86,26 +88,38 @@ class BranchFormState extends State<BranchForm> {
 
   static int _minutes(TimeOfDay t) => t.hour * 60 + t.minute;
 
-  /// Part 6 Task 4 validation. Returns a user-facing message, or null when
-  /// the form is valid.
+  /// Closing time is at/past midnight relative to opening — the branch
+  /// closes on the following day (e.g. 20:00 → 04:00).
+  bool get _isOvernight =>
+      _openTime != null &&
+      _closeTime != null &&
+      _minutes(_closeTime!) < _minutes(_openTime!);
+
+  /// Part 6 Task 4 validation (2026-07-23: supports 24-hour and overnight
+  /// clinics). A closing time earlier than the opening time is VALID — it
+  /// means the branch closes the next day. Only start == end is rejected;
+  /// that's what the "Open 24 hours" toggle is for. Returns a user-facing
+  /// message, or null when the form is valid.
   String? validate() {
     if (!widget.hoursOnly) {
       if (_nameController.text.trim().isEmpty) return 'Branch name is required.';
       if (_province == null) return 'Province is required.';
       if (_district == null) return 'District is required.';
     }
-    if (_openTime == null || _closeTime == null) {
-      return 'Working hours (opening and closing time) are required.';
-    }
-    if (_minutes(_openTime!) >= _minutes(_closeTime!)) {
-      return 'Opening time must be before closing time.';
+    if (!_open24Hours) {
+      if (_openTime == null || _closeTime == null) {
+        return 'Working hours (opening and closing time) are required — or turn on "Open 24 hours".';
+      }
+      if (_minutes(_openTime!) == _minutes(_closeTime!)) {
+        return 'Opening and closing time can\'t be the same — turn on "Open 24 hours" instead.';
+      }
     }
     if (_umugandaOverride) {
       if (_umugandaOpenTime == null || _umugandaCloseTime == null) {
         return 'Set the Umuganda Saturday opening and closing time, or turn the override off.';
       }
-      if (_minutes(_umugandaOpenTime!) >= _minutes(_umugandaCloseTime!)) {
-        return 'Umuganda Saturday: opening time must be before closing time.';
+      if (_minutes(_umugandaOpenTime!) == _minutes(_umugandaCloseTime!)) {
+        return 'Umuganda Saturday: opening and closing time can\'t be the same.';
       }
     }
     return null;
@@ -116,10 +130,12 @@ class BranchFormState extends State<BranchForm> {
   /// Admin anyway.
   Map<String, dynamic> buildBody() {
     final hours = {
-      'workingHours': {
-        'start': _formatTime(_openTime!),
-        'end': _formatTime(_closeTime!),
-      },
+      'workingHours': _open24Hours
+          ? {'is24Hours': true}
+          : {
+              'start': _formatTime(_openTime!),
+              'end': _formatTime(_closeTime!),
+            },
       'umugandaSaturdayHours': _umugandaOverride
           ? {
               'start': _formatTime(_umugandaOpenTime!),
@@ -253,29 +269,62 @@ class BranchFormState extends State<BranchForm> {
         const SizedBox(height: 8),
         Row(
           children: [
-            Expanded(
-              child: _TimeButton(
-                label: 'Opens',
-                time: _openTime,
-                onTap: () => _pickTime(
-                  _openTime,
-                  (t) => setState(() => _openTime = t),
+            SizedBox(
+              width: 36,
+              height: 24,
+              child: FittedBox(
+                fit: BoxFit.contain,
+                child: Switch(
+                  value: _open24Hours,
+                  activeTrackColor: context.appPrimary,
+                  onChanged: (value) => setState(() => _open24Hours = value),
                 ),
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 10),
             Expanded(
-              child: _TimeButton(
-                label: 'Closes',
-                time: _closeTime,
-                onTap: () => _pickTime(
-                  _closeTime,
-                  (t) => setState(() => _closeTime = t),
-                ),
+              child: Text(
+                'Open 24 hours',
+                style: TextStyle(color: context.appText, fontSize: 13.5),
               ),
             ),
           ],
         ),
+        if (!_open24Hours) ...[
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _TimeButton(
+                  label: 'Opens',
+                  time: _openTime,
+                  onTap: () => _pickTime(
+                    _openTime,
+                    (t) => setState(() => _openTime = t),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _TimeButton(
+                  label: 'Closes',
+                  time: _closeTime,
+                  onTap: () => _pickTime(
+                    _closeTime,
+                    (t) => setState(() => _closeTime = t),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          if (_isOvernight) ...[
+            const SizedBox(height: 6),
+            Text(
+              'Closes after midnight — the next day.',
+              style: TextStyle(color: context.appSubtext, fontSize: 12.5),
+            ),
+          ],
+        ],
         const SizedBox(height: 16),
         Row(
           children: [

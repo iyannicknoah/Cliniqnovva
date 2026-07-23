@@ -58,7 +58,7 @@ async function create(req, res, next) {
       role: ROLES.ORGANIZATION_ADMIN,
       organizationId: organization.id,
       branchId: null,
-      invitedBy: req.user?.uid,
+      createdBy: req.user?.uid,
     });
 
     res.status(201).json({ organization, account });

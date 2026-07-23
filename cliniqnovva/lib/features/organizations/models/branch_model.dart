@@ -8,21 +8,37 @@ library;
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-/// A start/end pair of 'HH:mm' strings (e.g. 08:00–17:00).
+/// Branch working hours (2026-07-23, supports round-the-clock and
+/// overnight clinics):
+///   - [is24Hours] true → open 24 hours, [start]/[end] are null;
+///   - otherwise a 'HH:mm' pair where an [end] EARLIER than [start] means
+///     the branch closes the NEXT day (e.g. 20:00 → 04:00).
 class BranchHours {
-  const BranchHours({required this.start, required this.end});
+  const BranchHours({this.start, this.end, this.is24Hours = false});
 
-  final String start;
-  final String end;
+  final String? start;
+  final String? end;
+  final bool is24Hours;
 
   factory BranchHours.fromMap(Map<String, dynamic> map) => BranchHours(
-    start: map['start'] as String? ?? '',
-    end: map['end'] as String? ?? '',
+    start: map['start'] as String?,
+    end: map['end'] as String?,
+    is24Hours: map['is24Hours'] == true,
   );
 
-  Map<String, dynamic> toMap() => {'start': start, 'end': end};
+  Map<String, dynamic> toMap() => is24Hours
+      ? {'is24Hours': true}
+      : {'start': start, 'end': end, 'is24Hours': false};
 
-  String get label => '$start – $end';
+  /// Closes past midnight, on the following day.
+  bool get isOvernight =>
+      !is24Hours && start != null && end != null && start!.compareTo(end!) > 0;
+
+  String get label => is24Hours
+      ? 'Open 24 hours'
+      : isOvernight
+      ? '$start – $end (next day)'
+      : '$start – $end';
 }
 
 /// Rwanda administrative location: province/district required for a valid
@@ -75,6 +91,7 @@ class BranchModel {
     this.workingHours,
     this.umugandaSaturdayHours,
     this.servicesOffered = const [],
+    this.holidayOverrides = const [],
     this.isActive = true,
     this.createdAt,
     this.employeeCount,
@@ -91,6 +108,10 @@ class BranchModel {
   /// community work morning) — null means the branch keeps normal hours.
   final BranchHours? umugandaSaturdayHours;
   final List<String> servicesOffered;
+
+  /// Public holiday ids this branch keeps open despite the national
+  /// auto-block (Part 8 Task 2: "override — keep open" per holiday).
+  final List<String> holidayOverrides;
   final bool isActive;
   final DateTime? createdAt;
 
@@ -120,6 +141,11 @@ class BranchModel {
               ?.map((e) => e.toString())
               .toList() ??
           const [],
+      holidayOverrides:
+          (data['holidayOverrides'] as List<dynamic>?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          const [],
       isActive: data['isActive'] as bool? ?? true,
       createdAt: switch (data['createdAt']) {
         final Timestamp t => t.toDate(),
@@ -140,6 +166,7 @@ class BranchModel {
     'workingHours': workingHours?.toMap(),
     'umugandaSaturdayHours': umugandaSaturdayHours?.toMap(),
     'servicesOffered': servicesOffered,
+    'holidayOverrides': holidayOverrides,
     'isActive': isActive,
     'createdAt': createdAt?.toIso8601String(),
   };

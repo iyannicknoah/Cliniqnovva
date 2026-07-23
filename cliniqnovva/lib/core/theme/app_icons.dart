@@ -30,4 +30,8 @@ class AppIcons {
   static const notification = IconRef.hero(HeroIcons.bell);
   static const search = IconRef.hero(HeroIcons.magnifyingGlass);
   static const overview = IconRef.hero(HeroIcons.squares2x2);
+  static const trash = IconRef.hero(HeroIcons.trash);
+  static const plus = IconRef.hero(HeroIcons.plus);
+  static const department = IconRef.hero(HeroIcons.buildingOffice);
+  static const generate = IconRef.hero(HeroIcons.arrowPath);
 }

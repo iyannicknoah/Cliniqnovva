@@ -20,11 +20,15 @@ const WRITABLE_FIELDS = [
   'workingHours',
   'umugandaSaturdayHours',
   'servicesOffered',
+  'holidayOverrides',
 ];
 
 // Working-hours only — the subset a Branch Admin may edit on their own
-// branch (Part 6 Task 3: "editable working hours only").
-const BRANCH_ADMIN_FIELDS = ['workingHours', 'umugandaSaturdayHours'];
+// branch (Part 6 Task 3: "editable working hours only"). holidayOverrides
+// added here too (Part 8 Task 2) — it's a scheduling setting in the same
+// family as hours, and the Doctor Schedule screen (branch-scoped, not
+// org-wide) is where a Branch Admin toggles it.
+const BRANCH_ADMIN_FIELDS = ['workingHours', 'umugandaSaturdayHours', 'holidayOverrides'];
 
 function httpError(status, message) {
   const err = new Error(message);
@@ -33,19 +37,30 @@ function httpError(status, message) {
 }
 
 /**
- * Validates a {start, end} 'HH:mm' pair (opening time must be before
- * closing time — Part 6 Task 4). `label` names the field in error messages.
- * Null/undefined is allowed (hours are optional); anything else must be a
- * well-formed pair.
+ * Validates a working-hours object. Accepted shapes (2026-07-23, per the
+ * user's explicit instruction to support round-the-clock and overnight
+ * clinics):
+ *   - { is24Hours: true }                 — open 24 hours, no times needed
+ *   - { start: 'HH:mm', end: 'HH:mm' }    — end EARLIER than start means the
+ *     branch closes the NEXT day (e.g. 20:00 → 04:00, an overnight shift).
+ * The only invalid pair is start === end — that's ambiguous; a 24-hour
+ * branch must say so explicitly. Null/undefined is allowed (hours optional).
  */
 function assertValidHours(hours, label) {
   if (hours === null || hours === undefined) return;
-  const pattern = /^([01]\d|2[0-3]):[0-5]\d$/;
-  if (typeof hours !== 'object' || !pattern.test(hours.start || '') || !pattern.test(hours.end || '')) {
-    throw httpError(400, `${label} must be { start: 'HH:mm', end: 'HH:mm' }`);
+  if (typeof hours !== 'object') {
+    throw httpError(400, `${label} must be an object`);
   }
-  if (hours.start >= hours.end) {
-    throw httpError(400, `${label}: opening time must be before closing time`);
+  if (hours.is24Hours === true) return;
+  const pattern = /^([01]\d|2[0-3]):[0-5]\d$/;
+  if (!pattern.test(hours.start || '') || !pattern.test(hours.end || '')) {
+    throw httpError(400, `${label} must be { start: 'HH:mm', end: 'HH:mm' } or { is24Hours: true }`);
+  }
+  if (hours.start === hours.end) {
+    throw httpError(
+      400,
+      `${label}: opening and closing time can't be the same — use is24Hours for a round-the-clock branch`
+    );
   }
 }
 
@@ -183,6 +198,9 @@ async function update(id, fields, { actorId, actorRole, scope }) {
   if ('workingHours' in fields) assertValidHours(fields.workingHours, 'workingHours');
   if ('umugandaSaturdayHours' in fields) assertValidHours(fields.umugandaSaturdayHours, 'umugandaSaturdayHours');
   if ('name' in fields && !fields.name) throw httpError(400, 'Branch name cannot be empty');
+  if ('holidayOverrides' in fields && fields.holidayOverrides !== null && !Array.isArray(fields.holidayOverrides)) {
+    throw httpError(400, 'holidayOverrides must be an array of holiday ids');
+  }
 
   const updates = {};
   requestedFields.forEach((f) => {

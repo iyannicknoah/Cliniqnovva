@@ -54,7 +54,10 @@ dependencies:
   qr_flutter: ^4.1.0
   image_picker: ^1.2.3
   image: ^4.9.1
+  file_picker: ^8.1.7
+  url_launcher: ^6.3.1
   dio: ^5.10.0
+  http_parser: ^4.1.2
   pdf: ^3.13.0
   printing: ^5.15.0
   fl_chart: ^1.2.0

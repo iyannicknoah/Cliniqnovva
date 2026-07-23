@@ -23,7 +23,7 @@ import '../../features/organizations/screens/branches_screen.dart';
 import '../../features/organizations/screens/onboarding_screen.dart';
 import '../../features/patients/screens/patient_profile_screen.dart';
 import '../../features/patients/screens/patients_screen.dart';
-import '../../features/patients/screens/walkin_register_screen.dart';
+import '../../features/patients/screens/register_patient_screen.dart';
 import '../../features/reports/screens/audit_log_screen.dart';
 import '../../features/reports/screens/reports_screen.dart';
 import '../../features/reviews/screens/popular_clinics_screen.dart';
@@ -223,8 +223,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const PatientsScreen(),
       ),
       GoRoute(
-        path: '/patients/walk-in-register',
-        builder: (context, state) => const WalkInRegisterScreen(),
+        path: '/patients/register',
+        builder: (context, state) => const RegisterPatientScreen(),
       ),
       GoRoute(
         path: '/patients/:id',

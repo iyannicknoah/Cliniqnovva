@@ -372,6 +372,16 @@ class _SummaryStep extends StatelessWidget {
   final Map<String, dynamic> branchBody;
   final List<String> departments;
 
+  /// Mirrors BranchHours.label: 24-hour flag, or a start–end pair where an
+  /// end earlier than the start means the branch closes the next day.
+  static String _hoursLabel(Map<String, dynamic> hours) {
+    if (hours['is24Hours'] == true) return 'Open 24 hours';
+    final start = hours['start'] as String? ?? '';
+    final end = hours['end'] as String? ?? '';
+    final overnight = start.compareTo(end) > 0;
+    return overnight ? '$start – $end (next day)' : '$start – $end';
+  }
+
   @override
   Widget build(BuildContext context) {
     final location = branchBody['location'] as Map<String, dynamic>? ?? {};
@@ -405,13 +415,11 @@ class _SummaryStep extends StatelessWidget {
           ),
           _SummaryRow(
             label: 'Working hours',
-            value: hours == null ? '—' : '${hours['start']} – ${hours['end']}',
+            value: hours == null ? '—' : _hoursLabel(hours),
           ),
           _SummaryRow(
             label: 'Umuganda Saturdays',
-            value: umuganda == null
-                ? 'Normal hours'
-                : '${umuganda['start']} – ${umuganda['end']}',
+            value: umuganda == null ? 'Normal hours' : _hoursLabel(umuganda),
           ),
           _SummaryRow(
             label: departments.length == 1 ? 'Department' : 'Departments',

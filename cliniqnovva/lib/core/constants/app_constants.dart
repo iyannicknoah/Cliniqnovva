@@ -30,6 +30,17 @@ abstract final class AppConstants {
     rolePatient,
   ];
 
+  /// Roles manageable from the Staff screen (Part 8 Task 1) — excludes
+  /// branch_admin/organization_admin/super_admin, whose accounts are
+  /// created elsewhere.
+  static const List<String> staffRoles = [
+    roleDoctor,
+    roleNurse,
+    roleReceptionist,
+    rolePharmacist,
+    roleAccountant,
+  ];
+
   // Subscription plans
   static const String planBasic = 'basic';
   static const String planPro = 'pro';

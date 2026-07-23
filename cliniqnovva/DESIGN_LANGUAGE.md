@@ -335,6 +335,65 @@ growth/trend chart rather than introducing a new chart style or color.
 
 ## Change log
 
+- **2026-07-23 (Part 9: patient records + front-desk registration)** — New
+  patterns: a 3-segment tab selector (`_TabSelector` on Patient Profile —
+  `appSecondaryBg` track, `appCard` selected pill, same shape as the
+  Light/Dark theme toggle in the sidebar's profile menu) used instead of
+  Material's default `TabBar`, keeping the "no primary color" rule intact
+  without needing to re-theme an indicator line. A reusable
+  `PatientAddressForm` (`GlobalKey`-driven `validate`/`value` pattern, same
+  contract as `BranchForm`) shared between Register Patient and the Profile
+  tab's edit form, plus public `LabeledDropdown`/`GenderDropdown`/
+  `PatientDateField` in `patient_form_fields.dart` — the first form-field
+  extraction promoted to a shared file rather than duplicated privately
+  per-screen, since Register and Profile needed the exact same ~150-line
+  address block twice. Role-restricted tab content renders a plain
+  `_RestrictedNotice` card (message only, no icon/warning color — this
+  isn't an error state, just "nothing here for you") when the API omitted
+  a field entirely, distinct from an empty-list "nothing yet" state.
+- **2026-07-23 (Part 8: staff + doctor schedule)** — New patterns: a role
+  badge (`_RoleBadge`, `appSecondaryBg` pill, matches the department-chip
+  style from onboarding) on the Staff table. Add Staff panel's password
+  field has two suffix actions (Generate — `AppIcons.generate`/`arrowPath`
+  — and the usual show/hide eye toggle); on create, a plain `AlertDialog`
+  with `SelectableText` shows the login email + temp password once,
+  matching the master spec's exact phrasing ("Login: ... / Temp password:
+  ... — share this directly"). Doctor Schedule screen introduces an
+  inline-editable row pattern (day dropdown + two `_MiniTimeButton`s +
+  duration field + trash icon, `IgnorePointer`-disabled for a Doctor's own
+  read-only view) for the weekly schedule builder — distinct from
+  `BranchForm`'s static time buttons since these rows are addable/
+  removable. Conflict warnings (blocking a date that overlaps existing
+  bookings) use `AppColors.pillAmberBg`/`pillAmberText` — the same amber
+  pair `StatusBadge`'s warning type already used, now reused as a banner
+  background+text pair rather than just badge text. Public holiday rows
+  use a `Switch` identical in styling to the Umuganda-override switch from
+  `BranchForm`, confirming that's now the standard toggle look wherever a
+  binary override is offered inline in a list row.
+- **2026-07-23 (Part 7: departments + service catalog)** — New patterns:
+  a right-edge SLIDE-OUT panel (`showServicePanel`, full height, 420px,
+  `SlideTransition` from `Offset(1,0)`, left border only) for "+ Add
+  Service" — the spec's explicit wording for this one form, distinct from
+  the centered-modal quick-add pattern used everywhere else (Add Branch,
+  Add Clinic). A small `AlertDialog` (not the full modal chrome) for
+  name-only forms — Add/Rename Department. A muted, tooltipped inline label
+  ("Has services" / "Has history") replaces the Delete action wherever
+  deletion is blocked server-side (department with services attached,
+  service with appointment/invoice history) — Deactivate stays available
+  either way. Departments/Services screens share a `BranchSelector`
+  dropdown (styled like other label-above selects) for an Organization
+  Admin choosing among branches; a Branch Admin never sees it (server-scoped
+  to their own branch). Added `AppIcons.trash`/`plus`/`department`
+  (Heroicons `trash`/`plus`/`buildingOffice`) to the icon catalog.
+- **2026-07-23 (24-hour + overnight working hours)** — The branch form's
+  working hours now support round-the-clock clinics (an "Open 24 hours"
+  switch that hides the time pickers; stored as `{is24Hours: true}`) and
+  overnight shifts: a closing time earlier than the opening time is valid
+  and means the branch closes the NEXT day (e.g. 20:00 – 04:00), with a
+  subtle "Closes after midnight" hint under the pickers and a
+  "(next day)" suffix wherever hours are displayed. The only rejected pair
+  is start == end (ambiguous — that's what the 24-hour switch is for).
+  Enforced client-side and server-side.
 - **2026-07-23 (Part 6: onboarding wizard + branches)** — New patterns:
   full-screen 3-step wizard (`/onboarding`, 560px column, "Step X of 3"
   over a 6px `LinearProgressIndicator` in `appPrimary` on `appSecondaryBg`,
