@@ -6,6 +6,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/theme_ext.dart';
+import '../../../shared/utils/async_feedback.dart';
 import '../../../shared/widgets/app_icon.dart';
 import '../../../shared/widgets/cliniqnovva_button.dart';
 import '../../../shared/widgets/cliniqnovva_text_field.dart';
@@ -93,23 +94,28 @@ class _AddOrganizationPanelState extends ConsumerState<_AddOrganizationPanel> {
     });
 
     try {
-      await ref
-          .read(organizationsNotifierProvider.notifier)
-          .create(
-            name: name,
-            subscriptionPlan: _plan,
-            adminEmail: adminEmail,
-            adminPassword: adminPassword,
-            ownerContactName: _ownerNameController.text.trim().isEmpty
-                ? null
-                : _ownerNameController.text.trim(),
-            ownerContactPhone: _ownerPhoneController.text.trim().isEmpty
-                ? null
-                : _ownerPhoneController.text.trim(),
-            subscriptionAmountRwf: int.tryParse(
-              _subscriptionAmountController.text.trim(),
+      await runWithFeedback(
+        context,
+        () => ref
+            .read(organizationsNotifierProvider.notifier)
+            .create(
+              name: name,
+              subscriptionPlan: _plan,
+              adminEmail: adminEmail,
+              adminPassword: adminPassword,
+              ownerContactName: _ownerNameController.text.trim().isEmpty
+                  ? null
+                  : _ownerNameController.text.trim(),
+              ownerContactPhone: _ownerPhoneController.text.trim().isEmpty
+                  ? null
+                  : _ownerPhoneController.text.trim(),
+              subscriptionAmountRwf: int.tryParse(
+                _subscriptionAmountController.text.trim(),
+              ),
             ),
-          );
+        loadingMessage: 'Creating clinic…',
+        successMessage: 'Clinic created.',
+      );
       if (!mounted) return;
       Navigator.of(context).pop();
       await showDialog<void>(

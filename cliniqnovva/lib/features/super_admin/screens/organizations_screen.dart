@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/theme_ext.dart';
+import '../../../shared/utils/async_feedback.dart';
 import '../../../shared/widgets/app_icon.dart';
 import '../../../shared/widgets/cliniqnovva_button.dart';
 import '../../../shared/widgets/cliniqnovva_card.dart';
@@ -43,10 +44,15 @@ class _OrganizationsScreenState extends ConsumerState<OrganizationsScreen> {
       organizationName: org.name,
       activate: activate,
     );
-    if (!confirmed) return;
-    await ref
-        .read(organizationsNotifierProvider.notifier)
-        .setStatus(org.id, activate);
+    if (!confirmed || !mounted) return;
+    await runWithFeedback(
+      context,
+      () => ref
+          .read(organizationsNotifierProvider.notifier)
+          .setStatus(org.id, activate),
+      loadingMessage: activate ? 'Activating clinic…' : 'Suspending clinic…',
+      successMessage: activate ? 'Clinic activated.' : 'Clinic suspended.',
+    );
   }
 
   String _formatDate(DateTime? date) {

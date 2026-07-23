@@ -24,6 +24,12 @@ seeds the app's `ColorScheme` (`ColorScheme.fromSeed(seedColor: Colors.black`
 buttons, etc.) that reads `colorScheme.primary` automatically follows suit —
 don't reintroduce a colored accent as "primary" anywhere.
 
+**`AppColors.skyBlue` (`#38BDF8`) is the system's second primary color
+(2026-07-23)** — the one deliberate exception to "no color accent." Currently
+used for the Overview revenue chart (line + a more-transparent fill beneath
+it). Reach for this before introducing any other accent color; it isn't a
+per-chart one-off.
+
 | Token | Value | Use |
 |---|---|---|
 | `pageBackground` | `#FFFFFF` (pure white) | Every page/scaffold background, input fills, containers (light mode) |
@@ -33,6 +39,7 @@ don't reintroduce a colored accent as "primary" anywhere.
 | `successGreen` / `warningAmber` / `errorRed` | `#2ECC71` / `#F4A261` / `#E63946` | Status semantics |
 | Pill pairs (`pillGreenBg/Text` etc.) | — | Inline banners only (e.g. login error, Add Clinic error box) — no longer used for `StatusBadge` |
 | `brightGreen` / `brightRed` | `#34C759` / `#FF3B30` | `StatusBadge` success/error text (2026-07-23) — bright, no background |
+| `skyBlue` | `#38BDF8` | Second primary/accent (2026-07-23) — Overview revenue chart line + fill |
 | `avatarGradients` | 26 letter-keyed gradients | Avatar initials |
 
 `deepNavy` (`#0B2545`) still exists but is no longer used for any page/sidebar
@@ -218,6 +225,27 @@ inverse text when selected, border-only (`context.appBorder`) with
 `context.appText` otherwise. Not yet promoted to `shared/widgets/` since it
 only has one caller — promote it if a second one shows up.
 
+## Loading/success feedback (`runWithFeedback`, `shared/utils/async_feedback.dart`)
+
+**Every write action shows a loading SnackBar while in flight, replaced by a
+success SnackBar when it finishes (2026-07-23)** — so a slow request never
+reads as a silent no-op. Call `runWithFeedback(context, () => notifier.doThing(...),
+loadingMessage: '…', successMessage: '…')` around every mutation instead of
+awaiting the notifier call directly; it rethrows on failure so callers can
+still run their own inline error handling (form error text, etc.) in
+addition to the automatic failure SnackBar. Applied to every Super Admin
+write action: create/update/suspend/activate a clinic, create a branch on a
+clinic's behalf, set billing status, record a payment. Deliberately NOT
+applied to read-only lookups (search-as-you-type, "View record", the
+Support View session start/end) — those already have their own inline
+loading/result UI, and a toast on every keystroke would be noise, not
+signal.
+
+**SnackBar theme** (`AppTheme._snackBarTheme`) follows the same black/white
+inversion rule as `CliniqnovvaButton`/selected chips: black background with
+white text in light mode, white background with black text in dark mode —
+floating, 12px radius, no color accent.
+
 ## Brand assets
 
 - Current source marks at the repo root: **`Light Logo.png`** and
@@ -285,14 +313,37 @@ activity" feed, distinct from a data table.
 
 **Chart**: `fl_chart`'s `LineChart`, one series (real monthly revenue,
 summed server-side from every organization's recorded cash payments — see
-`GET /api/v1/platform/revenue-trend`), colored with `context.appPrimary` and
-a soft area fill beneath — **no primary/lime, matches the black/white rule**.
-Reuse this pattern (single-series `LineChart`, `context.appPrimary` line +
-low-alpha `belowBarData` fill, month labels via `RevenueTrendPoint.monthLabel`)
-for any future growth/trend chart rather than introducing a new chart style.
+`GET /api/v1/platform/revenue-trend`), colored with `AppColors.skyBlue`
+(the system's second primary, 2026-07-23) and a more-transparent
+`skyBlue.withValues(alpha: 0.15)` area fill beneath. X-axis labels are
+capped at ~8 visible via `labelInterval = (points.length / 8).ceil()` —
+without it, one label per data point overlaps/duplicates once there are
+more than a handful of months. Reuse this pattern (single-series
+`LineChart`, `skyBlue` line + low-alpha fill, interval-capped month labels
+via `RevenueTrendPoint.monthLabel`) for any future growth/trend chart
+rather than introducing a new chart style or color.
 
 ## Change log
 
+- **2026-07-23 (Loading/success SnackBar on every write action)** — Added
+  `runWithFeedback` (`shared/utils/async_feedback.dart`) and a new global
+  `SnackBarThemeData` (black/white-inverted, matching `CliniqnovvaButton`).
+  Every Super Admin mutation now shows a loading SnackBar while in flight and
+  a success one when it resolves: Add Clinic, Suspend/Activate (both the
+  Clinics list and Clinic detail screen), Save changes on Clinic detail,
+  Create branch on a clinic's behalf, set billing status, record a payment.
+  Read-only actions (search, View record, Support View) were left alone —
+  see "Loading/success feedback" above for the reasoning.
+- **2026-07-23 (Revenue chart → sky blue, fixed label crowding)** — Added
+  `AppColors.skyBlue` (`#38BDF8`) as the system's second primary color — the
+  one deliberate exception to the black/white-only rule. The Overview
+  revenue chart's line changed from `context.appPrimary` to `skyBlue`, and
+  its area fill to `skyBlue` at a lower alpha (0.15, up from 0.08) so it
+  reads as a visible tinted wash rather than a near-invisible grey haze.
+  Also fixed the x-axis: it previously rendered a label for every single
+  data point, which overlapped/duplicated once there were more than ~8
+  months of data — now capped at ~8 evenly-spaced labels via a computed
+  `labelInterval`.
 - **2026-07-23 (Manual billing status + payment gate)** — `billingStatus` is
   now a manually-set field (`notPaid` | `pending` | `paid`, default `notPaid`
   on clinic creation) instead of computed from `nextDueDate` — the Super

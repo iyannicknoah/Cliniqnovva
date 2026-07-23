@@ -37,6 +37,12 @@ abstract final class AppColors {
   static const Color brightGreen = Color(0xFF34C759);
   static const Color brightRed = Color(0xFFFF3B30);
 
+  /// The system's second primary color (2026-07-23), alongside the
+  /// black/white `context.appPrimary`. Currently used for the Overview
+  /// revenue chart's line + area fill — reach for this first before
+  /// introducing any other accent color.
+  static const Color skyBlue = Color(0xFF38BDF8);
+
   /// One unique 2-color gradient per letter A-Z, used for avatar-initial
   /// circles when a person has no photo. Look up by the first letter of a
   /// name (uppercased) — see [AvatarWidget].

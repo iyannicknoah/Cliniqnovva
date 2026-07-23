@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/theme_ext.dart';
 import '../../../shared/widgets/cliniqnovva_card.dart';
 import '../../../shared/widgets/metric_card.dart';
@@ -34,7 +35,9 @@ class OverviewScreen extends ConsumerWidget {
     final metricsAsync = ref.watch(platformMetricsProvider);
     final organizationsAsync = ref.watch(organizationsListProvider);
     final revenueTrendAsync = ref.watch(platformRevenueTrendProvider);
-    final activityAsync = ref.watch(platformAuditLogProvider(const AuditLogFilter()));
+    final activityAsync = ref.watch(
+      platformAuditLogProvider(const AuditLogFilter()),
+    );
 
     return SuperAdminScaffold(
       currentRoute: '/super-admin/overview',
@@ -43,7 +46,10 @@ class OverviewScreen extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           organizationsAsync.when(
-            loading: () => const Padding(padding: EdgeInsets.all(24), child: Center(child: CircularProgressIndicator())),
+            loading: () => const Padding(
+              padding: EdgeInsets.all(24),
+              child: Center(child: CircularProgressIndicator()),
+            ),
             error: (err, _) => Text('Failed to load clinics: $err'),
             data: (organizations) {
               final totalOrgs = organizations.length;
@@ -53,17 +59,40 @@ class OverviewScreen extends ConsumerWidget {
                   .fold<double>(0, (sum, o) => sum + o.monthlyEquivalentRwf);
 
               return metricsAsync.when(
-                loading: () => const Padding(padding: EdgeInsets.all(24), child: Center(child: CircularProgressIndicator())),
+                loading: () => const Padding(
+                  padding: EdgeInsets.all(24),
+                  child: Center(child: CircularProgressIndicator()),
+                ),
                 error: (err, _) => Text('Failed to load metrics: $err'),
                 data: (metrics) => Row(
                   children: [
-                    Expanded(child: MetricCard(value: '$totalOrgs', label: 'Total clinics')),
+                    Expanded(
+                      child: MetricCard(
+                        value: '$totalOrgs',
+                        label: 'Total clinics',
+                      ),
+                    ),
                     const SizedBox(width: 16),
-                    Expanded(child: MetricCard(value: '$activeOrgs', label: 'Active clinics')),
+                    Expanded(
+                      child: MetricCard(
+                        value: '$activeOrgs',
+                        label: 'Active clinics',
+                      ),
+                    ),
                     const SizedBox(width: 16),
-                    Expanded(child: MetricCard(value: '${metrics.totalBranches}', label: 'Total branches')),
+                    Expanded(
+                      child: MetricCard(
+                        value: '${metrics.totalBranches}',
+                        label: 'Total branches',
+                      ),
+                    ),
                     const SizedBox(width: 16),
-                    Expanded(child: MetricCard(value: formatRwf(totalMonthlyRevenue), label: 'Monthly revenue (RWF)')),
+                    Expanded(
+                      child: MetricCard(
+                        value: formatRwf(totalMonthlyRevenue),
+                        label: 'Monthly revenue (RWF)',
+                      ),
+                    ),
                   ],
                 ),
               );
@@ -76,8 +105,12 @@ class OverviewScreen extends ConsumerWidget {
               height: 240,
               child: revenueTrendAsync.when(
                 loading: () => const Center(child: CircularProgressIndicator()),
-                error: (err, _) =>
-                    Center(child: Text('Failed to load revenue trend: $err', style: TextStyle(color: context.appSubtext))),
+                error: (err, _) => Center(
+                  child: Text(
+                    'Failed to load revenue trend: $err',
+                    style: TextStyle(color: context.appSubtext),
+                  ),
+                ),
                 data: (points) => _RevenueChart(points: points),
               ),
             ),
@@ -90,20 +123,30 @@ class OverviewScreen extends ConsumerWidget {
                 child: CliniqnovvaCard(
                   title: 'Recent clinics',
                   child: organizationsAsync.when(
-                    loading: () => const Center(child: CircularProgressIndicator()),
-                    error: (err, _) => Text('Failed to load: $err', style: TextStyle(color: context.appSubtext)),
+                    loading: () =>
+                        const Center(child: CircularProgressIndicator()),
+                    error: (err, _) => Text(
+                      'Failed to load: $err',
+                      style: TextStyle(color: context.appSubtext),
+                    ),
                     data: (organizations) {
                       final recent = organizations.take(5).toList();
                       if (recent.isEmpty) {
-                        return Text('No clinics yet.', style: TextStyle(color: context.appSubtext));
+                        return Text(
+                          'No clinics yet.',
+                          style: TextStyle(color: context.appSubtext),
+                        );
                       }
                       return Column(
                         children: [
                           for (final org in recent)
                             _OverviewListRow(
-                              onTap: () => context.push('/super-admin/organizations/${org.id}'),
+                              onTap: () => context.push(
+                                '/super-admin/organizations/${org.id}',
+                              ),
                               title: org.name,
-                              subtitle: '${org.subscriptionPlan[0].toUpperCase()}${org.subscriptionPlan.substring(1)}',
+                              subtitle:
+                                  '${org.subscriptionPlan[0].toUpperCase()}${org.subscriptionPlan.substring(1)}',
                               trailing: _formatDate(org.createdAt),
                             ),
                         ],
@@ -117,19 +160,29 @@ class OverviewScreen extends ConsumerWidget {
                 child: CliniqnovvaCard(
                   title: 'Recent platform activity',
                   child: activityAsync.when(
-                    loading: () => const Center(child: CircularProgressIndicator()),
-                    error: (err, _) => Text('Failed to load: $err', style: TextStyle(color: context.appSubtext)),
+                    loading: () =>
+                        const Center(child: CircularProgressIndicator()),
+                    error: (err, _) => Text(
+                      'Failed to load: $err',
+                      style: TextStyle(color: context.appSubtext),
+                    ),
                     data: (entries) {
                       final recent = entries.take(5).toList();
                       if (recent.isEmpty) {
-                        return Text('No activity yet.', style: TextStyle(color: context.appSubtext));
+                        return Text(
+                          'No activity yet.',
+                          style: TextStyle(color: context.appSubtext),
+                        );
                       }
                       return Column(
                         children: [
                           for (final entry in recent)
                             _OverviewListRow(
                               title: entry.action,
-                              subtitle: entry.organizationId ?? entry.actorRole ?? '—',
+                              subtitle:
+                                  entry.organizationId ??
+                                  entry.actorRole ??
+                                  '—',
                               trailing: _formatDateTime(entry.timestamp),
                             ),
                         ],
@@ -147,7 +200,12 @@ class OverviewScreen extends ConsumerWidget {
 }
 
 class _OverviewListRow extends StatelessWidget {
-  const _OverviewListRow({required this.title, required this.subtitle, required this.trailing, this.onTap});
+  const _OverviewListRow({
+    required this.title,
+    required this.subtitle,
+    required this.trailing,
+    this.onTap,
+  });
 
   final String title;
   final String subtitle;
@@ -162,7 +220,10 @@ class _OverviewListRow extends StatelessWidget {
       child: Container(
         margin: const EdgeInsets.only(bottom: 8),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        decoration: BoxDecoration(color: context.appSecondaryBg, borderRadius: BorderRadius.circular(12)),
+        decoration: BoxDecoration(
+          color: context.appSecondaryBg,
+          borderRadius: BorderRadius.circular(12),
+        ),
         child: Row(
           children: [
             Expanded(
@@ -173,7 +234,11 @@ class _OverviewListRow extends StatelessWidget {
                     title,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(color: context.appText, fontWeight: FontWeight.w600, fontSize: 14),
+                    style: TextStyle(
+                      color: context.appText,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                    ),
                   ),
                   Text(
                     subtitle,
@@ -185,7 +250,10 @@ class _OverviewListRow extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 8),
-            Text(trailing, style: TextStyle(color: context.appSubtext, fontSize: 12)),
+            Text(
+              trailing,
+              style: TextStyle(color: context.appSubtext, fontSize: 12),
+            ),
           ],
         ),
       ),
@@ -193,8 +261,8 @@ class _OverviewListRow extends StatelessWidget {
   }
 }
 
-/// Real revenue growth — no primary/lime, matches the system's black/white
-/// rule (2026-07-24): a single line + soft area fill in `context.appPrimary`.
+/// Real revenue growth — second-primary sky blue (2026-07-23) for the line
+/// and a more-transparent sky blue for the area fill beneath it.
 class _RevenueChart extends StatelessWidget {
   const _RevenueChart({required this.points});
 
@@ -203,13 +271,26 @@ class _RevenueChart extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (points.isEmpty) {
-      return Center(child: Text('No revenue data yet.', style: TextStyle(color: context.appSubtext)));
+      return Center(
+        child: Text(
+          'No revenue data yet.',
+          style: TextStyle(color: context.appSubtext),
+        ),
+      );
     }
 
-    final spots = [for (var i = 0; i < points.length; i++) FlSpot(i.toDouble(), points[i].revenueRwf.toDouble())];
-    final maxRevenue = points.map((p) => p.revenueRwf).fold<int>(0, (a, b) => a > b ? a : b);
+    final spots = [
+      for (var i = 0; i < points.length; i++)
+        FlSpot(i.toDouble(), points[i].revenueRwf.toDouble()),
+    ];
+    final maxRevenue = points
+        .map((p) => p.revenueRwf)
+        .fold<int>(0, (a, b) => a > b ? a : b);
     final chartMaxY = maxRevenue == 0 ? 10.0 : maxRevenue * 1.2;
-    final lineColor = context.appPrimary;
+    final lineColor = AppColors.skyBlue;
+    // Only label every Nth month so labels never crowd/overlap each other —
+    // caps the x-axis at ~8 visible labels regardless of how many points exist.
+    final labelInterval = (points.length / 8).ceil().clamp(1, points.length);
 
     return LineChart(
       LineChartData(
@@ -219,23 +300,39 @@ class _RevenueChart extends StatelessWidget {
           show: true,
           drawVerticalLine: false,
           horizontalInterval: chartMaxY / 4,
-          getDrawingHorizontalLine: (value) => FlLine(color: context.appBorder, strokeWidth: 1),
+          getDrawingHorizontalLine: (value) =>
+              FlLine(color: context.appBorder, strokeWidth: 1),
         ),
         borderData: FlBorderData(show: false),
         titlesData: FlTitlesData(
-          topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          topTitles: const AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
+          rightTitles: const AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
+          leftTitles: const AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
           bottomTitles: AxisTitles(
             sideTitles: SideTitles(
               showTitles: true,
               reservedSize: 28,
+              interval: 1,
               getTitlesWidget: (value, meta) {
                 final index = value.toInt();
-                if (index < 0 || index >= points.length) return const SizedBox.shrink();
+                if (index < 0 || index >= points.length) {
+                  return const SizedBox.shrink();
+                }
+                if (index % labelInterval != 0) {
+                  return const SizedBox.shrink();
+                }
                 return Padding(
                   padding: const EdgeInsets.only(top: 8),
-                  child: Text(points[index].monthLabel, style: TextStyle(color: context.appSubtext, fontSize: 11)),
+                  child: Text(
+                    points[index].monthLabel,
+                    style: TextStyle(color: context.appSubtext, fontSize: 11),
+                  ),
                 );
               },
             ),
@@ -248,7 +345,11 @@ class _RevenueChart extends StatelessWidget {
               final point = points[spot.x.toInt()];
               return LineTooltipItem(
                 '${point.monthLabel}\n${formatRwf(point.revenueRwf)} RWF',
-                TextStyle(color: context.appText, fontWeight: FontWeight.w600, fontSize: 12),
+                TextStyle(
+                  color: context.appText,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 12,
+                ),
               );
             }).toList(),
           ),
@@ -260,7 +361,10 @@ class _RevenueChart extends StatelessWidget {
             color: lineColor,
             barWidth: 2,
             dotData: const FlDotData(show: false),
-            belowBarData: BarAreaData(show: true, color: lineColor.withValues(alpha: 0.08)),
+            belowBarData: BarAreaData(
+              show: true,
+              color: lineColor.withValues(alpha: 0.15),
+            ),
           ),
         ],
       ),

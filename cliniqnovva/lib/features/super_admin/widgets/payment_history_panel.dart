@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/theme_ext.dart';
+import '../../../shared/utils/async_feedback.dart';
 import '../../../shared/widgets/app_icon.dart';
 import '../../../shared/widgets/cliniqnovva_button.dart';
 import '../../../shared/widgets/cliniqnovva_table.dart';
@@ -126,20 +127,25 @@ class _PaymentHistoryPanel extends ConsumerWidget {
       ),
     );
 
-    if (confirmed != true) return;
+    if (confirmed != true || !context.mounted) return;
     final amount = int.tryParse(amountController.text.trim());
     if (amount == null || amount <= 0) return;
 
-    await ref
-        .read(organizationsNotifierProvider.notifier)
-        .recordPayment(
-          organization.id,
-          amountRwf: amount,
-          date: date,
-          note: noteController.text.trim().isEmpty
-              ? null
-              : noteController.text.trim(),
-        );
+    await runWithFeedback(
+      context,
+      () => ref
+          .read(organizationsNotifierProvider.notifier)
+          .recordPayment(
+            organization.id,
+            amountRwf: amount,
+            date: date,
+            note: noteController.text.trim().isEmpty
+                ? null
+                : noteController.text.trim(),
+          ),
+      loadingMessage: 'Recording payment…',
+      successMessage: 'Payment recorded.',
+    );
   }
 
   @override
@@ -194,9 +200,15 @@ class _PaymentHistoryPanel extends ConsumerWidget {
                       _BillingStatusChip(
                         label: _billingStatusLabel(status),
                         selected: currentOrg.billingStatus == status,
-                        onTap: () => ref
-                            .read(organizationsNotifierProvider.notifier)
-                            .setBillingStatus(organization.id, status),
+                        onTap: () => runWithFeedback(
+                          context,
+                          () => ref
+                              .read(organizationsNotifierProvider.notifier)
+                              .setBillingStatus(organization.id, status),
+                          loadingMessage: 'Updating billing status…',
+                          successMessage:
+                              'Billing status set to ${_billingStatusLabel(status)}.',
+                        ),
                       ),
                       const SizedBox(width: 8),
                     ],

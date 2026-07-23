@@ -18,14 +18,19 @@ abstract final class AppTheme {
 
   static BorderSide cardBorderSide(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    return BorderSide(color: isDark ? const Color(0xFF2A2A2A) : AppColors.cardBorder, width: 0.5);
+    return BorderSide(
+      color: isDark ? const Color(0xFF2A2A2A) : AppColors.cardBorder,
+      width: 0.5,
+    );
   }
 
   // Cards use the exact same value as the page background in both themes
   // (design rule 2026-07-23, copied from HRNova) — never a separate shade.
   // Differentiate a card from the page with `cardBorderSide` only.
   static Color cardColor(BuildContext context) {
-    return Theme.of(context).brightness == Brightness.dark ? AppColors.pageBackgroundDark : AppColors.pageBackground;
+    return Theme.of(context).brightness == Brightness.dark
+        ? AppColors.pageBackgroundDark
+        : AppColors.pageBackground;
   }
 
   /// `showDatePicker`'s default Material 3 styling derives its colors from
@@ -42,9 +47,15 @@ abstract final class AppTheme {
     final selectedFg = isDark ? Colors.black : Colors.white;
     final borderColor = isDark ? const Color(0xFF2A2A2A) : AppColors.cardBorder;
 
-    Color dayColor(Set<WidgetState> states, {required Color selected, required Color normal}) {
+    Color dayColor(
+      Set<WidgetState> states, {
+      required Color selected,
+      required Color normal,
+    }) {
       if (states.contains(WidgetState.selected)) return selected;
-      if (states.contains(WidgetState.disabled)) return normal.withValues(alpha: 0.35);
+      if (states.contains(WidgetState.disabled)) {
+        return normal.withValues(alpha: 0.35);
+      }
       return normal;
     }
 
@@ -58,10 +69,14 @@ abstract final class AppTheme {
         (states) => dayColor(states, selected: selectedFg, normal: fg),
       ),
       dayBackgroundColor: WidgetStateProperty.resolveWith(
-        (states) => states.contains(WidgetState.selected) ? selectedBg : Colors.transparent,
+        (states) => states.contains(WidgetState.selected)
+            ? selectedBg
+            : Colors.transparent,
       ),
       dayOverlayColor: WidgetStateProperty.resolveWith(
-        (states) => states.contains(WidgetState.hovered) || states.contains(WidgetState.pressed)
+        (states) =>
+            states.contains(WidgetState.hovered) ||
+                states.contains(WidgetState.pressed)
             ? fg.withValues(alpha: 0.08)
             : Colors.transparent,
       ),
@@ -70,17 +85,24 @@ abstract final class AppTheme {
         (states) => dayColor(states, selected: selectedFg, normal: fg),
       ),
       todayBackgroundColor: WidgetStateProperty.resolveWith(
-        (states) => states.contains(WidgetState.selected) ? selectedBg : Colors.transparent,
+        (states) => states.contains(WidgetState.selected)
+            ? selectedBg
+            : Colors.transparent,
       ),
       todayBorder: BorderSide(color: fg, width: 1),
       yearForegroundColor: WidgetStateProperty.resolveWith(
         (states) => dayColor(states, selected: selectedFg, normal: fg),
       ),
       yearBackgroundColor: WidgetStateProperty.resolveWith(
-        (states) => states.contains(WidgetState.selected) ? selectedBg : Colors.transparent,
+        (states) => states.contains(WidgetState.selected)
+            ? selectedBg
+            : Colors.transparent,
       ),
       dividerColor: borderColor,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: BorderSide(color: borderColor)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: borderColor),
+      ),
       cancelButtonStyle: TextButton.styleFrom(foregroundColor: fg),
       confirmButtonStyle: TextButton.styleFrom(foregroundColor: fg),
     );
@@ -102,9 +124,45 @@ abstract final class AppTheme {
       backgroundColor: bg,
       surfaceTintColor: Colors.transparent,
       elevation: 0,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18), side: BorderSide(color: borderColor)),
-      titleTextStyle: TextStyle(color: fg, fontFamily: fontFamily, fontSize: 18, fontWeight: FontWeight.w600),
-      contentTextStyle: TextStyle(color: sub, fontFamily: fontFamily, fontSize: 14, height: 1.4),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(18),
+        side: BorderSide(color: borderColor),
+      ),
+      titleTextStyle: TextStyle(
+        color: fg,
+        fontFamily: fontFamily,
+        fontSize: 18,
+        fontWeight: FontWeight.w600,
+      ),
+      contentTextStyle: TextStyle(
+        color: sub,
+        fontFamily: fontFamily,
+        fontSize: 14,
+        height: 1.4,
+      ),
+    );
+  }
+
+  /// Every write action shows a loading SnackBar while in flight and a
+  /// success/error one when it finishes (`runWithFeedback`, 2026-07-23).
+  /// Themed to match the black/white inversion rule every other filled
+  /// surface (`CliniqnovvaButton`, selected chips) already follows: black
+  /// bg/white text in light mode, white bg/black text in dark mode.
+  static SnackBarThemeData _snackBarTheme({required bool isDark}) {
+    final bg = isDark ? Colors.white : Colors.black;
+    final fg = isDark ? Colors.black : Colors.white;
+
+    return SnackBarThemeData(
+      backgroundColor: bg,
+      contentTextStyle: TextStyle(
+        color: fg,
+        fontFamily: fontFamily,
+        fontSize: 14,
+        fontWeight: FontWeight.w500,
+      ),
+      behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      actionTextColor: fg,
     );
   }
 
@@ -133,6 +191,7 @@ abstract final class AppTheme {
       dividerColor: AppColors.cardBorder,
       datePickerTheme: _datePickerTheme(isDark: false),
       dialogTheme: _dialogTheme(isDark: false),
+      snackBarTheme: _snackBarTheme(isDark: false),
     );
   }
 
@@ -157,6 +216,7 @@ abstract final class AppTheme {
       dividerColor: const Color(0xFF2A2A2A),
       datePickerTheme: _datePickerTheme(isDark: true),
       dialogTheme: _dialogTheme(isDark: true),
+      snackBarTheme: _snackBarTheme(isDark: true),
     );
   }
 }
