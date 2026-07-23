@@ -180,7 +180,8 @@ class OverviewScreen extends ConsumerWidget {
                             _OverviewListRow(
                               title: entry.action,
                               subtitle:
-                                  entry.organizationId ??
+                                  entry.organizationName ??
+                                  entry.actorLabel ??
                                   entry.actorRole ??
                                   '—',
                               trailing: _formatDateTime(entry.timestamp),
@@ -296,6 +297,10 @@ class _RevenueChart extends StatelessWidget {
       LineChartData(
         minY: 0,
         maxY: chartMaxY,
+        // Cubic-bezier curve smoothing can dip below the actual data (and
+        // bleed into the axis labels) on a sharp flat-to-steep transition —
+        // clipData + preventCurveOverShooting keep the curve inside minY/maxY.
+        clipData: const FlClipData.all(),
         gridData: FlGridData(
           show: true,
           drawVerticalLine: false,
@@ -358,6 +363,7 @@ class _RevenueChart extends StatelessWidget {
           LineChartBarData(
             spots: spots,
             isCurved: true,
+            preventCurveOverShooting: true,
             color: lineColor,
             barWidth: 2,
             dotData: const FlDotData(show: false),

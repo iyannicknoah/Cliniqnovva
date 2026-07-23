@@ -318,13 +318,28 @@ summed server-side from every organization's recorded cash payments — see
 `skyBlue.withValues(alpha: 0.15)` area fill beneath. X-axis labels are
 capped at ~8 visible via `labelInterval = (points.length / 8).ceil()` —
 without it, one label per data point overlaps/duplicates once there are
-more than a handful of months. Reuse this pattern (single-series
-`LineChart`, `skyBlue` line + low-alpha fill, interval-capped month labels
-via `RevenueTrendPoint.monthLabel`) for any future growth/trend chart
-rather than introducing a new chart style or color.
+more than a handful of months. `LineChartBarData.preventCurveOverShooting:
+true` + `LineChartData.clipData: FlClipData.all()` (2026-07-23) keep the
+cubic-bezier curve smoothing inside `minY`/`maxY` — without them, a sharp
+flat-to-steep jump in the data (e.g. a long flat stretch before a payment
+spike) makes the curve dip below the axis and bleed into the month labels.
+Reuse this pattern (single-series `LineChart`, `skyBlue` line + low-alpha
+fill, interval-capped month labels, curve-clamping) for any future
+growth/trend chart rather than introducing a new chart style or color.
 
 ## Change log
 
+- **2026-07-23 (Real names in the audit log; chart curve fix)** — The
+  platform audit log (Oversight screen + Overview's "Recent platform
+  activity") was showing raw Firestore ids for Clinic and Actor, which read
+  as fake/meaningless even though the entries were real. `getAuditLog`
+  (`platform.service.js`) now resolves `organizationId` → the clinic's real
+  name and `actorId` → a real name/email (`/users` doc first, falling back
+  to the Firebase Auth record for auth-only accounts like Super Admin) —
+  new `organizationName`/`actorLabel` fields on `AuditLogEntry`. Also fixed
+  the revenue chart's curve dipping below the axis and overlapping the
+  month labels on a sharp flat-to-steep jump — see the Overview page's
+  Chart section above for the `preventCurveOverShooting`/`clipData` fix.
 - **2026-07-23 (Loading/success SnackBar on every write action)** — Added
   `runWithFeedback` (`shared/utils/async_feedback.dart`) and a new global
   `SnackBarThemeData` (black/white-inverted, matching `CliniqnovvaButton`).

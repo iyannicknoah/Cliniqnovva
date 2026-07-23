@@ -509,13 +509,17 @@ void main() {
       'action': 'organization.suspended',
       'actorId': 'admin1',
       'actorRole': 'super_admin',
+      'actorLabel': 'admin@cliniqnova.rw',
       'targetCollection': 'organizations',
       'targetId': 'org1',
       'organizationId': 'org1',
+      'organizationName': 'Kigali Family Clinic',
       'timestamp': '2026-07-22T12:00:00.000Z',
     });
     expect(entry.action, 'organization.suspended');
     expect(entry.organizationId, 'org1');
+    expect(entry.organizationName, 'Kigali Family Clinic');
+    expect(entry.actorLabel, 'admin@cliniqnova.rw');
     expect(entry.timestamp, DateTime.parse('2026-07-22T12:00:00.000Z'));
   });
 

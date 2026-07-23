@@ -59,7 +59,9 @@ class _OversightScreenState extends ConsumerState<OversightScreen> {
       _recordResult = null;
       _recordNotFound = false;
     });
-    final result = await ref.read(platformNotifierProvider.notifier).viewRecord(_recordCollection, id);
+    final result = await ref
+        .read(platformNotifierProvider.notifier)
+        .viewRecord(_recordCollection, id);
     if (!mounted) return;
     setState(() {
       _recordLoading = false;
@@ -69,7 +71,11 @@ class _OversightScreenState extends ConsumerState<OversightScreen> {
   }
 
   Future<void> _pickDate({required bool isFrom}) async {
-    final picked = await showDatePicker(context: context, firstDate: DateTime(2020), lastDate: DateTime(2100));
+    final picked = await showDatePicker(
+      context: context,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2100),
+    );
     if (picked == null) return;
     setState(() => isFrom ? _filterDateFrom = picked : _filterDateTo = picked);
   }
@@ -78,8 +84,12 @@ class _OversightScreenState extends ConsumerState<OversightScreen> {
     setState(() {
       _appliedFilter = AuditLogFilter(
         organizationId: _filterOrgId,
-        actorId: _filterActorController.text.trim().isEmpty ? null : _filterActorController.text.trim(),
-        action: _filterActionController.text.trim().isEmpty ? null : _filterActionController.text.trim(),
+        actorId: _filterActorController.text.trim().isEmpty
+            ? null
+            : _filterActorController.text.trim(),
+        action: _filterActionController.text.trim().isEmpty
+            ? null
+            : _filterActionController.text.trim(),
         dateFrom: _filterDateFrom,
         dateTo: _filterDateTo,
       );
@@ -122,19 +132,47 @@ class _OversightScreenState extends ConsumerState<OversightScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           metricsAsync.when(
-            loading: () => const Padding(padding: EdgeInsets.all(24), child: Center(child: CircularProgressIndicator())),
+            loading: () => const Padding(
+              padding: EdgeInsets.all(24),
+              child: Center(child: CircularProgressIndicator()),
+            ),
             error: (err, _) => Text('Failed to load metrics: $err'),
             data: (metrics) => Row(
               children: [
-                Expanded(child: MetricCard(value: '${metrics.totalOrganizations}', label: 'Clinics')),
+                Expanded(
+                  child: MetricCard(
+                    value: '${metrics.totalOrganizations}',
+                    label: 'Clinics',
+                  ),
+                ),
                 const SizedBox(width: 12),
-                Expanded(child: MetricCard(value: '${metrics.totalBranches}', label: 'Branches')),
+                Expanded(
+                  child: MetricCard(
+                    value: '${metrics.totalBranches}',
+                    label: 'Branches',
+                  ),
+                ),
                 const SizedBox(width: 12),
-                Expanded(child: MetricCard(value: '${metrics.totalActiveStaff}', label: 'Active staff')),
+                Expanded(
+                  child: MetricCard(
+                    value: '${metrics.totalActiveStaff}',
+                    label: 'Active staff',
+                  ),
+                ),
                 const SizedBox(width: 12),
-                Expanded(child: MetricCard(value: '${metrics.totalPatients}', label: 'Patients')),
+                Expanded(
+                  child: MetricCard(
+                    value: '${metrics.totalPatients}',
+                    label: 'Patients',
+                  ),
+                ),
                 const SizedBox(width: 12),
-                Expanded(child: MetricCard(value: '${metrics.totalAppointmentsThisMonth}', label: 'Appts this month')),
+                Expanded(
+                  child: MetricCard(
+                    value: '${metrics.totalAppointmentsThisMonth}',
+                    label: 'Appts this month',
+                  ),
+                ),
               ],
             ),
           ),
@@ -158,21 +196,41 @@ class _OversightScreenState extends ConsumerState<OversightScreen> {
                       padding: EdgeInsets.all(16),
                       child: Center(child: CircularProgressIndicator()),
                     ),
-                    error: (err, _) => Text('Search failed: $err', style: TextStyle(color: context.appSubtext)),
+                    error: (err, _) => Text(
+                      'Search failed: $err',
+                      style: TextStyle(color: context.appSubtext),
+                    ),
                     data: (results) {
                       if (results.isEmpty) {
-                        return Text('No matches.', style: TextStyle(color: context.appSubtext));
+                        return Text(
+                          'No matches.',
+                          style: TextStyle(color: context.appSubtext),
+                        );
                       }
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           if (results.branches.isNotEmpty) ...[
-                            Text('Branches', style: TextStyle(color: context.appText, fontWeight: FontWeight.w600)),
-                            const CliniqnovvaTableHeader(columns: ['Name', 'Clinic', 'Address']),
+                            Text(
+                              'Branches',
+                              style: TextStyle(
+                                color: context.appText,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const CliniqnovvaTableHeader(
+                              columns: ['Name', 'Clinic', 'Address'],
+                            ),
                             for (final b in results.branches)
                               CliniqnovvaTableRow(
                                 cells: [
-                                  Text(b.name, style: TextStyle(color: context.appText, fontWeight: FontWeight.w600)),
+                                  Text(
+                                    b.name,
+                                    style: TextStyle(
+                                      color: context.appText,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
                                   Text(b.organizationName ?? '—'),
                                   Text(b.address ?? '—'),
                                 ],
@@ -180,12 +238,26 @@ class _OversightScreenState extends ConsumerState<OversightScreen> {
                             const SizedBox(height: 16),
                           ],
                           if (results.staff.isNotEmpty) ...[
-                            Text('Staff', style: TextStyle(color: context.appText, fontWeight: FontWeight.w600)),
-                            const CliniqnovvaTableHeader(columns: ['Name', 'Role', 'Clinic', 'Email']),
+                            Text(
+                              'Staff',
+                              style: TextStyle(
+                                color: context.appText,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const CliniqnovvaTableHeader(
+                              columns: ['Name', 'Role', 'Clinic', 'Email'],
+                            ),
                             for (final s in results.staff)
                               CliniqnovvaTableRow(
                                 cells: [
-                                  Text(s.name, style: TextStyle(color: context.appText, fontWeight: FontWeight.w600)),
+                                  Text(
+                                    s.name,
+                                    style: TextStyle(
+                                      color: context.appText,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
                                   Text(s.role),
                                   Text(s.organizationName ?? '—'),
                                   Text(s.email ?? '—'),
@@ -203,7 +275,8 @@ class _OversightScreenState extends ConsumerState<OversightScreen> {
           const SizedBox(height: 24),
 
           CliniqnovvaCard(
-            title: 'View a record (any clinic) — read-only, every view is logged',
+            title:
+                'View a record (any clinic) — read-only, every view is logged',
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -217,18 +290,34 @@ class _OversightScreenState extends ConsumerState<OversightScreen> {
                         children: [
                           Text(
                             'Collection',
-                            style: TextStyle(color: context.appText, fontSize: 14, fontWeight: FontWeight.w500),
+                            style: TextStyle(
+                              color: context.appText,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
                           const SizedBox(height: 8),
                           DropdownButtonFormField<String>(
                             initialValue: _recordCollection,
                             decoration: _dropdownDecoration(context),
                             items: const [
-                              DropdownMenuItem(value: 'patients', child: Text('Patients')),
-                              DropdownMenuItem(value: 'appointments', child: Text('Appointments')),
-                              DropdownMenuItem(value: 'invoices', child: Text('Invoices')),
+                              DropdownMenuItem(
+                                value: 'patients',
+                                child: Text('Patients'),
+                              ),
+                              DropdownMenuItem(
+                                value: 'appointments',
+                                child: Text('Appointments'),
+                              ),
+                              DropdownMenuItem(
+                                value: 'invoices',
+                                child: Text('Invoices'),
+                              ),
                             ],
-                            onChanged: (value) => setState(() => _recordCollection = value ?? _recordCollection),
+                            onChanged: (value) => setState(
+                              () => _recordCollection =
+                                  value ?? _recordCollection,
+                            ),
                           ),
                         ],
                       ),
@@ -242,19 +331,30 @@ class _OversightScreenState extends ConsumerState<OversightScreen> {
                       ),
                     ),
                     const SizedBox(width: 16),
-                    CliniqnovvaButton(label: 'View', isFullWidth: false, isLoading: _recordLoading, onPressed: _viewRecord),
+                    CliniqnovvaButton(
+                      label: 'View',
+                      isFullWidth: false,
+                      isLoading: _recordLoading,
+                      onPressed: _viewRecord,
+                    ),
                   ],
                 ),
                 if (_recordNotFound) ...[
                   const SizedBox(height: 16),
-                  Text('No record found.', style: TextStyle(color: context.appSubtext)),
+                  Text(
+                    'No record found.',
+                    style: TextStyle(color: context.appSubtext),
+                  ),
                 ],
                 if (_recordResult != null) ...[
                   const SizedBox(height: 16),
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(color: context.appSecondaryBg, borderRadius: BorderRadius.circular(12)),
+                    decoration: BoxDecoration(
+                      color: context.appSecondaryBg,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -263,7 +363,10 @@ class _OversightScreenState extends ConsumerState<OversightScreen> {
                             padding: const EdgeInsets.symmetric(vertical: 3),
                             child: Text(
                               '${entry.key}: ${entry.value}',
-                              style: TextStyle(color: context.appText, fontSize: 13),
+                              style: TextStyle(
+                                color: context.appText,
+                                fontSize: 13,
+                              ),
                             ),
                           ),
                       ],
@@ -291,7 +394,11 @@ class _OversightScreenState extends ConsumerState<OversightScreen> {
                         children: [
                           Text(
                             'Clinic',
-                            style: TextStyle(color: context.appText, fontSize: 14, fontWeight: FontWeight.w500),
+                            style: TextStyle(
+                              color: context.appText,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
                           const SizedBox(height: 8),
                           organizationsAsync.when(
@@ -301,16 +408,30 @@ class _OversightScreenState extends ConsumerState<OversightScreen> {
                               initialValue: _filterOrgId,
                               decoration: _dropdownDecoration(context),
                               items: [
-                                const DropdownMenuItem(value: null, child: Text('All clinics')),
-                                for (final org in orgs) DropdownMenuItem(value: org.id, child: Text(org.name)),
+                                const DropdownMenuItem(
+                                  value: null,
+                                  child: Text('All clinics'),
+                                ),
+                                for (final org in orgs)
+                                  DropdownMenuItem(
+                                    value: org.id,
+                                    child: Text(org.name),
+                                  ),
                               ],
-                              onChanged: (value) => setState(() => _filterOrgId = value),
+                              onChanged: (value) =>
+                                  setState(() => _filterOrgId = value),
                             ),
                           ),
                         ],
                       ),
                     ),
-                    SizedBox(width: 200, child: CliniqnovvaTextField(label: 'Actor ID', controller: _filterActorController)),
+                    SizedBox(
+                      width: 200,
+                      child: CliniqnovvaTextField(
+                        label: 'Actor ID',
+                        controller: _filterActorController,
+                      ),
+                    ),
                     SizedBox(
                       width: 220,
                       child: CliniqnovvaTextField(
@@ -324,19 +445,39 @@ class _OversightScreenState extends ConsumerState<OversightScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('From', style: TextStyle(color: context.appText, fontSize: 14, fontWeight: FontWeight.w500)),
+                          Text(
+                            'From',
+                            style: TextStyle(
+                              color: context.appText,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
                           const SizedBox(height: 8),
                           InkWell(
-                            borderRadius: BorderRadius.circular(AppTheme.inputRadius),
+                            borderRadius: BorderRadius.circular(
+                              AppTheme.inputRadius,
+                            ),
                             onTap: () => _pickDate(isFrom: true),
                             child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 14,
+                                vertical: 13,
+                              ),
                               decoration: BoxDecoration(
                                 color: context.appCard,
-                                borderRadius: BorderRadius.circular(AppTheme.inputRadius),
+                                borderRadius: BorderRadius.circular(
+                                  AppTheme.inputRadius,
+                                ),
                                 border: Border.all(color: context.appBorder),
                               ),
-                              child: Text(_formatDate(_filterDateFrom), style: TextStyle(color: context.appText, fontSize: 14)),
+                              child: Text(
+                                _formatDate(_filterDateFrom),
+                                style: TextStyle(
+                                  color: context.appText,
+                                  fontSize: 14,
+                                ),
+                              ),
                             ),
                           ),
                         ],
@@ -347,19 +488,39 @@ class _OversightScreenState extends ConsumerState<OversightScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('To', style: TextStyle(color: context.appText, fontSize: 14, fontWeight: FontWeight.w500)),
+                          Text(
+                            'To',
+                            style: TextStyle(
+                              color: context.appText,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
                           const SizedBox(height: 8),
                           InkWell(
-                            borderRadius: BorderRadius.circular(AppTheme.inputRadius),
+                            borderRadius: BorderRadius.circular(
+                              AppTheme.inputRadius,
+                            ),
                             onTap: () => _pickDate(isFrom: false),
                             child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 14,
+                                vertical: 13,
+                              ),
                               decoration: BoxDecoration(
                                 color: context.appCard,
-                                borderRadius: BorderRadius.circular(AppTheme.inputRadius),
+                                borderRadius: BorderRadius.circular(
+                                  AppTheme.inputRadius,
+                                ),
                                 border: Border.all(color: context.appBorder),
                               ),
-                              child: Text(_formatDate(_filterDateTo), style: TextStyle(color: context.appText, fontSize: 14)),
+                              child: Text(
+                                _formatDate(_filterDateTo),
+                                style: TextStyle(
+                                  color: context.appText,
+                                  fontSize: 14,
+                                ),
+                              ),
                             ),
                           ),
                         ],
@@ -367,23 +528,38 @@ class _OversightScreenState extends ConsumerState<OversightScreen> {
                     ),
                     Padding(
                       padding: const EdgeInsets.only(top: 22),
-                      child: CliniqnovvaButton(label: 'Apply filters', isFullWidth: false, onPressed: _applyAuditFilter),
+                      child: CliniqnovvaButton(
+                        label: 'Apply filters',
+                        isFullWidth: false,
+                        onPressed: _applyAuditFilter,
+                      ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 20),
-                const CliniqnovvaTableHeader(columns: ['Time', 'Action', 'Actor', 'Clinic', 'Target']),
+                const CliniqnovvaTableHeader(
+                  columns: ['Time', 'Action', 'Actor', 'Clinic', 'Target'],
+                ),
                 auditLogAsync.when(
-                  loading: () => const Padding(padding: EdgeInsets.all(24), child: Center(child: CircularProgressIndicator())),
+                  loading: () => const Padding(
+                    padding: EdgeInsets.all(24),
+                    child: Center(child: CircularProgressIndicator()),
+                  ),
                   error: (err, _) => Padding(
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    child: Text('Failed to load audit log: $err', style: TextStyle(color: context.appSubtext)),
+                    child: Text(
+                      'Failed to load audit log: $err',
+                      style: TextStyle(color: context.appSubtext),
+                    ),
                   ),
                   data: (entries) {
                     if (entries.isEmpty) {
                       return Padding(
                         padding: const EdgeInsets.symmetric(vertical: 24),
-                        child: Text('No matching audit log entries.', style: TextStyle(color: context.appSubtext)),
+                        child: Text(
+                          'No matching audit log entries.',
+                          style: TextStyle(color: context.appSubtext),
+                        ),
                       );
                     }
                     return Column(
@@ -391,13 +567,40 @@ class _OversightScreenState extends ConsumerState<OversightScreen> {
                         for (final entry in entries)
                           CliniqnovvaTableRow(
                             cells: [
-                              Text(_formatDateTime(entry.timestamp), style: TextStyle(color: context.appSubtext, fontSize: 13)),
-                              Text(entry.action, style: TextStyle(color: context.appText, fontWeight: FontWeight.w600)),
-                              Text(entry.actorId ?? '—', style: TextStyle(color: context.appSubtext, fontSize: 13)),
-                              Text(entry.organizationId ?? '—', style: TextStyle(color: context.appSubtext, fontSize: 13)),
+                              Text(
+                                _formatDateTime(entry.timestamp),
+                                style: TextStyle(
+                                  color: context.appSubtext,
+                                  fontSize: 13,
+                                ),
+                              ),
+                              Text(
+                                entry.action,
+                                style: TextStyle(
+                                  color: context.appText,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              Text(
+                                entry.actorLabel ?? entry.actorRole ?? '—',
+                                style: TextStyle(
+                                  color: context.appSubtext,
+                                  fontSize: 13,
+                                ),
+                              ),
+                              Text(
+                                entry.organizationName ?? '—',
+                                style: TextStyle(
+                                  color: context.appSubtext,
+                                  fontSize: 13,
+                                ),
+                              ),
                               Text(
                                 '${entry.targetCollection ?? '—'}/${entry.targetId ?? '—'}',
-                                style: TextStyle(color: context.appSubtext, fontSize: 13),
+                                style: TextStyle(
+                                  color: context.appSubtext,
+                                  fontSize: 13,
+                                ),
                               ),
                             ],
                           ),

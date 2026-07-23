@@ -4,7 +4,7 @@
 // able to WRITE another organization's data through this module (Task 4
 // DONE CONDITION).
 const { randomUUID } = require('crypto');
-const { db } = require('../config/firebase-admin');
+const { db, auth } = require('../config/firebase-admin');
 const { ORG_SCOPED_ROLES_FOR_SUSPENSION } = require('../middleware/branchScope.middleware');
 
 // Only these collections can be viewed via viewRecord() — a fixed whitelist,
@@ -84,8 +84,47 @@ async function getMetrics() {
 }
 
 /**
+ * Resolves actor uids to a human-readable label — a `/users` doc's
+ * name/email for staff/org admins, falling back to the Firebase Auth
+ * record's email for accounts with no Firestore mirror (e.g. Super Admin,
+ * which is auth-only). So the audit log never shows a bare uid when a real
+ * name/email is available.
+ */
+async function _actorLabelMap(actorIds) {
+  const uniqueIds = [...new Set(actorIds.filter(Boolean))];
+  if (uniqueIds.length === 0) return {};
+
+  const map = {};
+  const userDocs = await Promise.all(uniqueIds.map((id) => db.collection('users').doc(id).get()));
+  const missing = [];
+  userDocs.forEach((doc, i) => {
+    if (doc.exists) {
+      const data = doc.data();
+      map[uniqueIds[i]] = data.name || data.email || uniqueIds[i];
+    } else {
+      missing.push(uniqueIds[i]);
+    }
+  });
+
+  await Promise.all(
+    missing.map(async (id) => {
+      try {
+        const userRecord = await auth.getUser(id);
+        map[id] = userRecord.email || userRecord.displayName || id;
+      } catch {
+        map[id] = id;
+      }
+    })
+  );
+
+  return map;
+}
+
+/**
  * Part 5 Task 1 — platform-wide audit log, filterable by organization,
- * actor, action type, and date range.
+ * actor, action type, and date range. Resolves `organizationId`/`actorId`
+ * to a real clinic name and a real actor name/email so the log reads as
+ * actual activity, not a wall of opaque Firestore ids.
  */
 async function getAuditLog({ organizationId, actorId, action, dateFrom, dateTo, limit } = {}) {
   let query = db.collection('auditLogs').orderBy('timestamp', 'desc');
@@ -97,7 +136,18 @@ async function getAuditLog({ organizationId, actorId, action, dateFrom, dateTo, 
   query = query.limit(Math.min(Number(limit) || 100, 500));
 
   const snapshot = await query.get();
-  return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+  const entries = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+
+  const [orgNameById, actorLabelById] = await Promise.all([
+    _organizationNameMap(),
+    _actorLabelMap(entries.map((e) => e.actorId)),
+  ]);
+
+  return entries.map((e) => ({
+    ...e,
+    organizationName: e.organizationId ? orgNameById[e.organizationId] || null : null,
+    actorLabel: e.actorId ? actorLabelById[e.actorId] || e.actorId : e.actorRole || null,
+  }));
 }
 
 /**
