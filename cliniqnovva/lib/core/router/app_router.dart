@@ -36,6 +36,7 @@ import '../../features/super_admin/screens/organizations_screen.dart';
 import '../../features/super_admin/screens/overview_screen.dart';
 import '../../features/super_admin/screens/support_view_screen.dart';
 import '../constants/app_constants.dart';
+import '../services/firebase_service.dart';
 
 /// Roles whose organization's `isActive` status gates access (spec Task 4:
 /// "any organization-scoped role"). Patients aren't tied to one clinic's
@@ -50,43 +51,52 @@ const _orgScopedRolesForSuspension = [
   AppConstants.roleNurse,
 ];
 
-String _homeRouteForRole(String role) {
-  switch (role) {
-    case AppConstants.roleSuperAdmin:
-      return '/super-admin/overview';
-    case AppConstants.roleDoctor:
-    case AppConstants.roleNurse:
-      return '/staff-home';
-    case AppConstants.rolePatient:
-      return '/patient-home';
-    default:
-      return '/dashboard';
-  }
-}
 
-/// Converts Riverpod's authStateProvider into a Listenable so GoRouter
+/// Converts Riverpod's auth providers into a Listenable so GoRouter
 /// re-evaluates `redirect` whenever sign-in state changes.
+///
+/// Listens to both authStateProvider (Firebase's browser stream — covers
+/// sign-in restored on page load and changes from other tabs) and
+/// authNotifierProvider (updated deterministically by signIn/signOut).
+/// The stream alone is not enough: on Flutter web, authStateChanges() is
+/// known to sometimes not emit after an interactive
+/// signInWithEmailAndPassword (flutterfire #4348), which left the user
+/// parked on /login until a manual refresh.
 class RouterNotifier extends ChangeNotifier {
   RouterNotifier(this.ref) {
-    _subscription = ref.listen<AsyncValue<User?>>(
-      authStateProvider,
-      (previous, next) => notifyListeners(),
-    );
+    _subscriptions = [
+      ref.listen<AsyncValue<User?>>(
+        authStateProvider,
+        (previous, next) => notifyListeners(),
+      ),
+      ref.listen<AsyncValue<User?>>(
+        authNotifierProvider,
+        (previous, next) => notifyListeners(),
+      ),
+    ];
   }
 
   final Ref ref;
-  late final ProviderSubscription<AsyncValue<User?>> _subscription;
+  late final List<ProviderSubscription<AsyncValue<User?>>> _subscriptions;
 
   @override
   void dispose() {
-    _subscription.close();
+    for (final subscription in _subscriptions) {
+      subscription.close();
+    }
     super.dispose();
   }
 }
 
 Future<String?> _redirect(Ref ref, GoRouterState state) async {
-  final loggedIn = ref.read(authStateProvider).valueOrNull != null;
+  // currentUser is updated synchronously by sign-in/sign-out, unlike the
+  // authStateChanges() stream snapshot, which can be stale on web right
+  // after an interactive login.
+  final loggedIn = FirebaseService.auth.currentUser != null;
   final loggingIn = state.matchedLocation == '/login';
+  debugPrint(
+    '[router] redirect at ${state.matchedLocation} (loggedIn=$loggedIn)',
+  );
 
   if (!loggedIn) {
     return loggingIn ? null : '/login';
@@ -94,6 +104,7 @@ Future<String?> _redirect(Ref ref, GoRouterState state) async {
 
   final claims = await ref.read(userClaimsProvider.future);
   final role = claims?['role'] as String?;
+  debugPrint('[router] claims resolved: role=$role');
   final organizationId = claims?['organizationId'] as String?;
 
   // Spec Task 3: an authenticated user whose role isn't one we recognize
@@ -114,7 +125,7 @@ Future<String?> _redirect(Ref ref, GoRouterState state) async {
   if (state.matchedLocation == '/suspended') {
     // Only reachable here if the org is active again, or the role isn't
     // org-scoped — either way this user shouldn't be parked on this screen.
-    return _homeRouteForRole(role);
+    return homeRouteForRole(role);
   }
 
   if (role == AppConstants.roleOrganizationAdmin && organizationId != null) {
@@ -130,7 +141,7 @@ Future<String?> _redirect(Ref ref, GoRouterState state) async {
   }
 
   if (loggingIn) {
-    return _homeRouteForRole(role);
+    return homeRouteForRole(role);
   }
 
   return null;

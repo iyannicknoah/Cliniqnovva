@@ -64,14 +64,32 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           password: _passwordController.text,
         );
     final state = ref.read(authNotifierProvider);
-    if (state.hasError && mounted) {
+    if (!mounted) return;
+    if (state.hasError) {
       final error = state.error;
       setState(() {
         _errorMessage = error is AuthException
             ? error.message
             : 'Something went wrong signing you in. Please try again.';
       });
+      return;
     }
+
+    // Success: navigate explicitly instead of relying only on the router's
+    // refreshListenable — on Flutter web the Firebase auth stream can fail
+    // to emit after an interactive sign-in (flutterfire #4348), which left
+    // the user parked on this screen until a manual refresh. The router's
+    // redirect still runs on this navigation, so the role/suspension/
+    // onboarding gates all remain enforced.
+    var target = '/dashboard';
+    try {
+      final role = await ref.read(authNotifierProvider.notifier).getUserRole();
+      if (role != null) target = homeRouteForRole(role);
+    } catch (e) {
+      debugPrint('[login] role lookup failed, defaulting to /dashboard: $e');
+    }
+    debugPrint('[login] signed in, navigating to $target');
+    if (mounted) context.go(target);
   }
 
   @override
@@ -82,7 +100,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final isLoading = authState.isLoading;
 
     return Scaffold(
-      backgroundColor: AppColors.pageBackground,
+      backgroundColor: context.appBg,
       body: SafeArea(
         child: Align(
           alignment: Alignment.topCenter,
@@ -106,18 +124,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           children: [
                             Column(
                               children: [
-                                const Text(
+                                Text(
                                   'Welcome back',
                                   style: TextStyle(
-                                    color: AppColors.textPrimary,
+                                    color: context.appText,
                                     fontSize: 18,
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
-                                const Text(
+                                Text(
                                   'Sign in to your account',
                                   style: TextStyle(
-                                    color: AppColors.textSecondary,
+                                    color: context.appSubtext,
                                   ),
                                 ),
                               ].withGap(5),
@@ -189,15 +207,15 @@ class _LogoMark extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Row(
+    return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        CliniqnovvaLogo(size: 30, radius: 10),
-        SizedBox(width: 5),
+        const CliniqnovvaLogo(size: 24, radius: 8),
+        const SizedBox(width: 5),
         Text(
           AppConstants.appName,
           style: TextStyle(
-            color: AppColors.textPrimary,
+            color: context.appText,
             fontSize: 18,
             fontWeight: FontWeight.bold,
           ),

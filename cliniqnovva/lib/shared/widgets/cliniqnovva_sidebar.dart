@@ -74,7 +74,7 @@ class CliniqnovvaSidebar extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Row(
               children: [
-                const CliniqnovvaLogo(size: 26, radius: 8),
+                const CliniqnovvaLogo(size: 20, radius: 6),
                 const SizedBox(width: 4),
                 Flexible(
                   child: Text(

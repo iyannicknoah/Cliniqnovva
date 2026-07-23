@@ -248,16 +248,19 @@ floating, 12px radius, no color accent.
 
 ## Brand assets
 
-- Current source marks at the repo root: **`Light Logo.png`** and
-  **`Dark Logo.png`** (both 2000×2000) — supersede the earlier
-  `favappIcon.png`/`Logo.png` pair, which are no longer referenced.
-- **In-app logo is theme-aware** (rule set 2026-07-20): light mode shows
-  `assets/images/logo_light.png` (from `Light Logo.png`), dark mode shows
-  `assets/images/logo_dark.png` (from `Dark Logo.png`). Always use the shared
-  `CliniqnovvaLogo` widget (`size`, `radius` params) — never `Image.asset` a
-  logo file directly. Placements: login screen (30px, radius 10) and sidebar
-  (26px, radius 8), each next to the bold wordmark.
-- Favicon, PWA icons, and mobile app icons all derive from **`Dark Logo.png`**.
+- Source marks at the repo root (both 2000×2000, added 2026-07-23):
+  **`Logo.png`** (black square, white circle, black medical cross) is the
+  IN-APP logo source; **`AppIcon.png`** (blue square, same mark in blue) is
+  the APP-ICON source (favicon, PWA, Android/iOS). They supersede the
+  `Light Logo.png`/`Dark Logo.png` pair.
+- **In-app logo is one single mark** (rule updated 2026-07-23):
+  `assets/images/logo.png` (256×256, downscaled from the black `Logo.png`)
+  is shown in BOTH light and dark mode. `logo_dark.png`/`logo_light.png` stay in the
+  asset bundle but are unreferenced. Always use the shared `CliniqnovvaLogo`
+  widget (`size`, `radius` params) — never `Image.asset` a logo file
+  directly. Placements (sizes reduced 2026-07-23): login screen (24px,
+  radius 8) and sidebar (20px, radius 6), each next to the bold wordmark.
+- Favicon, PWA icons, and mobile app icons all derive from **`AppIcon.png`**.
 - Mobile icon source (`assets/icon/app_icon_source.png`) must stay a raw,
   un-rounded square — the OS applies its own mask. Web favicon/PWA icons are
   pre-rounded (browsers don't mask); maskable PWA variants stay full-bleed.
@@ -332,6 +335,46 @@ growth/trend chart rather than introducing a new chart style or color.
 
 ## Change log
 
+- **2026-07-23 (Part 6: onboarding wizard + branches)** — New patterns:
+  full-screen 3-step wizard (`/onboarding`, 560px column, "Step X of 3"
+  over a 6px `LinearProgressIndicator` in `appPrimary` on `appSecondaryBg`,
+  Back as text button bottom-left / Next-Finish filled bottom-right);
+  removable chips (`appSecondaryBg` pill, 20px radius, close icon) for the
+  departments step; label-above dropdown styled like `CliniqnovvaTextField`
+  (`_LabeledDropdown` in `branch_form.dart`) for Province → District
+  cascading selects; tappable time-field buttons (`_TimeButton`, border-only
+  field look) opening `showTimePicker`. Branches screen uses the standard
+  table components with text-button row actions (Edit / Deactivate). The
+  branch form (`BranchForm`) is the one reusable component for onboarding
+  Step 1, the Add/Edit Branch modal, and the Branch Admin hours-only mode.
+- **2026-07-23 (Login screen made theme-aware)** — The login screen was
+  still hardcoded to light colors (`AppColors.pageBackground`/`textPrimary`/
+  `textSecondary`), so in dark mode only the theme-driven inputs/button
+  flipped while the page stayed white. Now uses `context.appBg`/`appText`/
+  `appSubtext` like every other screen, per the global page-background rule.
+- **2026-07-23 (Split: black logo on screens, blue app icon)** — The
+  on-screen logo went back to the black `Logo.png` mark
+  (`assets/images/logo.png` regenerated) at the user's request; the blue
+  `AppIcon.png` remains the source for all app icons (favicon, PWA,
+  Android/iOS launcher icons) only.
+- **2026-07-23 (AppIcon.png → logo + all app icons)** — New repo-root
+  `AppIcon.png` source (blue square, white circle, blue cross) replaces
+  `Logo.png` everywhere: regenerated `assets/images/logo.png` (256×256,
+  on-screen logo, same placements/sizes), `assets/icon/app_icon_source.png`
+  (1024×1024 raw square) + reran `flutter_launcher_icons` for Android/iOS,
+  `web/favicon.png` (32) and `web/icons/Icon-192/512` (pre-rounded, 25%
+  radius), `web/icons/Icon-maskable-192/512` (full-bleed).
+- **2026-07-23 (New logo mark + smaller sizes)** — New repo-root `Logo.png`
+  source (black square, white circle, black cross) bundled as
+  `assets/images/logo.png` (256×256) and used by `CliniqnovvaLogo` on every
+  placement, same mark in both themes. Rendered sizes reduced: login
+  30px/r10 → 24px/r8, sidebar 26px/r8 → 20px/r6 (widget defaults now
+  24/r8). `logo_dark.png`/`logo_light.png` remain bundled but unreferenced.
+- **2026-07-23 (Logo → always the dark mark)** — `CliniqnovvaLogo` no longer
+  switches assets by theme: it now renders `assets/images/logo_dark.png` in
+  both light and dark mode (explicit instruction; supersedes the 2026-07-20
+  theme-aware rule). `logo_light.png` remains bundled but unreferenced. See
+  "Brand assets" above. (Superseded same-day by the new `Logo.png` mark.)
 - **2026-07-23 (Audit log feature + Oversight page removed)** — The
   platform audit log display and the whole "Platform Oversight" page
   (`/super-admin/oversight`, cross-clinic branch/staff search, read-only

@@ -3,12 +3,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/services/firebase_service.dart';
 import 'auth_provider.dart';
 
-/// Custom claims (role/organizationId/branchId) for whoever authStateProvider
-/// currently reports signed in. Re-fetches whenever the signed-in user
-/// changes; null while signed out.
+/// Custom claims (role/organizationId/branchId) for the signed-in user.
+/// Re-fetches whenever the signed-in user changes; null while signed out.
+///
+/// Watches both auth providers: on Flutter web the authStateChanges()
+/// stream can miss an interactive sign-in (flutterfire #4348), while
+/// authNotifierProvider is updated deterministically by signIn/signOut.
+/// The actual user is read from FirebaseAuth.currentUser inside
+/// getCurrentUserClaims(), which is always current.
 final userClaimsProvider = FutureProvider<Map<String, dynamic>?>((ref) async {
-  final user = ref.watch(authStateProvider).valueOrNull;
-  if (user == null) return null;
+  ref.watch(authStateProvider);
+  ref.watch(authNotifierProvider);
   return FirebaseService.getCurrentUserClaims();
 });
 

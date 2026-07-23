@@ -91,3 +91,20 @@ abstract final class AppConstants {
   // Rwandan mobile prefixes valid for phone-number validation (spec section 1)
   static const List<String> validPhonePrefixes = ['078', '079', '073', '072'];
 }
+
+/// Landing route per role. Used by the router's redirect and by the login
+/// screen's explicit post-sign-in navigation — keep the two in sync by
+/// keeping this the single source of truth.
+String homeRouteForRole(String role) {
+  switch (role) {
+    case AppConstants.roleSuperAdmin:
+      return '/super-admin/overview';
+    case AppConstants.roleDoctor:
+    case AppConstants.roleNurse:
+      return '/staff-home';
+    case AppConstants.rolePatient:
+      return '/patient-home';
+    default:
+      return '/dashboard';
+  }
+}
