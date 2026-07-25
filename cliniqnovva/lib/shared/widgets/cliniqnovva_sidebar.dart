@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/constants/app_constants.dart';
+import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_icons.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/theme/theme_ext.dart';
@@ -13,27 +14,44 @@ import 'cliniqnovva_logo.dart';
 
 /// One entry in [CliniqnovvaSidebar]'s nav list. [allowedRoles] controls
 /// role-based visibility — an item is hidden entirely for a role not in
-/// this list.
+/// this list. [badgeCount] (Part 17 Task 4 — "Badge counts on Appointments
+/// (today), Chat (unread), Reviews") is a small pill shown beside the
+/// label when > 0; null/0 shows nothing, so items without a badge concept
+/// (e.g. Billing) never render an empty pill.
+///
+/// [label] is an `easy_localization` TRANSLATION KEY (Part 17 Task 6, e.g.
+/// `'nav_dashboard'`), not display text — rendered via `.tr()` in
+/// [_SidebarNavTile]. A key missing from `assets/translations/*.json`
+/// safely falls back to showing the key itself, so this never breaks even
+/// for a label not yet translated.
 class SidebarNavItem {
   const SidebarNavItem({
     required this.label,
     required this.icon,
     required this.route,
     required this.allowedRoles,
+    this.badgeCount,
   });
 
   final String label;
   final IconRef icon;
   final String route;
   final List<String> allowedRoles;
+  final int? badgeCount;
 }
 
-/// The single sidebar component for the Admin Web Dashboard surface — no
-/// distinct sidebar background (same white/black as the page it sits in),
-/// a right-edge divider marking where it ends, fixed 220px width, logo top
-/// (no divider under it), role-filtered nav items (active = soft secondary
-/// background, no left border), signed-in user's profile chip at bottom
-/// (primary-colored, borderless, with a "more" menu for theme/language/logout).
+/// The single sidebar component for the Admin Web Dashboard surface —
+/// SAME background as the page it sits beside (2026-07-24: pure white in
+/// light mode, pure black in dark mode, via `context.appBg` — reversing
+/// Part 17's "always navy" rule). The only thing separating it from the
+/// content pane is the right-hand border (`context.appBorder`), the same
+/// "never a different flat color than the page, differentiate with a
+/// border only" rule `theme_ext.dart` already uses for cards. Fixed 220px
+/// width, logo top (no divider under it), role-filtered nav items (active
+/// = a soft neutral pill via `context.appSecondaryBg`), signed-in user's
+/// profile chip at bottom (border-only, with a "more" menu for
+/// theme/language/logout — that floating popup was already theme-reactive
+/// and needed no change here).
 class CliniqnovvaSidebar extends StatelessWidget {
   const CliniqnovvaSidebar({
     super.key,
@@ -131,6 +149,8 @@ class _SidebarNavTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final activeColor = context.appText;
     final inactiveColor = context.appSubtext;
+    final hoverColor = (context.isDark ? Colors.white : Colors.black).withValues(alpha: 0.04);
+    final badgeCount = item.badgeCount ?? 0;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
@@ -140,13 +160,15 @@ class _SidebarNavTile extends StatelessWidget {
         child: InkWell(
           borderRadius: BorderRadius.circular(14),
           onTap: onTap,
-          hoverColor: context.appSecondaryBg,
+          hoverColor: hoverColor,
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 200),
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
             decoration: BoxDecoration(
-              // Active state: soft secondary background pill, no left border
-              // (design rule 2026-07-23/24).
+              // Active state: soft neutral pill, no left border (design
+              // rule 2026-07-23, reaffirmed 2026-07-24 for the white/black
+              // sidebar — same fill `appSecondaryBg` uses for any other
+              // interactive-state highlight in the app).
               color: active ? context.appSecondaryBg : Colors.transparent,
               borderRadius: BorderRadius.circular(14),
             ),
@@ -158,14 +180,37 @@ class _SidebarNavTile extends StatelessWidget {
                   color: active ? activeColor : inactiveColor,
                 ),
                 const SizedBox(width: 10),
-                Text(
-                  item.label,
-                  style: TextStyle(
-                    color: active ? activeColor : inactiveColor,
-                    fontSize: 13,
-                    fontWeight: active ? FontWeight.w600 : FontWeight.w500,
+                Expanded(
+                  child: Text(
+                    item.label.tr(),
+                    style: TextStyle(
+                      color: active ? activeColor : inactiveColor,
+                      fontSize: 13,
+                      fontWeight: active ? FontWeight.w600 : FontWeight.w500,
+                    ),
                   ),
                 ),
+                if (badgeCount > 0) ...[
+                  const SizedBox(width: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                    constraints: const BoxConstraints(minWidth: 18),
+                    decoration: BoxDecoration(
+                      color: AppColors.brightRed,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      badgeCount > 99 ? '99+' : '$badgeCount',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w700,
+                        height: 1.3,
+                      ),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
@@ -361,10 +406,12 @@ class _ProfileMenuContentState extends ConsumerState<_ProfileMenuContent> {
             followerAnchor: Alignment.topLeft,
             offset: const Offset(8, 0),
             child: _LanguageSubmenu(
-              onPick: () {
-                // Visual only — no setLocale() yet (explicit instruction:
-                // build the design, not the switching behavior). Picking any
-                // option dismisses BOTH the submenu and the parent menu.
+              // Part 17 Task 6 — real switching: easy_localization re-renders
+              // every `.tr()` call in the tree the instant the locale changes,
+              // no restart needed. Picking any option dismisses BOTH the
+              // submenu and the parent menu.
+              onPick: (code) {
+                context.setLocale(Locale(code));
                 _removeLanguageSubmenu();
                 widget.onClose();
               },
@@ -398,7 +445,7 @@ class _ProfileMenuContentState extends ConsumerState<_ProfileMenuContent> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Theme',
+                'menu_theme'.tr(),
                 style: TextStyle(
                   color: context.appText,
                   fontSize: 13,
@@ -416,7 +463,7 @@ class _ProfileMenuContentState extends ConsumerState<_ProfileMenuContent> {
                   children: [
                     Expanded(
                       child: _ThemeOption(
-                        label: 'Light',
+                        label: 'menu_light'.tr(),
                         selected: !isDark,
                         onTap: () => ref
                             .read(themeNotifierProvider.notifier)
@@ -425,7 +472,7 @@ class _ProfileMenuContentState extends ConsumerState<_ProfileMenuContent> {
                     ),
                     Expanded(
                       child: _ThemeOption(
-                        label: 'Dark',
+                        label: 'menu_dark'.tr(),
                         selected: isDark,
                         onTap: () => ref
                             .read(themeNotifierProvider.notifier)
@@ -439,7 +486,7 @@ class _ProfileMenuContentState extends ConsumerState<_ProfileMenuContent> {
               Divider(height: 1, color: context.appBorder),
               const SizedBox(height: 14),
               Text(
-                'Language',
+                'menu_language'.tr(),
                 style: TextStyle(
                   color: context.appText,
                   fontSize: 13,
@@ -495,7 +542,7 @@ class _ProfileMenuContentState extends ConsumerState<_ProfileMenuContent> {
                     ),
                     child: Center(
                       child: Text(
-                        'Logout',
+                        'menu_logout'.tr(),
                         style: TextStyle(
                           color: context.appText,
                           fontWeight: FontWeight.w600,
@@ -513,14 +560,14 @@ class _ProfileMenuContentState extends ConsumerState<_ProfileMenuContent> {
   }
 }
 
-/// Design-only language submenu (2026-07-24) — lists the 3 supported
-/// languages with the same panel styling as [_ProfileMenuContent], but
-/// picking one does NOT call `setLocale()` yet; it just dismisses every
-/// open dropdown. Wire up real switching once that's explicitly requested.
+/// Language submenu (Part 17 Task 6) — lists the 3 supported languages
+/// with the same panel styling as [_ProfileMenuContent]. Picking one calls
+/// [onPick] with that language code; the caller applies it via
+/// `context.setLocale()`.
 class _LanguageSubmenu extends StatelessWidget {
   const _LanguageSubmenu({required this.onPick});
 
-  final VoidCallback onPick;
+  final ValueChanged<String> onPick;
 
   @override
   Widget build(BuildContext context) {
@@ -541,7 +588,7 @@ class _LanguageSubmenu extends StatelessWidget {
             for (final code in AppConstants.supportedLanguages)
               InkWell(
                 borderRadius: BorderRadius.circular(10),
-                onTap: onPick,
+                onTap: () => onPick(code),
                 child: Container(
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(

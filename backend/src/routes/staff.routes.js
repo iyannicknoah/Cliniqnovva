@@ -10,12 +10,12 @@ router.use(verifyToken, attachScope);
 
 // Read: admins + a Doctor viewing their own record/schedule (spec 6.5:
 // "Doctor (view own)").
-const READ_ROLES = [ROLES.ORGANIZATION_ADMIN, ROLES.BRANCH_ADMIN, ROLES.SUPER_ADMIN, ROLES.DOCTOR];
+const READ_ROLES = [ROLES.CLINIC_ADMIN, ROLES.BRANCH_ADMIN, ROLES.SUPER_ADMIN, ROLES.DOCTOR];
 router.get('/', requireRole(...READ_ROLES), controller.list);
 router.get('/:id', requireRole(...READ_ROLES), controller.getById);
 
 // Create/edit/deactivate: admins only.
-const MANAGE_ROLES = [ROLES.ORGANIZATION_ADMIN, ROLES.BRANCH_ADMIN, ROLES.SUPER_ADMIN];
+const MANAGE_ROLES = [ROLES.CLINIC_ADMIN, ROLES.BRANCH_ADMIN, ROLES.SUPER_ADMIN];
 router.post('/', requireRole(...MANAGE_ROLES), controller.create);
 router.patch('/:id', requireRole(...MANAGE_ROLES), controller.update);
 router.put('/:id', requireRole(...MANAGE_ROLES), controller.update);
@@ -25,7 +25,7 @@ router.put('/:id/status', requireRole(...MANAGE_ROLES), controller.setStatus);
 // any doctor's schedule in their branch" — Doctor themself is view-only,
 // covered by READ_ROLES above, not here).
 const SCHEDULE_WRITE_ROLES = [
-  ROLES.ORGANIZATION_ADMIN,
+  ROLES.CLINIC_ADMIN,
   ROLES.BRANCH_ADMIN,
   ROLES.RECEPTIONIST,
   ROLES.SUPER_ADMIN,

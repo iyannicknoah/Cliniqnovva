@@ -8,8 +8,8 @@ import '../../../shared/widgets/app_icon.dart';
 import '../../../shared/widgets/cliniqnovva_button.dart';
 import '../../../shared/widgets/cliniqnovva_table.dart';
 import '../../../shared/widgets/cliniqnovva_text_field.dart';
-import '../../organizations/models/organization.dart';
-import '../../organizations/providers/organizations_provider.dart';
+import '../../clinics/models/clinic.dart';
+import '../../clinics/providers/clinics_provider.dart';
 
 const _billingStatuses = ['notPaid', 'pending', 'paid'];
 
@@ -20,11 +20,11 @@ String _billingStatusLabel(String status) => switch (status) {
 };
 
 /// Part 4 Task 2 — clicking a billing row opens this: past payments plus a
-/// "Record Payment" action. Same 480px slide-out pattern as Add Organization
+/// "Record Payment" action. Same 480px slide-out pattern as Add Clinic
 /// (see DESIGN_LANGUAGE.md's "Slide-out panel" section).
 Future<void> showPaymentHistoryPanel(
   BuildContext context,
-  Organization organization,
+  Clinic clinic,
 ) {
   return showGeneralDialog(
     context: context,
@@ -34,7 +34,7 @@ Future<void> showPaymentHistoryPanel(
     transitionDuration: const Duration(milliseconds: 250),
     pageBuilder: (context, animation, secondaryAnimation) => Align(
       alignment: Alignment.centerRight,
-      child: _PaymentHistoryPanel(organization: organization),
+      child: _PaymentHistoryPanel(clinic: clinic),
     ),
     transitionBuilder: (context, animation, secondaryAnimation, child) {
       final offset = Tween<Offset>(
@@ -62,13 +62,13 @@ String _formatDate(DateTime? date) {
 }
 
 class _PaymentHistoryPanel extends ConsumerWidget {
-  const _PaymentHistoryPanel({required this.organization});
+  const _PaymentHistoryPanel({required this.clinic});
 
-  final Organization organization;
+  final Clinic clinic;
 
   Future<void> _recordPayment(BuildContext context, WidgetRef ref) async {
     final amountController = TextEditingController(
-      text: organization.subscriptionAmountRwf.toString(),
+      text: clinic.subscriptionAmountRwf.toString(),
     );
     final noteController = TextEditingController();
     DateTime date = DateTime.now();
@@ -134,9 +134,9 @@ class _PaymentHistoryPanel extends ConsumerWidget {
     await runWithFeedback(
       context,
       () => ref
-          .read(organizationsNotifierProvider.notifier)
+          .read(clinicsNotifierProvider.notifier)
           .recordPayment(
-            organization.id,
+            clinic.id,
             amountRwf: amount,
             date: date,
             note: noteController.text.trim().isEmpty
@@ -150,9 +150,9 @@ class _PaymentHistoryPanel extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final historyAsync = ref.watch(paymentHistoryProvider(organization.id));
-    final orgAsync = ref.watch(organizationDetailProvider(organization.id));
-    final currentOrg = orgAsync.valueOrNull ?? organization;
+    final historyAsync = ref.watch(paymentHistoryProvider(clinic.id));
+    final orgAsync = ref.watch(clinicDetailProvider(clinic.id));
+    final currentOrg = orgAsync.valueOrNull ?? clinic;
     final canRecordPayment = currentOrg.billingStatus == 'paid';
 
     return Material(
@@ -170,7 +170,7 @@ class _PaymentHistoryPanel extends ConsumerWidget {
                   children: [
                     Expanded(
                       child: Text(
-                        organization.name,
+                        clinic.name,
                         style: TextStyle(
                           color: context.appText,
                           fontSize: 18,
@@ -203,8 +203,8 @@ class _PaymentHistoryPanel extends ConsumerWidget {
                         onTap: () => runWithFeedback(
                           context,
                           () => ref
-                              .read(organizationsNotifierProvider.notifier)
-                              .setBillingStatus(organization.id, status),
+                              .read(clinicsNotifierProvider.notifier)
+                              .setBillingStatus(clinic.id, status),
                           loadingMessage: 'Updating billing status…',
                           successMessage:
                               'Billing status set to ${_billingStatusLabel(status)}.',

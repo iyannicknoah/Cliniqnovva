@@ -6,6 +6,7 @@ import '../../../core/theme/theme_ext.dart';
 import '../../../shared/utils/async_feedback.dart';
 import '../../../shared/widgets/cliniqnovva_button.dart';
 import '../../../shared/widgets/cliniqnovva_table.dart';
+import '../../../shared/widgets/empty_state.dart';
 import '../../../shared/widgets/loading_widget.dart';
 import '../../../shared/widgets/status_badge.dart';
 import '../../auth/providers/access_control_provider.dart';
@@ -39,7 +40,7 @@ class ServicesScreen extends ConsumerWidget {
           final isBranchScoped = role == AppConstants.roleBranchAdmin;
           final ownBranchId = data?['branchId'] as String?;
           final canManage =
-              role == AppConstants.roleOrganizationAdmin ||
+              role == AppConstants.roleClinicAdmin ||
               role == AppConstants.roleBranchAdmin;
 
           return _ServicesBody(
@@ -145,12 +146,7 @@ class _ServicesBody extends ConsumerWidget {
           const SizedBox(height: 28),
           Expanded(
             child: effectiveBranchId == null
-                ? Center(
-                    child: Text(
-                      'No branch to show yet.',
-                      style: TextStyle(color: context.appSubtext),
-                    ),
-                  )
+                ? const NoBranchSelectedState()
                 : _ServicesList(
                     branchId: effectiveBranchId,
                     canManage: canManage,

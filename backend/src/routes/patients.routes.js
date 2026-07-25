@@ -11,16 +11,34 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 15 
 // Every route below is scoped by req.scope (branch/org isolation, spec section 10/11).
 router.use(verifyToken, attachScope);
 
-const READ_ROLES = [ROLES.RECEPTIONIST, ROLES.BRANCH_ADMIN, ROLES.ORGANIZATION_ADMIN, ROLES.DOCTOR, ROLES.NURSE, ROLES.SUPER_ADMIN];
-const WRITE_ROLES = [ROLES.RECEPTIONIST, ROLES.BRANCH_ADMIN, ROLES.ORGANIZATION_ADMIN, ROLES.SUPER_ADMIN];
-const CLINICAL_ROLES = [ROLES.DOCTOR, ROLES.NURSE, ROLES.BRANCH_ADMIN, ROLES.ORGANIZATION_ADMIN, ROLES.SUPER_ADMIN];
+// Part 13 Task 2 — Pharmacist added so the dispense flow can search/look up
+// a patient to select their prescriptions; getById() shapes the response
+// down to prescriptions-only for this role (see patients.service.js).
+const READ_ROLES = [
+  ROLES.RECEPTIONIST,
+  ROLES.BRANCH_ADMIN,
+  ROLES.CLINIC_ADMIN,
+  ROLES.DOCTOR,
+  ROLES.NURSE,
+  ROLES.PHARMACIST,
+  ROLES.SUPER_ADMIN,
+];
+const WRITE_ROLES = [ROLES.RECEPTIONIST, ROLES.BRANCH_ADMIN, ROLES.CLINIC_ADMIN, ROLES.SUPER_ADMIN];
+const CLINICAL_ROLES = [ROLES.DOCTOR, ROLES.NURSE, ROLES.BRANCH_ADMIN, ROLES.CLINIC_ADMIN, ROLES.SUPER_ADMIN];
+// Part 10 Task 2 — merge is deliberately narrower than WRITE_ROLES: no
+// Receptionist, no Super Admin support exception. Spec says branch_admin/
+// clinic_admin only.
+const MERGE_ROLES = [ROLES.BRANCH_ADMIN, ROLES.CLINIC_ADMIN];
 
 router.post('/', requireRole(...WRITE_ROLES), controller.create);
-router.get('/check-duplicate', requireRole(...WRITE_ROLES), controller.checkDuplicate);
+// Part 10 Task 3 — POST (was GET in Part 9; body now matches what
+// POST /'s own built-in duplicate check uses).
+router.post('/check-duplicate', requireRole(...WRITE_ROLES), controller.checkDuplicate);
+router.post('/merge', requireRole(...MERGE_ROLES), controller.merge);
 
-// NOTE: literal-segment routes ('detail', 'check-duplicate' above) MUST stay
-// registered BEFORE the '/:organizationId' catch-all below, or Express would
-// capture 'detail'/'check-duplicate' as an organizationId value.
+// NOTE: literal-segment routes ('detail' above) MUST stay registered
+// BEFORE the '/:clinicId' catch-all below, or Express would capture
+// 'detail' as a clinicId value.
 router.get('/detail/:patientId', requireRole(...READ_ROLES), controller.getById);
 router.put('/:patientId', requireRole(...WRITE_ROLES), controller.update);
 
@@ -33,6 +51,6 @@ router.delete('/:id', requireRole(...WRITE_ROLES), controller.remove);
 
 // Search — the least specific route (single dynamic segment), registered
 // LAST so every literal path above takes priority.
-router.get('/:organizationId', requireRole(...READ_ROLES), controller.search);
+router.get('/:clinicId', requireRole(...READ_ROLES), controller.search);
 
 module.exports = router;

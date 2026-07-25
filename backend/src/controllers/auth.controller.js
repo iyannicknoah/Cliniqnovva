@@ -7,11 +7,11 @@ const { ROLES } = require('../middleware/requireRole');
 // Roles a scope-limited creator is never allowed to hand out, regardless of
 // what the request body asks for — a conservative default against privilege
 // escalation until Part 5 defines the full staff-creation authorization
-// matrix (organization_admin/branch_admin creating staff).
-const ESCALATION_GUARDED_ROLES = [ROLES.SUPER_ADMIN, ROLES.ORGANIZATION_ADMIN];
+// matrix (clinic_admin/branch_admin creating staff).
+const ESCALATION_GUARDED_ROLES = [ROLES.SUPER_ADMIN, ROLES.CLINIC_ADMIN];
 
 /**
- * POST /api/auth/create-user — {email, password, role, organizationId,
+ * POST /api/auth/create-user — {email, password, role, clinicId,
  * branchId?, displayName} -> {uid, success: true}. The only account-
  * creation path: creates the Firebase Auth user directly with the given
  * password, sets custom claims, and returns immediately. No email/SMS is
@@ -20,23 +20,23 @@ const ESCALATION_GUARDED_ROLES = [ROLES.SUPER_ADMIN, ROLES.ORGANIZATION_ADMIN];
 async function createUser(req, res, next) {
   try {
     const { email, password, role, displayName } = req.body;
-    let { organizationId, branchId } = req.body;
+    let { clinicId, branchId } = req.body;
 
     if (!email || !password || !role || !displayName) {
       return res.status(400).json({ error: 'email, password, role, and displayName are required' });
     }
-    if (role !== ROLES.SUPER_ADMIN && !organizationId && req.scope?.level !== 'organization' && req.scope?.level !== 'branch') {
-      return res.status(400).json({ error: 'organizationId is required for this role' });
+    if (role !== ROLES.SUPER_ADMIN && !clinicId && req.scope?.level !== 'clinic' && req.scope?.level !== 'branch') {
+      return res.status(400).json({ error: 'clinicId is required for this role' });
     }
 
     // Data-isolation guard (CRITICAL RULE — never trust a client-supplied
-    // organizationId/branchId over the caller's own scope): an
-    // Organization Admin can only create staff within their own
-    // organization; a Branch Admin only within their own branch.
-    if (req.scope?.level === 'organization') {
-      organizationId = req.scope.organizationId;
+    // clinicId/branchId over the caller's own scope): an
+    // Clinic Admin can only create staff within their own
+    // clinic; a Branch Admin only within their own branch.
+    if (req.scope?.level === 'clinic') {
+      clinicId = req.scope.clinicId;
     } else if (req.scope?.level === 'branch') {
-      organizationId = req.scope.organizationId;
+      clinicId = req.scope.clinicId;
       branchId = req.scope.branchId;
     }
 
@@ -49,7 +49,7 @@ async function createUser(req, res, next) {
       password,
       name: displayName,
       role,
-      organizationId: organizationId || null,
+      clinicId: clinicId || null,
       branchId: branchId || null,
       createdBy: req.user?.uid,
     });
@@ -62,12 +62,12 @@ async function createUser(req, res, next) {
 
 async function setClaims(req, res, next) {
   try {
-    const { uid, role, organizationId, branchId } = req.body;
+    const { uid, role, clinicId, branchId } = req.body;
     if (!uid || !role) {
       return res.status(400).json({ error: 'uid and role are required' });
     }
 
-    await authService.setUserClaims({ uid, role, organizationId, branchId });
+    await authService.setUserClaims({ uid, role, clinicId, branchId });
     res.json({ success: true });
   } catch (err) {
     next(err);

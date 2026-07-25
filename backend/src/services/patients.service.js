@@ -11,7 +11,7 @@ const { db } = require('../config/firebase-admin');
 const { ROLES } = require('../middleware/requireRole');
 const storageService = require('./storage.service');
 
-const CLINICAL_ROLES = [ROLES.DOCTOR, ROLES.NURSE, ROLES.BRANCH_ADMIN, ROLES.ORGANIZATION_ADMIN, ROLES.SUPER_ADMIN];
+const CLINICAL_ROLES = [ROLES.DOCTOR, ROLES.NURSE, ROLES.BRANCH_ADMIN, ROLES.CLINIC_ADMIN, ROLES.SUPER_ADMIN];
 
 function httpError(status, message) {
   const err = new Error(message);
@@ -30,35 +30,49 @@ function assertValidNationalId(nationalId) {
   }
 }
 
-async function auditLog({ actorId, actorRole }, action, targetId, organizationId) {
-  await db.collection('auditLogs').add({
-    actorId: actorId || null,
-    actorRole: actorRole || null,
-    action,
-    targetCollection: 'patients',
-    targetId,
-    organizationId,
-    timestamp: new Date().toISOString(),
-  });
-}
-
 /**
  * Create a patient directly (spec 6.5A: phone is the only required
- * identifier — no smartphone/app account needed). Duplicate checking is a
- * separate, non-blocking step the client runs first via checkDuplicate();
- * this function does not itself reject a phone/nationalId that already
- * exists (full merge handling is Part 10's scope).
+ * identifier — no smartphone/app account needed).
+ *
+ * Part 10 Task 1: before creating, this checks for an existing patient
+ * matching phone OR nationalId. A match throws a distinguishable
+ * "possible duplicate" error (status 409, `possibleDuplicate: true`,
+ * `matches`) INSTEAD of creating — the caller (controller) shapes that
+ * into the UI's "Is this the same person?" prompt. Passing
+ * `confirmedDuplicate: true` skips the check entirely (the user already
+ * saw the prompt and chose "No, create new patient").
  */
 async function create(
-  { organizationId, branchId, name, phone, dateOfBirth, gender, nationalId, emergencyContact, location },
+  {
+    clinicId,
+    branchId,
+    name,
+    phone,
+    dateOfBirth,
+    gender,
+    nationalId,
+    emergencyContact,
+    location,
+    confirmedDuplicate,
+  },
   actor
 ) {
   if (!name || !name.trim()) throw httpError(400, 'Full name is required');
   if (!phone || !phone.trim()) throw httpError(400, 'Phone is required');
   assertValidNationalId(nationalId);
 
+  if (!confirmedDuplicate) {
+    const matches = await checkDuplicate({ clinicId, phone, nationalId });
+    if (matches.length > 0) {
+      const err = httpError(409, 'A patient with this phone or National ID may already exist');
+      err.possibleDuplicate = true;
+      err.matches = matches;
+      throw err;
+    }
+  }
+
   const data = {
-    organizationId,
+    clinicId,
     branchId,
     name: name.trim(),
     nameLower: name.trim().toLowerCase(),
@@ -77,26 +91,26 @@ async function create(
     createdBy: actor.actorId || null,
   };
   const ref = await db.collection('patients').add(data);
-  await auditLog(actor, 'patient.registered', ref.id, organizationId);
   return { id: ref.id, ...data };
 }
 
 /**
- * Exact-match duplicate check on phone OR nationalId (spec 6.6A — full
- * merge UI lands in Part 10; this is the "show a warning" precursor Part 9
- * Task 2 explicitly calls for). Returns lightweight matches only.
+ * Exact-match duplicate check on phone OR nationalId (spec 6.6A). Excludes
+ * patients already merged away (isActive: false) — a record deactivated by
+ * a prior merge shouldn't keep surfacing as a "possible duplicate" forever.
+ * Returns lightweight matches only.
  */
-async function checkDuplicate({ organizationId, phone, nationalId }) {
+async function checkDuplicate({ clinicId, phone, nationalId }) {
   const phoneDigits = digitsOnly(phone);
   const queries = [];
   if (phoneDigits) {
     queries.push(
-      db.collection('patients').where('organizationId', '==', organizationId).where('phoneDigits', '==', phoneDigits).get()
+      db.collection('patients').where('clinicId', '==', clinicId).where('phoneDigits', '==', phoneDigits).get()
     );
   }
   if (nationalId) {
     queries.push(
-      db.collection('patients').where('organizationId', '==', organizationId).where('nationalId', '==', nationalId).get()
+      db.collection('patients').where('clinicId', '==', clinicId).where('nationalId', '==', nationalId).get()
     );
   }
   if (queries.length === 0) return [];
@@ -106,6 +120,7 @@ async function checkDuplicate({ organizationId, phone, nationalId }) {
   snapshots.forEach((snap) =>
     snap.docs.forEach((doc) => {
       const d = doc.data();
+      if (d.isActive === false) return;
       byId[doc.id] = { id: doc.id, name: d.name, phone: d.phone, nationalId: d.nationalId || null };
     })
   );
@@ -128,13 +143,13 @@ async function lastVisitDatesFor(patientIds) {
  * Search by name (prefix, case-insensitive), phone, or National ID (spec
  * Part 9 Task 1) — one query box covers all three, merged and de-duplicated.
  */
-async function search({ organizationId, branchId, q }) {
+async function search({ clinicId, branchId, q }) {
   const trimmed = (q || '').trim();
   const results = {};
 
   const addAll = (snap) => snap.docs.forEach((doc) => (results[doc.id] = { id: doc.id, ...doc.data() }));
 
-  let base = db.collection('patients').where('organizationId', '==', organizationId);
+  let base = db.collection('patients').where('clinicId', '==', clinicId);
   if (branchId) base = base.where('branchId', '==', branchId);
 
   if (!trimmed) {
@@ -157,7 +172,9 @@ async function search({ organizationId, branchId, q }) {
     snapshots.forEach(addAll);
   }
 
-  const patients = Object.values(results);
+  // Records merged away by Part 10's merge tool (isActive: false) shouldn't
+  // appear as a separate result — the surviving record is the one to find.
+  const patients = Object.values(results).filter((p) => p.isActive !== false);
   const lastVisit = await lastVisitDatesFor(patients.map((p) => p.id));
   return patients.map((p) => ({ ...p, lastVisitDate: lastVisit[p.id] || null }));
 }
@@ -170,8 +187,8 @@ async function getRawById(id) {
 
 function assertAccess(patient, scope) {
   if (scope.level === 'platform') return;
-  if (patient.organizationId !== scope.organizationId) {
-    throw httpError(403, 'This patient belongs to a different organization');
+  if (patient.clinicId !== scope.clinicId) {
+    throw httpError(403, 'This patient belongs to a different clinic');
   }
   if (scope.level === 'branch' && patient.branchId !== scope.branchId) {
     throw httpError(403, 'This patient belongs to a different branch');
@@ -179,12 +196,18 @@ function assertAccess(patient, scope) {
 }
 
 /**
- * Role-gated patient detail (Part 9 Task 3/DONE CONDITIONS):
- *   - Doctor/Branch Admin/Organization Admin/Super Admin: full medical
+ * Role-gated patient detail (Part 9 Task 3/DONE CONDITIONS; extended Part 13
+ * Task 2 for Pharmacist):
+ *   - Doctor/Branch Admin/Clinic Admin/Super Admin: full medical
  *     records (diagnosis, prescriptions, notes) + documents.
  *   - Nurse: medical record entries present but stripped to vitals + basic
  *     metadata only — diagnosis/prescriptions/notes are OMITTED. Documents
  *     included (clinical staff).
+ *   - Pharmacist: medical record entries stripped to PRESCRIPTIONS only —
+ *     diagnosis/notes/vitals are OMITTED (a pharmacist dispensing a
+ *     medication has no clinical need to see the diagnosis behind it). No
+ *     `documents` key either — lab results/scans aren't relevant to
+ *     dispensing, same "omit entirely" shaping as the Receptionist case.
  *   - Receptionist: demographics/contact ONLY — the `medicalRecords` and
  *     `documents` keys are omitted from the response entirely, not just
  *     emptied, so a receptionist-role request cannot see clinical fields
@@ -208,6 +231,18 @@ async function getById(id, actor) {
     .get();
   const records = recordsSnap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
 
+  if (role === ROLES.PHARMACIST) {
+    const medicalRecords = records.map((r) => ({
+      id: r.id,
+      patientId: r.patientId,
+      prescriptions: r.prescriptions || [],
+      createdAt: r.createdAt,
+      authorId: r.authorId,
+    }));
+    const { nameLower, phoneDigits, ...safe } = patient;
+    return { ...safe, medicalRecords };
+  }
+
   const medicalRecords =
     role === ROLES.NURSE
       ? records.map((r) => ({
@@ -227,8 +262,24 @@ async function getById(id, actor) {
     .get();
   const documents = docsSnap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
 
+  // Appointment/invoice counts — mainly for Part 10's merge preview
+  // ("appointment/record/invoice counts" side by side). Both collections
+  // are still empty system-wide until the booking/billing parts are built,
+  // so these are 0 for everyone today; wired now so merge counts are
+  // already correct once real data exists, nothing to revisit later.
+  const [apptCountSnap, invoiceCountSnap] = await Promise.all([
+    db.collection('appointments').where('patientId', '==', id).count().get(),
+    db.collection('invoices').where('patientId', '==', id).count().get(),
+  ]);
+
   const { nameLower, phoneDigits, ...safe } = patient;
-  return { ...safe, medicalRecords, documents };
+  return {
+    ...safe,
+    medicalRecords,
+    documents,
+    appointmentCount: apptCountSnap.data().count,
+    invoiceCount: invoiceCountSnap.data().count,
+  };
 }
 
 const EDITABLE_FIELDS = ['name', 'phone', 'dateOfBirth', 'gender', 'nationalId', 'emergencyContact', 'location'];
@@ -256,7 +307,6 @@ async function update(id, fields, actor) {
   if (Object.keys(updates).length === 0) throw httpError(400, 'No editable fields provided');
 
   await db.collection('patients').doc(id).update(updates);
-  await auditLog(actor, 'patient.updated', id, patient.organizationId);
   return getById(id, actor);
 }
 
@@ -290,17 +340,6 @@ async function addMedicalRecord(patientId, { appointmentId, diagnosis, prescript
     authorId: actor.actorId || null,
   };
   const ref = await db.collection('medicalRecords').add(data);
-
-  await db.collection('auditLogs').add({
-    actorId: actor.actorId || null,
-    actorRole: actor.role || null,
-    action: 'medicalRecord.created',
-    targetCollection: 'medicalRecords',
-    targetId: ref.id,
-    organizationId: patient.organizationId,
-    timestamp: new Date().toISOString(),
-  });
-
   return { id: ref.id, ...data };
 }
 
@@ -335,8 +374,6 @@ async function addDocument(patientId, { buffer, originalName, contentType }, act
     uploadedBy: actor.actorId || null,
   };
   await db.collection('patients').doc(patientId).collection('documents').doc(docId).set(data);
-
-  await auditLog(actor, 'patient.documentUploaded', patientId, patient.organizationId);
   return { id: docId, ...data };
 }
 
@@ -367,6 +404,66 @@ async function getDocumentSignedUrl(patientId, key, actor) {
   return storageService.getSignedDownloadUrl(key);
 }
 
+const REASSIGNED_COLLECTIONS = ['appointments', 'medicalRecords', 'invoices'];
+
+/**
+ * Part 10 Task 2 — merges [mergedPatientId] into [survivingPatientId]:
+ * every appointment/medicalRecord/invoice pointing at the merged patient is
+ * reassigned (patientId field updated) to the survivor — nothing lost, per
+ * the DONE CONDITION. The merged record itself is DEACTIVATED (isActive:
+ * false), never deleted (master rule 10: never hard-delete a record with
+ * dependent history). Logged to /patientMergeLogs with both ids.
+ *
+ * NOTE: clinical documents (patients/{id}/documents subcollection, Part 9)
+ * are intentionally NOT moved — Task 2's reassignment list is appointments/
+ * medicalRecords/invoices only, and subcollection documents would need a
+ * copy+delete rather than a field update. The merged record staying
+ * deactivated (not deleted) means its uploaded documents remain reachable
+ * by anyone who still has that patient id, just not through the survivor.
+ */
+async function mergePatients({ survivingPatientId, mergedPatientId }, actor) {
+  if (!survivingPatientId || !mergedPatientId) {
+    throw httpError(400, 'survivingPatientId and mergedPatientId are required');
+  }
+  if (survivingPatientId === mergedPatientId) {
+    throw httpError(400, 'Cannot merge a patient into itself');
+  }
+
+  const [surviving, merged] = await Promise.all([getRawById(survivingPatientId), getRawById(mergedPatientId)]);
+  if (!surviving) throw httpError(404, 'Surviving patient not found');
+  if (!merged) throw httpError(404, 'Patient to merge not found');
+  assertAccess(surviving, actor.scope);
+  assertAccess(merged, actor.scope);
+  if (surviving.clinicId !== merged.clinicId) {
+    throw httpError(400, 'Both patients must belong to the same clinic');
+  }
+
+  const reassignedCounts = {};
+  for (const collectionName of REASSIGNED_COLLECTIONS) {
+    const snap = await db.collection(collectionName).where('patientId', '==', mergedPatientId).get();
+    await Promise.all(snap.docs.map((doc) => doc.ref.update({ patientId: survivingPatientId })));
+    reassignedCounts[collectionName] = snap.size;
+  }
+
+  await db.collection('patients').doc(mergedPatientId).update({
+    isActive: false,
+    mergedInto: survivingPatientId,
+  });
+
+  const mergeLogRef = await db.collection('patientMergeLogs').add({
+    survivingPatientId,
+    mergedPatientId,
+    mergedBy: actor.actorId || null,
+    timestamp: new Date().toISOString(),
+  });
+
+  return {
+    survivingPatient: await getById(survivingPatientId, actor),
+    reassignedCounts,
+    mergeLogId: mergeLogRef.id,
+  };
+}
+
 module.exports = {
   create,
   checkDuplicate,
@@ -376,4 +473,5 @@ module.exports = {
   addMedicalRecord,
   addDocument,
   getDocumentSignedUrl,
+  mergePatients,
 };

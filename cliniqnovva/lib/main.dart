@@ -9,6 +9,7 @@ import 'core/theme/app_theme.dart';
 import 'features/auth/providers/auth_provider.dart';
 import 'firebase_options.dart';
 import 'shared/widgets/loading_widget.dart';
+import 'shared/widgets/offline_banner.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -61,6 +62,9 @@ class CliniqnovvaApp extends ConsumerWidget {
       supportedLocales: context.supportedLocales,
       locale: context.locale,
       routerConfig: router,
+      // Part 17 Task 8 — wraps every route so the offline banner is visible
+      // regardless of which screen is active, without touching any of them.
+      builder: (context, child) => OfflineBanner(child: child ?? const SizedBox.shrink()),
     );
   }
 }

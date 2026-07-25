@@ -1,20 +1,20 @@
 // Controller for /api/v1/services — spec section 6.4 / 9 (Part 7).
 const servicesService = require('../services/services.service');
 
-function resolveOrganizationId(req, explicit) {
-  return req.scope.level === 'platform' ? explicit : req.scope.organizationId;
+function resolveClinicId(req, explicit) {
+  return req.scope.level === 'platform' ? explicit : req.scope.clinicId;
 }
 
 async function list(req, res, next) {
   try {
-    const organizationId = resolveOrganizationId(req, req.query.organizationId);
-    if (!organizationId) return res.status(400).json({ error: 'organizationId is required' });
+    const clinicId = resolveClinicId(req, req.query.clinicId);
+    if (!clinicId) return res.status(400).json({ error: 'clinicId is required' });
 
     // Branch-level users only ever see their own branch's catalog.
     const branchId = req.scope.level === 'branch' ? req.scope.branchId : req.query.branchId;
     const departmentId = req.query.departmentId;
 
-    const services = await servicesService.list({ organizationId, branchId, departmentId });
+    const services = await servicesService.list({ clinicId, branchId, departmentId });
     res.json({ services });
   } catch (err) {
     next(err);
@@ -25,8 +25,8 @@ async function getById(req, res, next) {
   try {
     const service = await servicesService.getById(req.params.id);
     if (!service) return res.status(404).json({ error: 'Service not found' });
-    if (req.scope.level !== 'platform' && service.organizationId !== req.scope.organizationId) {
-      return res.status(403).json({ error: 'This service belongs to a different organization' });
+    if (req.scope.level !== 'platform' && service.clinicId !== req.scope.clinicId) {
+      return res.status(403).json({ error: 'This service belongs to a different clinic' });
     }
     res.json({ service });
   } catch (err) {
@@ -36,14 +36,14 @@ async function getById(req, res, next) {
 
 async function create(req, res, next) {
   try {
-    const organizationId = resolveOrganizationId(req, req.body.organizationId);
-    if (!organizationId) return res.status(400).json({ error: 'organizationId is required' });
+    const clinicId = resolveClinicId(req, req.body.clinicId);
+    if (!clinicId) return res.status(400).json({ error: 'clinicId is required' });
 
     const branchId = req.scope.level === 'branch' ? req.scope.branchId : req.body.branchId;
 
     const service = await servicesService.create(
       {
-        organizationId,
+        clinicId,
         branchId,
         departmentId: req.body.departmentId,
         name: req.body.name,

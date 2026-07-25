@@ -1,8 +1,8 @@
 // Controller for /api/v1/patients — spec section 6.5A / 6.6 / 6.6A / 9 (Part 9).
 const patientsService = require('../services/patients.service');
 
-function resolveOrganizationId(req, explicit) {
-  return req.scope.level === 'platform' ? explicit : req.scope.organizationId;
+function resolveClinicId(req, explicit) {
+  return req.scope.level === 'platform' ? explicit : req.scope.clinicId;
 }
 
 function resolveBranchId(req, explicit) {
@@ -13,14 +13,18 @@ function actorFrom(req) {
   return { actorId: req.user?.uid, role: req.user?.role, actorRole: req.user?.role, scope: req.scope };
 }
 
+// Part 10 Task 3 — POST (was GET in Part 9; the request now carries the
+// same shape POST /api/patients itself checks against, so this stays a
+// reusable pre-flight the client can call any time, e.g. before opening
+// the merge tool's search).
 async function checkDuplicate(req, res, next) {
   try {
-    const organizationId = resolveOrganizationId(req, req.query.organizationId);
-    if (!organizationId) return res.status(400).json({ error: 'organizationId is required' });
+    const clinicId = resolveClinicId(req, req.body.clinicId);
+    if (!clinicId) return res.status(400).json({ error: 'clinicId is required' });
     const matches = await patientsService.checkDuplicate({
-      organizationId,
-      phone: req.query.phone,
-      nationalId: req.query.nationalId,
+      clinicId,
+      phone: req.body.phone,
+      nationalId: req.body.nationalId,
     });
     res.json({ matches });
   } catch (err) {
@@ -28,14 +32,14 @@ async function checkDuplicate(req, res, next) {
   }
 }
 
-// GET /api/patients/:organizationId — search, per the Part 9 Task 4 route
-// shape. Scoped users ignore the path param and use their own organization;
+// GET /api/patients/:clinicId — search, per the Part 9 Task 4 route
+// shape. Scoped users ignore the path param and use their own clinic;
 // only Super Admin's explicit value is trusted.
 async function search(req, res, next) {
   try {
-    const organizationId = resolveOrganizationId(req, req.params.organizationId);
+    const clinicId = resolveClinicId(req, req.params.clinicId);
     const branchId = resolveBranchId(req, req.query.branchId);
-    const patients = await patientsService.search({ organizationId, branchId, q: req.query.q });
+    const patients = await patientsService.search({ clinicId, branchId, q: req.query.q });
     res.json({ patients });
   } catch (err) {
     next(err);
@@ -52,16 +56,19 @@ async function getById(req, res, next) {
   }
 }
 
+// Part 10 Task 1 — a possible-duplicate hit is a distinguishable response
+// shape ({possibleDuplicate: true, matches}), not the generic error
+// envelope, so it's handled here rather than falling through to next(err).
 async function create(req, res, next) {
   try {
-    const organizationId = resolveOrganizationId(req, req.body.organizationId);
+    const clinicId = resolveClinicId(req, req.body.clinicId);
     const branchId = resolveBranchId(req, req.body.branchId);
-    if (!organizationId) return res.status(400).json({ error: 'organizationId is required' });
+    if (!clinicId) return res.status(400).json({ error: 'clinicId is required' });
     if (!branchId) return res.status(400).json({ error: 'branchId is required' });
 
     const patient = await patientsService.create(
       {
-        organizationId,
+        clinicId,
         branchId,
         name: req.body.name,
         phone: req.body.phone,
@@ -70,11 +77,15 @@ async function create(req, res, next) {
         nationalId: req.body.nationalId,
         emergencyContact: req.body.emergencyContact,
         location: req.body.location,
+        confirmedDuplicate: req.body.confirmedDuplicate === true,
       },
       actorFrom(req)
     );
     res.status(201).json({ patient });
   } catch (err) {
+    if (err.possibleDuplicate) {
+      return res.status(409).json({ possibleDuplicate: true, matches: err.matches });
+    }
     next(err);
   }
 }
@@ -141,6 +152,21 @@ async function getDocumentSignedUrl(req, res, next) {
   }
 }
 
+// Part 10 Task 3 — POST /api/patients/merge (branch_admin/clinic_admin
+// only, enforced by the route's requireRole).
+async function merge(req, res, next) {
+  try {
+    const { survivingPatientId, mergedPatientId } = req.body;
+    const result = await patientsService.mergePatients(
+      { survivingPatientId, mergedPatientId },
+      actorFrom(req)
+    );
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+}
+
 async function remove(req, res) {
   res.status(501).json({ error: 'Not implemented: patients are never hard-deleted' });
 }
@@ -154,5 +180,6 @@ module.exports = {
   addMedicalRecord,
   addDocument,
   getDocumentSignedUrl,
+  merge,
   remove,
 };

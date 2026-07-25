@@ -8,11 +8,11 @@ const controller = require('../controllers/services.controller');
 // Every route below is scoped by req.scope (branch/org isolation, spec section 10/11).
 router.use(verifyToken, attachScope);
 
-router.get('/', requireRole(ROLES.ORGANIZATION_ADMIN, ROLES.BRANCH_ADMIN, ROLES.DOCTOR, ROLES.RECEPTIONIST, ROLES.PATIENT), controller.list);
-router.get('/:id', requireRole(ROLES.ORGANIZATION_ADMIN, ROLES.BRANCH_ADMIN, ROLES.DOCTOR, ROLES.RECEPTIONIST, ROLES.PATIENT), controller.getById);
-router.post('/', requireRole(ROLES.ORGANIZATION_ADMIN, ROLES.BRANCH_ADMIN), controller.create);
-router.put('/:id', requireRole(ROLES.ORGANIZATION_ADMIN, ROLES.BRANCH_ADMIN), controller.update);
-router.patch('/:id', requireRole(ROLES.ORGANIZATION_ADMIN, ROLES.BRANCH_ADMIN), controller.update);
-router.delete('/:id', requireRole(ROLES.ORGANIZATION_ADMIN, ROLES.BRANCH_ADMIN), controller.remove);
+router.get('/', requireRole(ROLES.CLINIC_ADMIN, ROLES.BRANCH_ADMIN, ROLES.DOCTOR, ROLES.RECEPTIONIST, ROLES.PATIENT), controller.list);
+router.get('/:id', requireRole(ROLES.CLINIC_ADMIN, ROLES.BRANCH_ADMIN, ROLES.DOCTOR, ROLES.RECEPTIONIST, ROLES.PATIENT), controller.getById);
+router.post('/', requireRole(ROLES.CLINIC_ADMIN, ROLES.BRANCH_ADMIN), controller.create);
+router.put('/:id', requireRole(ROLES.CLINIC_ADMIN, ROLES.BRANCH_ADMIN), controller.update);
+router.patch('/:id', requireRole(ROLES.CLINIC_ADMIN, ROLES.BRANCH_ADMIN), controller.update);
+router.delete('/:id', requireRole(ROLES.CLINIC_ADMIN, ROLES.BRANCH_ADMIN), controller.remove);
 
 module.exports = router;

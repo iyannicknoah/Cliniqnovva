@@ -2,19 +2,19 @@
 const staffService = require('../services/staff.service');
 const { ROLES } = require('../middleware/requireRole');
 
-function resolveOrganizationId(req, explicit) {
-  return req.scope.level === 'platform' ? explicit : req.scope.organizationId;
+function resolveClinicId(req, explicit) {
+  return req.scope.level === 'platform' ? explicit : req.scope.clinicId;
 }
 
-/** Branch Admin is always pinned to their own branch; Organization Admin/Super Admin pick one. */
+/** Branch Admin is always pinned to their own branch; Clinic Admin/Super Admin pick one. */
 function resolveBranchId(req, explicit) {
   return req.scope.level === 'branch' ? req.scope.branchId : explicit;
 }
 
 async function list(req, res, next) {
   try {
-    const organizationId = resolveOrganizationId(req, req.query.organizationId);
-    if (!organizationId) return res.status(400).json({ error: 'organizationId is required' });
+    const clinicId = resolveClinicId(req, req.query.clinicId);
+    if (!clinicId) return res.status(400).json({ error: 'clinicId is required' });
     const branchId = resolveBranchId(req, req.query.branchId);
 
     // A Doctor only ever sees themself (spec 6.5: "Doctor (view own)").
@@ -23,7 +23,7 @@ async function list(req, res, next) {
       return res.json({ staff: self ? [self] : [] });
     }
 
-    const staff = await staffService.list({ organizationId, branchId });
+    const staff = await staffService.list({ clinicId, branchId });
     res.json({ staff });
   } catch (err) {
     next(err);
@@ -36,8 +36,8 @@ async function getById(req, res, next) {
     const targetId = req.user?.role === ROLES.DOCTOR ? req.user.uid : req.params.id;
     const staffMember = await staffService.getById(targetId);
     if (!staffMember) return res.status(404).json({ error: 'Staff member not found' });
-    if (req.scope.level !== 'platform' && staffMember.organizationId !== req.scope.organizationId) {
-      return res.status(403).json({ error: 'This staff member belongs to a different organization' });
+    if (req.scope.level !== 'platform' && staffMember.clinicId !== req.scope.clinicId) {
+      return res.status(403).json({ error: 'This staff member belongs to a different clinic' });
     }
     res.json({ staff: staffMember });
   } catch (err) {
@@ -52,9 +52,9 @@ async function create(req, res, next) {
       return res.status(400).json({ error: 'email, password, role, and displayName are required' });
     }
 
-    const organizationId = resolveOrganizationId(req, req.body.organizationId);
+    const clinicId = resolveClinicId(req, req.body.clinicId);
     const branchId = resolveBranchId(req, req.body.branchId);
-    if (!organizationId) return res.status(400).json({ error: 'organizationId is required' });
+    if (!clinicId) return res.status(400).json({ error: 'clinicId is required' });
     if (!branchId) return res.status(400).json({ error: 'branchId is required' });
 
     const staffMember = await staffService.create(
@@ -63,7 +63,7 @@ async function create(req, res, next) {
         password,
         name: displayName,
         role,
-        organizationId,
+        clinicId,
         branchId,
         phone,
         specialty,

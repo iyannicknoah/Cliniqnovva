@@ -8,7 +8,7 @@ import '../../../core/theme/theme_ext.dart';
 import '../../../shared/widgets/cliniqnovva_card.dart';
 import '../../../shared/widgets/cliniqnovva_table.dart';
 import '../../../shared/widgets/metric_card.dart';
-import '../../organizations/providers/organizations_provider.dart';
+import '../../clinics/providers/clinics_provider.dart';
 import '../../platform/models/platform_models.dart';
 import '../../platform/providers/platform_provider.dart';
 import '../widgets/payment_history_panel.dart';
@@ -28,7 +28,7 @@ class OverviewScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final metricsAsync = ref.watch(platformMetricsProvider);
-    final organizationsAsync = ref.watch(organizationsListProvider);
+    final clinicsAsync = ref.watch(clinicsListProvider);
     final revenueTrendAsync = ref.watch(platformRevenueTrendProvider);
 
     return SuperAdminScaffold(
@@ -37,16 +37,16 @@ class OverviewScreen extends ConsumerWidget {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          organizationsAsync.when(
+          clinicsAsync.when(
             loading: () => const Padding(
               padding: EdgeInsets.all(24),
               child: Center(child: CircularProgressIndicator()),
             ),
             error: (err, _) => Text('Failed to load clinics: $err'),
-            data: (organizations) {
-              final totalOrgs = organizations.length;
-              final activeOrgs = organizations.where((o) => o.isActive).length;
-              final totalMonthlyRevenue = organizations
+            data: (clinics) {
+              final totalOrgs = clinics.length;
+              final activeOrgs = clinics.where((o) => o.isActive).length;
+              final totalMonthlyRevenue = clinics
                   .where((o) => o.isActive)
                   .fold<double>(0, (sum, o) => sum + o.monthlyEquivalentRwf);
 
@@ -110,14 +110,14 @@ class OverviewScreen extends ConsumerWidget {
           const SizedBox(height: 24),
           CliniqnovvaCard(
             title: 'Recent clinics',
-            child: organizationsAsync.when(
+            child: clinicsAsync.when(
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (err, _) => Text(
                 'Failed to load: $err',
                 style: TextStyle(color: context.appSubtext),
               ),
-              data: (organizations) {
-                final recent = organizations.take(5).toList();
+              data: (clinics) {
+                final recent = clinics.take(5).toList();
                 if (recent.isEmpty) {
                   return Text(
                     'No clinics yet.',
@@ -132,7 +132,7 @@ class OverviewScreen extends ConsumerWidget {
                     for (final org in recent)
                       CliniqnovvaTableRow(
                         onTap: () => context.push(
-                          '/super-admin/organizations/${org.id}',
+                          '/super-admin/clinics/${org.id}',
                         ),
                         cells: [
                           Text(

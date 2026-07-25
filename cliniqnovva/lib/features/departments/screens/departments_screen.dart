@@ -6,6 +6,7 @@ import '../../../core/theme/theme_ext.dart';
 import '../../../shared/utils/async_feedback.dart';
 import '../../../shared/widgets/cliniqnovva_button.dart';
 import '../../../shared/widgets/cliniqnovva_table.dart';
+import '../../../shared/widgets/empty_state.dart';
 import '../../../shared/widgets/loading_widget.dart';
 import '../../../shared/widgets/status_badge.dart';
 import '../../auth/providers/access_control_provider.dart';
@@ -14,7 +15,7 @@ import '../providers/departments_provider.dart';
 import '../widgets/add_department_dialog.dart';
 import '../widgets/branch_selector.dart';
 
-/// Part 7 Task 1 — /departments. Organization Admin picks among their
+/// Part 7 Task 1 — /departments. Clinic Admin picks among their
 /// branches (list scoped per branch); Branch Admin only ever sees their own
 /// (server-scoped, no picker shown). A department with services attached
 /// can't be hard-deleted — Deactivate is offered instead.
@@ -37,7 +38,7 @@ class DepartmentsScreen extends ConsumerWidget {
           final isBranchScoped = role == AppConstants.roleBranchAdmin;
           final ownBranchId = data?['branchId'] as String?;
           final canManage =
-              role == AppConstants.roleOrganizationAdmin ||
+              role == AppConstants.roleClinicAdmin ||
               role == AppConstants.roleBranchAdmin;
 
           return _DepartmentsBody(
@@ -58,7 +59,7 @@ class _DepartmentsBody extends ConsumerWidget {
     required this.canManage,
   });
 
-  /// Fixed branch id for a branch-scoped user; null for an Organization
+  /// Fixed branch id for a branch-scoped user; null for an Clinic
   /// Admin, who picks one via [activeBranchIdProvider]/[BranchSelector].
   final String? branchId;
   final bool showBranchSelector;
@@ -147,12 +148,7 @@ class _DepartmentsBody extends ConsumerWidget {
           const SizedBox(height: 28),
           Expanded(
             child: effectiveBranchId == null
-                ? Center(
-                    child: Text(
-                      'No branch to show yet.',
-                      style: TextStyle(color: context.appSubtext),
-                    ),
-                  )
+                ? const NoBranchSelectedState()
                 : _DepartmentsList(
                     branchId: effectiveBranchId,
                     canManage: canManage,

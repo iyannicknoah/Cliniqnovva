@@ -10,11 +10,12 @@ import '../../../core/theme/theme_ext.dart';
 import '../../../shared/widgets/app_icon.dart';
 import '../../../shared/widgets/cliniqnovva_button.dart';
 import '../../../shared/widgets/cliniqnovva_text_field.dart';
+import '../../../shared/widgets/empty_state.dart';
 import '../../../shared/widgets/loading_widget.dart';
 import '../../auth/providers/access_control_provider.dart';
 import '../../departments/providers/departments_provider.dart';
 import '../../departments/widgets/branch_selector.dart';
-import '../../organizations/providers/branches_provider.dart';
+import '../../clinics/providers/branches_provider.dart';
 import '../models/staff_model.dart';
 import '../providers/public_holidays_provider.dart';
 import '../providers/staff_provider.dart';
@@ -57,9 +58,9 @@ String _formatDate(DateTime d) => '${_monthAbbr[d.month]} ${d.day}, ${d.year}';
 
 /// Part 8 Task 2 — /doctor-schedule. A Doctor sees/edits only their own
 /// (view-only per spec 6.5 — no write role granted to Doctor); Branch
-/// Admin/Receptionist/Organization Admin can edit any doctor's schedule in
+/// Admin/Receptionist/Clinic Admin can edit any doctor's schedule in
 /// the branch (picked via a dropdown, or a branch selector first for an
-/// Organization Admin with several branches).
+/// Clinic Admin with several branches).
 class DoctorScheduleScreen extends ConsumerWidget {
   const DoctorScheduleScreen({super.key});
 
@@ -147,12 +148,7 @@ class _ScheduleBodyState extends ConsumerState<_ScheduleBody> {
           const SizedBox(height: 24),
           if (effectiveBranchId == null)
             Expanded(
-              child: Center(
-                child: Text(
-                  'No branch to show yet.',
-                  style: TextStyle(color: context.appSubtext),
-                ),
-              ),
+              child: const NoBranchSelectedState(),
             )
           else
             Expanded(

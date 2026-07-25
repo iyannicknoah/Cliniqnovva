@@ -1,15 +1,31 @@
-/// One prescribed medicine (spec section 6.6).
+/// One prescribed medicine (spec section 6.6). [dispensed]/[dispensedItemId]
+/// etc. are stamped server-side by Part 13's dispense flow — never sent by
+/// the client, so [toJson] (used when a doctor writes a new prescription)
+/// omits them entirely.
 class Prescription {
-  const Prescription({required this.medicineName, this.dosage, this.duration});
+  const Prescription({
+    required this.medicineName,
+    this.dosage,
+    this.duration,
+    this.dispensed = false,
+    this.dispensedItemId,
+    this.dispensedQuantity,
+  });
 
   final String medicineName;
   final String? dosage;
   final String? duration;
+  final bool dispensed;
+  final String? dispensedItemId;
+  final int? dispensedQuantity;
 
   factory Prescription.fromJson(Map<String, dynamic> json) => Prescription(
     medicineName: json['medicineName'] as String? ?? '',
     dosage: json['dosage'] as String?,
     duration: json['duration'] as String?,
+    dispensed: json['dispensed'] as bool? ?? false,
+    dispensedItemId: json['dispensedItemId'] as String?,
+    dispensedQuantity: json['dispensedQuantity'] as int?,
   );
 
   Map<String, dynamic> toJson() => {

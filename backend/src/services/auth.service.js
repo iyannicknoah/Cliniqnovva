@@ -13,7 +13,7 @@ const ALL_ROLES = Object.values(ROLES);
  * password the caller set or generated — no invite link, no email, no
  * pending state. The account can log in immediately. This is the ONLY
  * account-creation path (POST /api/auth/create-user, and internally reused
- * by organizations.controller.js's create() for the Organization Admin
+ * by clinics.controller.js's create() for the Clinic Admin
  * account).
  */
 async function createStaffAccountWithPassword({
@@ -21,7 +21,7 @@ async function createStaffAccountWithPassword({
   password,
   name,
   role,
-  organizationId,
+  clinicId,
   branchId,
   phone,
   createdBy,
@@ -43,14 +43,14 @@ async function createStaffAccountWithPassword({
     displayName: name,
   });
 
-  await auth.setCustomUserClaims(userRecord.uid, { role, organizationId, branchId: branchId || null });
+  await auth.setCustomUserClaims(userRecord.uid, { role, clinicId, branchId: branchId || null });
 
   await db
     .collection('users')
     .doc(userRecord.uid)
     .set({
       role,
-      organizationId,
+      clinicId,
       branchId: branchId || null,
       name,
       email,
@@ -60,16 +60,6 @@ async function createStaffAccountWithPassword({
       createdAt: new Date().toISOString(),
     });
 
-  await db.collection('auditLogs').add({
-    actorId: createdBy || null,
-    actorRole: 'system',
-    action: 'staff.accountCreated',
-    targetCollection: 'users',
-    targetId: userRecord.uid,
-    organizationId,
-    timestamp: new Date().toISOString(),
-  });
-
   return { uid: userRecord.uid };
 }
 
@@ -77,20 +67,20 @@ async function createStaffAccountWithPassword({
  * Sets/updates a user's Firebase custom claims AND keeps the mirrored
  * Firestore /users doc fields in sync (Part 2 Task 6: POST /api/auth/set-claims).
  */
-async function setUserClaims({ uid, role, organizationId, branchId }) {
+async function setUserClaims({ uid, role, clinicId, branchId }) {
   if (role && !ALL_ROLES.includes(role)) {
     const err = new Error(`Unknown role "${role}"`);
     err.status = 400;
     throw err;
   }
 
-  const claims = { role, organizationId, branchId: branchId || null };
+  const claims = { role, clinicId, branchId: branchId || null };
   await auth.setCustomUserClaims(uid, claims);
 
   await db
     .collection('users')
     .doc(uid)
-    .set({ role, organizationId, branchId: branchId || null }, { merge: true });
+    .set({ role, clinicId, branchId: branchId || null }, { merge: true });
 
   return claims;
 }

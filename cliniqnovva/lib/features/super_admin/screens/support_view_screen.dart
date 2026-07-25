@@ -10,22 +10,22 @@ import '../../../shared/widgets/cliniqnovva_button.dart';
 import '../../../shared/widgets/cliniqnovva_card.dart';
 import '../../../shared/widgets/cliniqnovva_table.dart';
 import '../../../shared/widgets/status_badge.dart';
-import '../../organizations/providers/organizations_provider.dart';
+import '../../clinics/providers/clinics_provider.dart';
 import '../../platform/providers/platform_provider.dart';
 import '../widgets/super_admin_scaffold.dart';
 
-/// Part 5 Task 3 — a read-only view of an organization's info for support
-/// purposes. Every session start/end is logged to auditLogs. Deliberately
-/// has ZERO write-capable widgets (no edit fields, no Suspend/Activate, no
-/// Record Payment, no branch creation) — Super Admin must never be able to
-/// accidentally write another org's data through this screen (DONE
-/// CONDITION). Only `ApiService` calls this file makes are the audit-only
-/// support-view start/end and the existing read-only
-/// `organizationDetailProvider`.
+/// Part 5 Task 3 — a read-only view of a clinic's info for support
+/// purposes. Deliberately has ZERO write-capable widgets (no edit fields,
+/// no Suspend/Activate, no Record Payment, no branch creation) — Super
+/// Admin must never be able to accidentally write another clinic's data
+/// through this screen (DONE CONDITION). Only `ApiService` calls this file
+/// makes are support-view start/end (session bookkeeping only, since the
+/// audit-log feature that used to back them was removed 2026-07-24) and
+/// the existing read-only `clinicDetailProvider`.
 class SupportViewScreen extends ConsumerStatefulWidget {
-  const SupportViewScreen({super.key, required this.organizationId});
+  const SupportViewScreen({super.key, required this.clinicId});
 
-  final String organizationId;
+  final String clinicId;
 
   @override
   ConsumerState<SupportViewScreen> createState() => _SupportViewScreenState();
@@ -43,7 +43,7 @@ class _SupportViewScreenState extends ConsumerState<SupportViewScreen> {
   Future<void> _startSession() async {
     final sessionId = await ref
         .read(platformNotifierProvider.notifier)
-        .startSupportView(widget.organizationId);
+        .startSupportView(widget.clinicId);
     if (!mounted) return;
     setState(() => _sessionId = sessionId);
   }
@@ -51,11 +51,11 @@ class _SupportViewScreenState extends ConsumerState<SupportViewScreen> {
   @override
   void dispose() {
     if (_sessionId != null) {
-      // Fire-and-forget — dispose() can't be async, and this is a pure
-      // audit-log write, not user-facing state.
+      // Fire-and-forget — dispose() can't be async, and this is pure
+      // session bookkeeping, not user-facing state.
       ref
           .read(platformNotifierProvider.notifier)
-          .endSupportView(widget.organizationId, _sessionId!);
+          .endSupportView(widget.clinicId, _sessionId!);
     }
     super.dispose();
   }
@@ -68,11 +68,11 @@ class _SupportViewScreenState extends ConsumerState<SupportViewScreen> {
   @override
   Widget build(BuildContext context) {
     final detailAsync = ref.watch(
-      organizationDetailProvider(widget.organizationId),
+      clinicDetailProvider(widget.clinicId),
     );
 
     return SuperAdminScaffold(
-      currentRoute: '/super-admin/organizations',
+      currentRoute: '/super-admin/clinics',
       title: 'Support View',
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -105,7 +105,7 @@ class _SupportViewScreenState extends ConsumerState<SupportViewScreen> {
                   label: 'Exit',
                   color: AppColors.pillAmberText,
                   onPressed: () => context.go(
-                    '/super-admin/organizations/${widget.organizationId}',
+                    '/super-admin/clinics/${widget.clinicId}',
                   ),
                 ),
               ],

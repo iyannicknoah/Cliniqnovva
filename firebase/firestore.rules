@@ -1,7 +1,7 @@
 rules_version = '2';
 
 // Spec section 10 (Security Model): default-deny; every collection checks
-// request.auth's custom claims (role / organizationId / branchId, set by the
+// request.auth's custom claims (role / clinicId / branchId, set by the
 // backend via the Admin SDK when a staff account is created — see
 // backend/src/services/auth.service.js) before allowing anything.
 //
@@ -17,14 +17,14 @@ service cloud.firestore {
 
     function isSignedIn() { return request.auth != null; }
     function role() { return request.auth.token.role; }
-    function orgId() { return request.auth.token.organizationId; }
+    function clinicId() { return request.auth.token.clinicId; }
     function branchId() { return request.auth.token.branchId; }
     // Must match backend/src/middleware/requireRole.js's ROLES exactly
     // (snake_case) — these are the literal custom-claim strings set by
     // auth.service.js, not just internal naming.
     function isSuperAdmin() { return isSignedIn() && role() == 'super_admin'; }
-    function isOrgAdmin() { return isSignedIn() && role() == 'organization_admin'; }
-    function inSameOrg(docOrgId) { return isSignedIn() && docOrgId == orgId(); }
+    function isClinicAdmin() { return isSignedIn() && role() == 'clinic_admin'; }
+    function inSameClinic(docClinicId) { return isSignedIn() && docClinicId == clinicId(); }
     function inSameBranch(docBranchId) { return isSignedIn() && docBranchId == branchId(); }
 
     // Default deny for anything not explicitly matched below.
@@ -32,13 +32,13 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
-    match /organizations/{orgId} {
-      allow read: if isSuperAdmin() || inSameOrg(orgId);
+    match /clinics/{clinicId} {
+      allow read: if isSuperAdmin() || inSameClinic(clinicId);
       allow write: if false; // creation/suspension/plan changes: Super Admin only, via backend
     }
 
     match /branches/{branchId} {
-      allow read: if isSuperAdmin() || inSameOrg(resource.data.organizationId);
+      allow read: if isSuperAdmin() || inSameClinic(resource.data.clinicId);
       allow write: if false; // plan branch-limit check must happen server-side
     }
 
@@ -54,7 +54,7 @@ service cloud.firestore {
 
     match /users/{userId} {
       allow read: if isSuperAdmin()
-        || inSameOrg(resource.data.organizationId)
+        || inSameClinic(resource.data.clinicId)
         || request.auth.uid == userId;
       allow write: if false; // staff invite/role assignment via backend only
     }
@@ -66,14 +66,14 @@ service cloud.firestore {
 
     match /patients/{patientId} {
       allow read: if isSuperAdmin()
-        || inSameOrg(resource.data.organizationId)
+        || inSameClinic(resource.data.clinicId)
         || request.auth.uid == patientId;
       allow write: if false; // dedupe/merge logic (6.6A) must run server-side
     }
 
     match /appointments/{id} {
       allow read: if isSuperAdmin()
-        || inSameOrg(resource.data.organizationId)
+        || inSameClinic(resource.data.clinicId)
         || inSameBranch(resource.data.branchId)
         || request.auth.uid == resource.data.patientId;
       allow write: if false; // double-booking transaction (6.7) must run server-side
@@ -88,7 +88,7 @@ service cloud.firestore {
 
     match /invoices/{id} {
       allow read: if isSuperAdmin()
-        || inSameOrg(resource.data.organizationId)
+        || inSameClinic(resource.data.clinicId)
         || inSameBranch(resource.data.branchId)
         || request.auth.uid == resource.data.patientId;
       allow write: if false; // totals/balances recalculated server-side only
@@ -106,7 +106,7 @@ service cloud.firestore {
 
     match /publicHolidays/{id} {
       allow read: if isSignedIn();
-      allow write: if false; // Super Admin/Org Admin edits still go through backend for audit logging
+      allow write: if false; // Super Admin/Clinic Admin edits still go through the backend
     }
 
     match /notifications/{id} {
@@ -114,13 +114,13 @@ service cloud.firestore {
       allow write: if false; // system-triggered only
     }
 
-    match /auditLogs/{id} {
-      allow read: if isSuperAdmin() || isOrgAdmin();
-      allow write: if false; // append-only, backend-only — never editable by anyone (spec 6.12/10)
-    }
-
+    // /auditLogs was removed entirely (general activity log feature retired,
+    // 2026-07-24) — see docs/security-review.md. patientMergeLogs is kept:
+    // it's a distinct, narrower feature (the merge tool's own history record,
+    // required so a merge never loses data — see patients.service.js) not
+    // the general audit log.
     match /patientMergeLogs/{id} {
-      allow read: if isSuperAdmin() || isOrgAdmin();
+      allow read: if isSuperAdmin() || isClinicAdmin();
       allow write: if false;
     }
 
@@ -134,7 +134,15 @@ service cloud.firestore {
         && (request.auth.uid == resource.data.patientId
             || inSameBranch(resource.data.branchId)
             || isSuperAdmin());
-      allow create: if isSignedIn() && request.auth.uid == request.resource.data.patientId;
+      // Part 15 Task 4: there is no Patient App yet, so a patient can't be
+      // request.auth.uid == patientId (patients have no account/token at
+      // all). Staff at the chat's own branch may create a thread on a
+      // patient's behalf until one exists — the patientId branch stays
+      // here, unchanged, for the day a Patient App calls this same rule
+      // with request.auth.uid actually equal to the patient's own uid.
+      allow create: if isSignedIn()
+        && (request.auth.uid == request.resource.data.patientId
+            || inSameBranch(request.resource.data.branchId));
       allow update: if isSignedIn()
         && (request.auth.uid == resource.data.patientId || inSameBranch(resource.data.branchId));
       allow delete: if false;

@@ -5,7 +5,9 @@ const { requireRole, ROLES } = require('../middleware/requireRole');
 const { attachScope } = require('../middleware/branchScope.middleware');
 const controller = require('../controllers/chats.controller');
 
-// Every route below is scoped by req.scope (branch/org isolation, spec section 10/11).
+// Kept only for routes/index.js's one-file-per-collection convention — see
+// chats.controller.js's docstring: nothing in the client calls these, chat
+// reads/writes go directly to Firestore instead (spec section 6.13, Part 15).
 router.use(verifyToken, attachScope);
 
 router.get('/', requireRole(ROLES.PATIENT, ROLES.RECEPTIONIST, ROLES.BRANCH_ADMIN, ROLES.DOCTOR), controller.list);

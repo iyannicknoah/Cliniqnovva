@@ -3,9 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/theme_ext.dart';
-import '../../organizations/providers/branches_provider.dart';
+import '../../clinics/providers/branches_provider.dart';
 
-/// Branch picker for an Organization Admin viewing per-branch data
+/// Branch picker for an Clinic Admin viewing per-branch data
 /// (Departments/Services — Part 7 Tasks 1-2 both say "per branch"). Writes
 /// through [selectedBranchProvider] (Part 6) so the choice is shared with
 /// /branches' "click a branch → filter" behavior. Hidden entirely by the

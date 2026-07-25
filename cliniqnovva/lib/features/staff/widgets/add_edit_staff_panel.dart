@@ -17,14 +17,6 @@ import '../../departments/providers/departments_provider.dart';
 import '../models/staff_model.dart';
 import '../providers/staff_provider.dart';
 
-const _roleLabels = {
-  AppConstants.roleDoctor: 'Doctor',
-  AppConstants.roleNurse: 'Nurse',
-  AppConstants.roleReceptionist: 'Receptionist',
-  AppConstants.rolePharmacist: 'Pharmacist',
-  AppConstants.roleAccountant: 'Accountant',
-};
-
 String _generatePassword() {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
   final rand = Random.secure();
@@ -284,12 +276,12 @@ class _StaffPanelState extends ConsumerState<_StaffPanel> {
                   ),
                   // Role is fixed once the account exists — changing it is a
                   // distinct capability the spec reserves for
-                  // Organization Admin/Super Admin elsewhere, not this form.
+                  // Clinic Admin/Super Admin elsewhere, not this form.
                   items: AppConstants.staffRoles
                       .map(
                         (role) => DropdownMenuItem(
                           value: role,
-                          child: Text(_roleLabels[role] ?? role),
+                          child: Text(roleLabel(role)),
                         ),
                       )
                       .toList(),
@@ -439,7 +431,7 @@ class _DepartmentDropdown extends StatelessWidget {
             if (value != null)
               DepartmentModel(
                 id: value!,
-                organizationId: '',
+                clinicId: '',
                 branchId: '',
                 name: '(unknown department)',
               ),

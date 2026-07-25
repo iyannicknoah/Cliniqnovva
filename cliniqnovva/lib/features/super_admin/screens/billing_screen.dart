@@ -6,8 +6,8 @@ import '../../../shared/widgets/cliniqnovva_card.dart';
 import '../../../shared/widgets/cliniqnovva_table.dart';
 import '../../../shared/widgets/metric_card.dart';
 import '../../../shared/widgets/status_badge.dart';
-import '../../organizations/models/organization.dart';
-import '../../organizations/providers/organizations_provider.dart';
+import '../../clinics/models/clinic.dart';
+import '../../clinics/providers/clinics_provider.dart';
 import '../widgets/payment_history_panel.dart';
 import '../widgets/super_admin_scaffold.dart';
 
@@ -33,19 +33,19 @@ class SuperAdminBillingScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final organizationsAsync = ref.watch(organizationsListProvider);
+    final clinicsAsync = ref.watch(clinicsListProvider);
 
     return SuperAdminScaffold(
       currentRoute: '/super-admin/billing',
       title: 'Platform Billing',
-      body: organizationsAsync.when(
+      body: clinicsAsync.when(
         loading: () => const Padding(
           padding: EdgeInsets.all(40),
           child: Center(child: CircularProgressIndicator()),
         ),
         error: (err, _) => Text('Failed to load clinics: $err'),
-        data: (organizations) {
-          final active = organizations.where((o) => o.isActive).toList();
+        data: (clinics) {
+          final active = clinics.where((o) => o.isActive).toList();
           final totalMonthlyRevenue = active.fold<double>(
             0,
             (sum, o) => sum + o.monthlyEquivalentRwf,
@@ -108,7 +108,7 @@ class SuperAdminBillingScreen extends ConsumerWidget {
                         'Status',
                       ],
                     ),
-                    if (organizations.isEmpty)
+                    if (clinics.isEmpty)
                       Padding(
                         padding: const EdgeInsets.symmetric(vertical: 24),
                         child: Text(
@@ -117,7 +117,7 @@ class SuperAdminBillingScreen extends ConsumerWidget {
                         ),
                       )
                     else
-                      for (final org in organizations)
+                      for (final org in clinics)
                         CliniqnovvaTableRow(
                           onTap: () => showPaymentHistoryPanel(context, org),
                           cells: _buildRowCells(context, org),
@@ -132,7 +132,7 @@ class SuperAdminBillingScreen extends ConsumerWidget {
     );
   }
 
-  List<Widget> _buildRowCells(BuildContext context, Organization org) {
+  List<Widget> _buildRowCells(BuildContext context, Clinic org) {
     final (label, type) = _statusLabel(org.billingStatus);
     return [
       Text(

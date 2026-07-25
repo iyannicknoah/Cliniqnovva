@@ -8,25 +8,26 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/theme_ext.dart';
 import '../../../shared/widgets/app_icon.dart';
 import '../../../shared/widgets/cliniqnovva_sidebar.dart';
+import '../../notifications/widgets/notification_bell.dart';
 import '../../auth/providers/auth_provider.dart';
 
 /// Shared by every Super Admin screen so the sidebar/topbar aren't
 /// duplicated per screen.
 const superAdminNavItems = [
   SidebarNavItem(
-    label: 'Overview',
+    label: 'nav_overview',
     icon: AppIcons.overview,
     route: '/super-admin/overview',
     allowedRoles: [AppConstants.roleSuperAdmin],
   ),
   SidebarNavItem(
-    label: 'Clinics',
-    icon: AppIcons.organizations,
-    route: '/super-admin/organizations',
+    label: 'nav_clinics',
+    icon: AppIcons.clinics,
+    route: '/super-admin/clinics',
     allowedRoles: [AppConstants.roleSuperAdmin],
   ),
   SidebarNavItem(
-    label: 'Billing',
+    label: 'nav_billing',
     icon: AppIcons.billing,
     route: '/super-admin/billing',
     allowedRoles: [AppConstants.roleSuperAdmin],
@@ -61,7 +62,7 @@ class SuperAdminScaffold extends ConsumerWidget {
             currentRoute: currentRoute,
             currentRole: AppConstants.roleSuperAdmin,
             userName: userName,
-            userRoleLabel: 'Super Admin',
+            userRoleLabel: roleLabel(AppConstants.roleSuperAdmin),
             onNavTap: (route) => context.go(route),
           ),
           Expanded(
@@ -94,15 +95,8 @@ class SuperAdminScaffold extends ConsumerWidget {
                           ),
                         ),
                       ),
-                      const SizedBox(width: 12),
-                      Padding(
-                        padding: const EdgeInsets.all(6),
-                        child: AppIcon(
-                          AppIcons.notification,
-                          size: 22,
-                          color: context.appText,
-                        ),
-                      ),
+                      const SizedBox(width: 4),
+                      const NotificationBell(),
                     ],
                   ),
                 ),

@@ -19,12 +19,19 @@ import '../widgets/patient_form_fields.dart';
 /// the only required identifier (spec 6.5A — no smartphone/app account
 /// needed). On submit, a duplicate-check runs first and WARNS on a match
 /// rather than blocking — full merge handling is Part 10's scope.
+///
+/// Part 11 Task 1's "register new" shortcut from the Booking screen passes
+/// `?returnTo=/appointments/book` — on success (or "use existing record"),
+/// this navigates back there with `?patientId=` instead of the usual
+/// profile page, so the booking flow picks up with the new patient already
+/// selected.
 class RegisterPatientScreen extends ConsumerWidget {
   const RegisterPatientScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final claims = ref.watch(userClaimsProvider);
+    final returnTo = GoRouterState.of(context).uri.queryParameters['returnTo'];
 
     return Scaffold(
       backgroundColor: context.appBg,
@@ -35,10 +42,11 @@ class RegisterPatientScreen extends ConsumerWidget {
         ),
         data: (data) {
           final role = data?['role'] as String?;
-          final isOrgAdmin = role == AppConstants.roleOrganizationAdmin;
+          final isOrgAdmin = role == AppConstants.roleClinicAdmin;
           final ownBranchId = data?['branchId'] as String?;
           return _RegisterForm(
             branchId: isOrgAdmin ? null : ownBranchId,
+            returnTo: returnTo,
           );
         },
       ),
@@ -47,7 +55,9 @@ class RegisterPatientScreen extends ConsumerWidget {
 }
 
 class _RegisterForm extends ConsumerStatefulWidget {
-  const _RegisterForm({required this.branchId});
+  const _RegisterForm({required this.branchId, this.returnTo});
+
+  final String? returnTo;
 
   final String? branchId;
 
@@ -101,7 +111,11 @@ class _RegisterFormState extends ConsumerState<_RegisterForm> {
     return null;
   }
 
-  Future<void> _submit() async {
+  /// Part 10 Task 1 — submits directly; the server itself checks for a
+  /// duplicate and responds with a "possible duplicate" outcome instead of
+  /// creating. [confirmedDuplicate] is only ever true on the resubmit after
+  /// the user picked "No, create new patient" below.
+  Future<void> _submit({bool confirmedDuplicate = false}) async {
     final validationError = _validate();
     if (validationError != null) {
       setState(() => _error = validationError);
@@ -115,33 +129,17 @@ class _RegisterFormState extends ConsumerState<_RegisterForm> {
 
     final phone = _phoneController.text.trim();
     final nationalId = _nationalIdController.text.trim();
+    final branchId = widget.branchId ?? ref.read(activeBranchIdProvider);
+    if (branchId == null) {
+      setState(() {
+        _saving = false;
+        _error = 'No branch to register this patient under.';
+      });
+      return;
+    }
 
     try {
-      final matches = await ref
-          .read(patientsNotifierProvider.notifier)
-          .checkDuplicate(
-            phone: phone,
-            nationalId: nationalId.isEmpty ? null : nationalId,
-          );
-
-      if (matches.isNotEmpty && mounted) {
-        final proceed = await _showDuplicateWarning(matches);
-        if (proceed != true) {
-          setState(() => _saving = false);
-          return;
-        }
-      }
-
-      final branchId = widget.branchId ?? ref.read(activeBranchIdProvider);
-      if (branchId == null) {
-        setState(() {
-          _saving = false;
-          _error = 'No branch to register this patient under.';
-        });
-        return;
-      }
-
-      final patient = await ref
+      final result = await ref
           .read(patientsNotifierProvider.notifier)
           .register(
             branchId: branchId,
@@ -163,10 +161,18 @@ class _RegisterFormState extends ConsumerState<_RegisterForm> {
                         : _emergencyPhoneController.text.trim(),
                   ),
             location: _addressKey.currentState!.value,
+            confirmedDuplicate: confirmedDuplicate,
           );
 
       if (!mounted) return;
-      context.go('/patients/${patient.id}');
+
+      switch (result) {
+        case PatientCreated(:final patient):
+          _goToPatient(patient.id);
+        case PatientPossibleDuplicate(:final matches):
+          setState(() => _saving = false);
+          await _handlePossibleDuplicate(matches);
+      }
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -176,11 +182,22 @@ class _RegisterFormState extends ConsumerState<_RegisterForm> {
     }
   }
 
-  Future<bool?> _showDuplicateWarning(List<DuplicateMatch> matches) {
-    return showDialog<bool>(
+  void _goToPatient(String patientId) {
+    if (widget.returnTo != null) {
+      context.go('${widget.returnTo}?patientId=$patientId');
+    } else {
+      context.go('/patients/$patientId');
+    }
+  }
+
+  /// "Is this the same person?" — Yes navigates to the existing record
+  /// without creating anything; No resubmits with confirmedDuplicate so the
+  /// server skips its own check this time (Part 10 Task 1's exact wording).
+  Future<void> _handlePossibleDuplicate(List<DuplicateMatch> matches) async {
+    final choice = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Possible existing patient'),
+        title: const Text('Is this the same person?'),
         content: SizedBox(
           width: 360,
           child: Column(
@@ -199,25 +216,29 @@ class _RegisterFormState extends ConsumerState<_RegisterForm> {
                     style: const TextStyle(fontWeight: FontWeight.w600),
                   ),
                 ),
-              const SizedBox(height: 8),
-              const Text(
-                'Register anyway if this is genuinely a different person.',
-              ),
             ],
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('Cancel'),
+            child: const Text('No, create new patient'),
           ),
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('Register anyway'),
+            child: const Text('Yes, use existing record'),
           ),
         ],
       ),
     );
+    if (!mounted) return;
+
+    if (choice == true) {
+      _goToPatient(matches.first.id);
+    } else if (choice == false) {
+      await _submit(confirmedDuplicate: true);
+    }
+    // choice == null (dialog dismissed): leave the form as-is, no action.
   }
 
   @override
@@ -337,7 +358,9 @@ class _RegisterFormState extends ConsumerState<_RegisterForm> {
                   CliniqnovvaButton.text(
                     label: 'Cancel',
                     color: context.appText,
-                    onPressed: _saving ? null : () => context.go('/patients'),
+                    onPressed: _saving
+                        ? null
+                        : () => context.go(widget.returnTo ?? '/patients'),
                   ),
                   const Spacer(),
                   SizedBox(

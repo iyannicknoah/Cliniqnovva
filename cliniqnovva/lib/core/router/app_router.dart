@@ -16,33 +16,37 @@ import '../../features/chat/screens/chat_thread_screen.dart';
 import '../../features/dashboard/screens/dashboard_screen.dart';
 import '../../features/departments/screens/departments_screen.dart';
 import '../../features/departments/screens/services_screen.dart';
+import '../../features/doctor/screens/doctor_reviews_screen.dart';
+import '../../features/doctor/screens/doctor_today_screen.dart';
 import '../../features/inventory/screens/inventory_screen.dart';
 import '../../features/mobile_patient/screens/patient_home_screen.dart';
 import '../../features/mobile_staff/screens/staff_home_screen.dart';
-import '../../features/organizations/screens/branches_screen.dart';
-import '../../features/organizations/screens/onboarding_screen.dart';
+import '../../features/nurse/screens/nurse_today_screen.dart';
+import '../../features/clinics/screens/branches_screen.dart';
+import '../../features/clinics/screens/onboarding_screen.dart';
+import '../../features/patients/screens/merge_patients_screen.dart';
 import '../../features/patients/screens/patient_profile_screen.dart';
 import '../../features/patients/screens/patients_screen.dart';
 import '../../features/patients/screens/register_patient_screen.dart';
-import '../../features/reports/screens/audit_log_screen.dart';
 import '../../features/reports/screens/reports_screen.dart';
 import '../../features/reviews/screens/popular_clinics_screen.dart';
 import '../../features/reviews/screens/reviews_screen.dart';
 import '../../features/staff/screens/doctor_schedule_screen.dart';
 import '../../features/staff/screens/staff_screen.dart';
 import '../../features/super_admin/screens/billing_screen.dart';
-import '../../features/super_admin/screens/organization_detail_screen.dart';
-import '../../features/super_admin/screens/organizations_screen.dart';
+import '../../features/super_admin/screens/clinic_detail_screen.dart';
+import '../../features/super_admin/screens/clinics_screen.dart';
 import '../../features/super_admin/screens/overview_screen.dart';
 import '../../features/super_admin/screens/support_view_screen.dart';
+import '../../shared/widgets/app_shell.dart';
 import '../constants/app_constants.dart';
 import '../services/firebase_service.dart';
 
-/// Roles whose organization's `isActive` status gates access (spec Task 4:
-/// "any organization-scoped role"). Patients aren't tied to one clinic's
-/// subscription status, and Super Admin isn't tied to any organization.
+/// Roles whose clinic's `isActive` status gates access (spec Task 4:
+/// "any clinic-scoped role"). Patients aren't tied to one clinic's
+/// subscription status, and Super Admin isn't tied to any clinic.
 const _orgScopedRolesForSuspension = [
-  AppConstants.roleOrganizationAdmin,
+  AppConstants.roleClinicAdmin,
   AppConstants.roleBranchAdmin,
   AppConstants.roleReceptionist,
   AppConstants.roleAccountant,
@@ -105,7 +109,7 @@ Future<String?> _redirect(Ref ref, GoRouterState state) async {
   final claims = await ref.read(userClaimsProvider.future);
   final role = claims?['role'] as String?;
   debugPrint('[router] claims resolved: role=$role');
-  final organizationId = claims?['organizationId'] as String?;
+  final clinicId = claims?['clinicId'] as String?;
 
   // Spec Task 3: an authenticated user whose role isn't one we recognize
   // gets signed out rather than silently let into a random screen.
@@ -114,9 +118,9 @@ Future<String?> _redirect(Ref ref, GoRouterState state) async {
     return '/login?error=unknown_role';
   }
 
-  if (_orgScopedRolesForSuspension.contains(role) && organizationId != null) {
+  if (_orgScopedRolesForSuspension.contains(role) && clinicId != null) {
     final isActive = await ref.read(
-      organizationStatusProvider(organizationId).future,
+      clinicStatusProvider(clinicId).future,
     );
     if (!isActive) {
       return state.matchedLocation == '/suspended' ? null : '/suspended';
@@ -128,9 +132,9 @@ Future<String?> _redirect(Ref ref, GoRouterState state) async {
     return homeRouteForRole(role);
   }
 
-  if (role == AppConstants.roleOrganizationAdmin && organizationId != null) {
+  if (role == AppConstants.roleClinicAdmin && clinicId != null) {
     final hasBranches = await ref.read(
-      hasBranchesProvider(organizationId).future,
+      hasBranchesProvider(clinicId).future,
     );
     if (!hasBranches) {
       return state.matchedLocation == '/onboarding' ? null : '/onboarding';
@@ -166,8 +170,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const SuspendedScreen(),
       ),
       GoRoute(
-        path: '/dashboard',
-        builder: (context, state) => const DashboardScreen(),
+        path: '/onboarding',
+        builder: (context, state) => const OnboardingScreen(),
       ),
 
       GoRoute(
@@ -175,113 +179,23 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const OverviewScreen(),
       ),
       GoRoute(
-        path: '/super-admin/organizations',
-        builder: (context, state) => const OrganizationsScreen(),
+        path: '/super-admin/clinics',
+        builder: (context, state) => const ClinicsScreen(),
       ),
       GoRoute(
-        path: '/super-admin/organizations/:id',
-        builder: (context, state) => OrganizationDetailScreen(
-          organizationId: state.pathParameters['id']!,
+        path: '/super-admin/clinics/:id',
+        builder: (context, state) => ClinicDetailScreen(
+          clinicId: state.pathParameters['id']!,
         ),
       ),
       GoRoute(
-        path: '/super-admin/organizations/:id/support-view',
+        path: '/super-admin/clinics/:id/support-view',
         builder: (context, state) =>
-            SupportViewScreen(organizationId: state.pathParameters['id']!),
+            SupportViewScreen(clinicId: state.pathParameters['id']!),
       ),
       GoRoute(
         path: '/super-admin/billing',
         builder: (context, state) => const SuperAdminBillingScreen(),
-      ),
-
-      GoRoute(
-        path: '/branches',
-        builder: (context, state) => const BranchesScreen(),
-      ),
-      GoRoute(
-        path: '/onboarding',
-        builder: (context, state) => const OnboardingScreen(),
-      ),
-
-      GoRoute(
-        path: '/departments',
-        builder: (context, state) => const DepartmentsScreen(),
-      ),
-      GoRoute(
-        path: '/services',
-        builder: (context, state) => const ServicesScreen(),
-      ),
-
-      GoRoute(path: '/staff', builder: (context, state) => const StaffScreen()),
-      GoRoute(
-        path: '/doctor-schedule',
-        builder: (context, state) => const DoctorScheduleScreen(),
-      ),
-
-      GoRoute(
-        path: '/patients',
-        builder: (context, state) => const PatientsScreen(),
-      ),
-      GoRoute(
-        path: '/patients/register',
-        builder: (context, state) => const RegisterPatientScreen(),
-      ),
-      GoRoute(
-        path: '/patients/:id',
-        builder: (context, state) =>
-            PatientProfileScreen(id: state.pathParameters['id']),
-      ),
-
-      GoRoute(
-        path: '/appointments',
-        builder: (context, state) => const AppointmentsScreen(),
-      ),
-      GoRoute(
-        path: '/appointments/book',
-        builder: (context, state) => const BookingScreen(),
-      ),
-
-      GoRoute(
-        path: '/billing',
-        builder: (context, state) => const BillingScreen(),
-      ),
-      GoRoute(
-        path: '/billing/:invoiceId',
-        builder: (context, state) =>
-            InvoiceDetailScreen(invoiceId: state.pathParameters['invoiceId']),
-      ),
-
-      GoRoute(
-        path: '/inventory',
-        builder: (context, state) => const InventoryScreen(),
-      ),
-
-      GoRoute(
-        path: '/reports',
-        builder: (context, state) => const ReportsScreen(),
-      ),
-      GoRoute(
-        path: '/audit-log',
-        builder: (context, state) => const AuditLogScreen(),
-      ),
-
-      GoRoute(
-        path: '/chat',
-        builder: (context, state) => const ChatInboxScreen(),
-      ),
-      GoRoute(
-        path: '/chat/:chatId',
-        builder: (context, state) =>
-            ChatThreadScreen(chatId: state.pathParameters['chatId']),
-      ),
-
-      GoRoute(
-        path: '/reviews',
-        builder: (context, state) => const ReviewsScreen(),
-      ),
-      GoRoute(
-        path: '/popular-clinics',
-        builder: (context, state) => const PopularClinicsScreen(),
       ),
 
       GoRoute(
@@ -291,6 +205,123 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/patient-home',
         builder: (context, state) => const PatientHomeScreen(),
+      ),
+
+      // Part 17 Task 4 — every general admin/staff screen shares one navy
+      // sidebar shell. Each screen below still renders its OWN `Scaffold`
+      // unchanged (none of them needed to change) — it just becomes this
+      // shell's content pane. Super Admin keeps its separate
+      // `SuperAdminScaffold`-based shell above; /login, /suspended,
+      // /onboarding, and the two mobile placeholders stay unwrapped.
+      ShellRoute(
+        builder: (context, state, child) =>
+            AppShell(currentRoute: state.matchedLocation, child: child),
+        routes: [
+          GoRoute(
+            path: '/dashboard',
+            builder: (context, state) => const DashboardScreen(),
+          ),
+
+          GoRoute(
+            path: '/doctor-today',
+            builder: (context, state) => const DoctorTodayScreen(),
+          ),
+          GoRoute(
+            path: '/doctor-reviews',
+            builder: (context, state) => const DoctorReviewsScreen(),
+          ),
+          GoRoute(
+            path: '/nurse-today',
+            builder: (context, state) => const NurseTodayScreen(),
+          ),
+
+          GoRoute(
+            path: '/branches',
+            builder: (context, state) => const BranchesScreen(),
+          ),
+
+          GoRoute(
+            path: '/departments',
+            builder: (context, state) => const DepartmentsScreen(),
+          ),
+          GoRoute(
+            path: '/services',
+            builder: (context, state) => const ServicesScreen(),
+          ),
+
+          GoRoute(path: '/staff', builder: (context, state) => const StaffScreen()),
+          GoRoute(
+            path: '/doctor-schedule',
+            builder: (context, state) => const DoctorScheduleScreen(),
+          ),
+
+          GoRoute(
+            path: '/patients',
+            builder: (context, state) => const PatientsScreen(),
+          ),
+          GoRoute(
+            path: '/patients/register',
+            builder: (context, state) => const RegisterPatientScreen(),
+          ),
+          GoRoute(
+            path: '/patients/merge',
+            builder: (context, state) => const MergePatientsScreen(),
+          ),
+          GoRoute(
+            path: '/patients/:id',
+            builder: (context, state) =>
+                PatientProfileScreen(id: state.pathParameters['id']),
+          ),
+
+          GoRoute(
+            path: '/appointments',
+            builder: (context, state) => const AppointmentsScreen(),
+          ),
+          GoRoute(
+            path: '/appointments/book',
+            builder: (context, state) => const BookingScreen(),
+          ),
+
+          GoRoute(
+            path: '/billing',
+            builder: (context, state) => const BillingScreen(),
+          ),
+          GoRoute(
+            path: '/billing/:invoiceId',
+            builder: (context, state) => InvoiceDetailScreen(
+              invoiceId: state.pathParameters['invoiceId'],
+            ),
+          ),
+
+          GoRoute(
+            path: '/inventory',
+            builder: (context, state) => const InventoryScreen(),
+          ),
+
+          GoRoute(
+            path: '/reports',
+            builder: (context, state) => const ReportsScreen(),
+          ),
+
+          GoRoute(
+            path: '/chat',
+            builder: (context, state) => const ChatInboxScreen(),
+          ),
+          GoRoute(
+            path: '/chat/:chatId',
+            builder: (context, state) =>
+                ChatThreadScreen(chatId: state.pathParameters['chatId']),
+          ),
+
+          GoRoute(
+            path: '/reviews',
+            builder: (context, state) => const ReviewsScreen(),
+          ),
+          GoRoute(
+            path: '/popular-clinics',
+            builder: (context, state) => const PopularClinicsScreen(),
+          ),
+        ],
       ),
     ],
   );

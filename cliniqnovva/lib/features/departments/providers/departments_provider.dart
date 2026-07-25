@@ -1,12 +1,12 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/services/api_service.dart';
-import '../../organizations/providers/branches_provider.dart';
+import '../../clinics/providers/branches_provider.dart';
 import '../models/department_model.dart';
 
 /// Departments for one branch (Part 7 Task 1: "List departments per
 /// branch"). A branch-scoped user (Branch Admin etc.) is auto-scoped
-/// server-side, so [branchId] is only strictly needed for an Organization
+/// server-side, so [branchId] is only strictly needed for an Clinic
 /// Admin picking among their branches — pass null to let the server infer
 /// scope (branch-level actor) or return every branch's departments
 /// (org-level actor with no branch selected).
@@ -64,7 +64,7 @@ final departmentsNotifierProvider =
     AsyncNotifierProvider<DepartmentsNotifier, void>(DepartmentsNotifier.new);
 
 /// The branch the Departments/Services screens are currently showing, for
-/// an Organization Admin choosing among several branches. Reuses
+/// an Clinic Admin choosing among several branches. Reuses
 /// [selectedBranchProvider] from Part 6 (set when a branch row is tapped on
 /// /branches) so navigating in from there arrives pre-filtered; screens
 /// fall back to the org's first branch when nothing is selected yet.

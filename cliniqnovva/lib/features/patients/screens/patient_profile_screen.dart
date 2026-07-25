@@ -14,6 +14,7 @@ import '../../../shared/widgets/avatar_widget.dart';
 import '../../../shared/widgets/cliniqnovva_button.dart';
 import '../../../shared/widgets/cliniqnovva_text_field.dart';
 import '../../../shared/widgets/loading_widget.dart';
+import '../../../shared/widgets/segmented_tabs.dart';
 import '../../auth/providers/access_control_provider.dart';
 import '../models/medical_record_model.dart';
 import '../models/patient_document_model.dart';
@@ -98,7 +99,12 @@ class _PatientProfileScreenState extends ConsumerState<PatientProfileScreen> {
                     children: [
                       _ProfileHeader(patient: patient),
                       const SizedBox(height: 28),
-                      _TabSelector(
+                      SegmentedTabs(
+                        labels: const [
+                          'Profile',
+                          'Medical Records',
+                          'Documents',
+                        ],
                         index: _tab,
                         onChanged: (i) => setState(() => _tab = i),
                       ),
@@ -159,55 +165,6 @@ class _ProfileHeader extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-class _TabSelector extends StatelessWidget {
-  const _TabSelector({required this.index, required this.onChanged});
-
-  final int index;
-  final ValueChanged<int> onChanged;
-
-  static const _labels = ['Profile', 'Medical Records', 'Documents'];
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(3),
-      decoration: BoxDecoration(
-        color: context.appSecondaryBg,
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Row(
-        children: List.generate(_labels.length, (i) {
-          final selected = i == index;
-          return Expanded(
-            child: InkWell(
-              borderRadius: BorderRadius.circular(8),
-              onTap: () => onChanged(i),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 150),
-                padding: const EdgeInsets.symmetric(vertical: 9),
-                decoration: BoxDecoration(
-                  color: selected ? context.appCard : Colors.transparent,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Center(
-                  child: Text(
-                    _labels[i],
-                    style: TextStyle(
-                      color: context.appText,
-                      fontSize: 13,
-                      fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          );
-        }),
-      ),
     );
   }
 }

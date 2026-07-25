@@ -15,7 +15,7 @@ final platformMetricsProvider = FutureProvider.autoDispose<PlatformMetrics>((
 });
 
 /// Real monthly revenue growth (sum of recorded cash payments per month,
-/// across every organization) — backs the Overview page's chart.
+/// across every clinic) — backs the Overview page's chart.
 final platformRevenueTrendProvider =
     FutureProvider.autoDispose<List<RevenueTrendPoint>>((ref) async {
       final response = await ApiService.instance.get<Map<String, dynamic>>(
@@ -27,23 +27,22 @@ final platformRevenueTrendProvider =
           .toList();
     });
 
-/// Owns the Support View session writes (Part 5 Task 3) — both are
-/// audit-log-only writes, never a write to another organization's actual
-/// data.
+/// Owns the Support View session calls (Part 5 Task 3) — session
+/// bookkeeping only, never a write to another clinic's actual data.
 class PlatformNotifier extends AsyncNotifier<void> {
   @override
   Future<void> build() async {}
 
-  Future<String> startSupportView(String organizationId) async {
+  Future<String> startSupportView(String clinicId) async {
     final response = await ApiService.instance.post<Map<String, dynamic>>(
-      '/api/v1/platform/support-view/$organizationId',
+      '/api/v1/platform/support-view/$clinicId',
     );
     return response.data!['sessionId'] as String;
   }
 
-  Future<void> endSupportView(String organizationId, String sessionId) async {
+  Future<void> endSupportView(String clinicId, String sessionId) async {
     await ApiService.instance.post<Map<String, dynamic>>(
-      '/api/v1/platform/support-view/$organizationId/end',
+      '/api/v1/platform/support-view/$clinicId/end',
       data: {'sessionId': sessionId},
     );
   }

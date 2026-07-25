@@ -23,7 +23,7 @@ class AuthException implements Exception {
 }
 
 /// Owns sign-in/sign-out and reads back the signed-in user's custom claims
-/// (role/organizationId/branchId) — the single place other code should go
+/// (role/clinicId/branchId) — the single place other code should go
 /// through for auth actions, rather than calling FirebaseAuth directly.
 class AuthNotifier extends AsyncNotifier<User?> {
   @override
@@ -68,9 +68,9 @@ class AuthNotifier extends AsyncNotifier<User?> {
     return claims?['role'] as String?;
   }
 
-  Future<String?> getOrganizationId() async {
+  Future<String?> getClinicId() async {
     final claims = await FirebaseService.getCurrentUserClaims();
-    return claims?['organizationId'] as String?;
+    return claims?['clinicId'] as String?;
   }
 
   Future<String?> getBranchId() async {
@@ -105,7 +105,7 @@ final authNotifierProvider = AsyncNotifierProvider<AuthNotifier, User?>(
   AuthNotifier.new,
 );
 
-/// Task 7 scaffold — 2FA is only offered to super_admin/organization_admin
+/// Task 7 scaffold — 2FA is only offered to super_admin/clinic_admin
 /// (enforced by whatever screen surfaces this toggle, not here). Full
 /// enrollment needs a profile/settings screen to collect a phone number and
 /// the OTP code, which doesn't exist yet — that's later, real UI work.

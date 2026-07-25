@@ -1,6 +1,6 @@
 // Service layer for staff (spec section 6.3 / 6.5 / 9 — Part 8).
 // Staff = doctor, nurse, receptionist, pharmacist, accountant (Task 1's
-// explicit role list — branch_admin/organization_admin/super_admin
+// explicit role list — branch_admin/clinic_admin/super_admin
 // accounts are created elsewhere). Doctors additionally get a /doctors/{uid}
 // document (specialty, departmentIds, schedule, blockedSlots, ratings).
 // Accounts are created DIRECTLY via authService.createStaffAccountWithPassword
@@ -39,18 +39,6 @@ function httpError(status, message) {
   return err;
 }
 
-async function auditLog({ actorId, actorRole }, action, targetId, organizationId) {
-  await db.collection('auditLogs').add({
-    actorId: actorId || null,
-    actorRole: actorRole || null,
-    action,
-    targetCollection: 'users',
-    targetId,
-    organizationId,
-    timestamp: new Date().toISOString(),
-  });
-}
-
 /** Attaches /doctors/{uid} fields (specialty, departmentIds, ratings) onto matching doctor rows, batched. */
 async function attachDoctorFields(staffRows) {
   const doctorIds = staffRows.filter((s) => s.role === ROLES.DOCTOR).map((s) => s.id);
@@ -79,10 +67,10 @@ async function attachDoctorFields(staffRows) {
 }
 
 /** Staff (the 5 STAFF_ROLES only) for one branch — Part 8 Task 1. */
-async function list({ organizationId, branchId }) {
+async function list({ clinicId, branchId }) {
   let query = db
     .collection('users')
-    .where('organizationId', '==', organizationId)
+    .where('clinicId', '==', clinicId)
     .where('role', 'in', STAFF_ROLES);
   if (branchId) query = query.where('branchId', '==', branchId);
 
@@ -100,8 +88,8 @@ async function getById(id) {
 
 function assertAccess(staffMember, scope) {
   if (scope.level === 'platform') return;
-  if (staffMember.organizationId !== scope.organizationId) {
-    throw httpError(403, 'This staff member belongs to a different organization');
+  if (staffMember.clinicId !== scope.clinicId) {
+    throw httpError(403, 'This staff member belongs to a different clinic');
   }
   if (scope.level === 'branch' && staffMember.branchId !== scope.branchId) {
     throw httpError(403, 'This staff member belongs to a different branch');
@@ -114,7 +102,7 @@ function assertAccess(staffMember, scope) {
  * additionally get a /doctors/{uid} document.
  */
 async function create(
-  { email, password, name, role, organizationId, branchId, phone, specialty, departmentIds },
+  { email, password, name, role, clinicId, branchId, phone, specialty, departmentIds },
   actor
 ) {
   if (!STAFF_ROLES.includes(role)) {
@@ -127,7 +115,7 @@ async function create(
     password,
     name,
     role,
-    organizationId,
+    clinicId,
     branchId,
     phone,
     createdBy: actor.actorId,
@@ -183,7 +171,6 @@ async function update(id, fields, actor) {
     }
   }
 
-  await auditLog(actor, 'staff.updated', id, staffMember.organizationId);
   return getById(id);
 }
 
@@ -200,12 +187,6 @@ async function setStatus(id, isActive, actor) {
   await db.collection('users').doc(id).update({ isActive });
   await auth.updateUser(id, { disabled: !isActive });
 
-  await auditLog(
-    actor,
-    isActive ? 'staff.activated' : 'staff.deactivated',
-    id,
-    staffMember.organizationId
-  );
   return getById(id);
 }
 
@@ -223,7 +204,7 @@ function toMinutes(hhmm) {
 /**
  * Weekly recurring schedule (spec 6.5, Part 8 Task 2) — rejects overlapping
  * slots on the same day for the same doctor. Only Branch Admin/Receptionist/
- * Organization Admin may write it (Doctor is view-own-only, enforced in the
+ * Clinic Admin may write it (Doctor is view-own-only, enforced in the
  * controller/route role list).
  */
 async function setSchedule(doctorId, entries, actor) {
@@ -266,7 +247,6 @@ async function setSchedule(doctorId, entries, actor) {
   }
 
   await db.collection('doctors').doc(doctorId).update({ schedule: entries });
-  await auditLog(actor, 'doctor.scheduleUpdated', doctorId, staffMember.organizationId);
   return getById(doctorId);
 }
 
@@ -297,8 +277,6 @@ async function addBlockedSlot(doctorId, { date, startTime, endTime, reason }, ac
     .collection('doctors')
     .doc(doctorId)
     .update({ blockedSlots: [...existingBlocked, blockedSlot] });
-
-  await auditLog(actor, 'doctor.slotBlocked', doctorId, staffMember.organizationId);
 
   // appointments isn't built yet (Part 9+), so this query is always empty
   // for now — it's wired ahead of time so the flag-don't-drop behavior is

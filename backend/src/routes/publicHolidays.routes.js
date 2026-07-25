@@ -8,10 +8,10 @@ const controller = require('../controllers/publicHolidays.controller');
 // Every route below is scoped by req.scope (branch/org isolation, spec section 10/11).
 router.use(verifyToken, attachScope);
 
-router.get('/', requireRole(ROLES.SUPER_ADMIN, ROLES.ORGANIZATION_ADMIN, ROLES.BRANCH_ADMIN, ROLES.RECEPTIONIST, ROLES.DOCTOR, ROLES.NURSE, ROLES.PATIENT), controller.list);
-router.get('/:id', requireRole(ROLES.SUPER_ADMIN, ROLES.ORGANIZATION_ADMIN, ROLES.BRANCH_ADMIN, ROLES.RECEPTIONIST, ROLES.DOCTOR, ROLES.NURSE, ROLES.PATIENT), controller.getById);
-router.post('/', requireRole(ROLES.SUPER_ADMIN, ROLES.ORGANIZATION_ADMIN), controller.create);
-router.patch('/:id', requireRole(ROLES.SUPER_ADMIN, ROLES.ORGANIZATION_ADMIN), controller.update);
-router.delete('/:id', requireRole(ROLES.SUPER_ADMIN, ROLES.ORGANIZATION_ADMIN), controller.remove);
+router.get('/', requireRole(ROLES.SUPER_ADMIN, ROLES.CLINIC_ADMIN, ROLES.BRANCH_ADMIN, ROLES.RECEPTIONIST, ROLES.DOCTOR, ROLES.NURSE, ROLES.PATIENT), controller.list);
+router.get('/:id', requireRole(ROLES.SUPER_ADMIN, ROLES.CLINIC_ADMIN, ROLES.BRANCH_ADMIN, ROLES.RECEPTIONIST, ROLES.DOCTOR, ROLES.NURSE, ROLES.PATIENT), controller.getById);
+router.post('/', requireRole(ROLES.SUPER_ADMIN, ROLES.CLINIC_ADMIN), controller.create);
+router.patch('/:id', requireRole(ROLES.SUPER_ADMIN, ROLES.CLINIC_ADMIN), controller.update);
+router.delete('/:id', requireRole(ROLES.SUPER_ADMIN, ROLES.CLINIC_ADMIN), controller.remove);
 
 module.exports = router;

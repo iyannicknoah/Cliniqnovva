@@ -1,0 +1,55 @@
+# Cliniqnovva — Known Pre-Launch Issues
+
+## Frontend Firebase project mismatch (found during Part 18 Task 5/6 verification, 2026-07-24)
+
+`cliniqnovva/lib/firebase_options.dart` was generated 2026-07-20 against a
+**temporary, unrelated Firebase project** (`risingacademy-801eb`, borrowed
+from another app — see the file's own header comment), not any of the
+real Cliniqnovva projects (`cliniqnovva-dev` / `cliniqnovva-staging` /
+`cliniqnovva-prod`, per `firebase/.firebaserc`). `lib/main.dart` calls
+`Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform)`
+unconditionally — there is no environment flavor/override, so this is the
+only Firebase project the Flutter web app has ever actually talked to.
+
+**Impact**: the backend (Node/Express + Admin SDK) and the frontend
+(Flutter web + client SDK) have been pointed at two completely different
+Firebase projects this entire build. Every account the backend creates —
+including the 19 demo accounts seeded for Part 18 Task 5
+(`docs/demo-accounts.md`) — lives in `cliniqnovva-dev`'s Firebase Auth,
+which the frontend's login screen never queries. The direct-Firestore-read
+exception for chats (`firestore.rules`' one documented exception) would
+also be reading/writing the wrong database. **No demo account can actually
+log in through the live Flutter web app until this is fixed.**
+
+**Why this went unnoticed through Parts 1–17**: this session's whole
+verification methodology (documented repeatedly throughout the build) has
+relied on `flutter analyze`, `node --check`, isolated mock-Firestore unit
+tests, and grepping compiled JS output — never an actual live login
+through a rendered browser, since no test login credentials existed until
+this part and the Browser pane can't composite frames in this environment.
+The mismatch is invisible to all of those checks: `flutter build web`
+compiles cleanly regardless of which valid-shaped `FirebaseOptions` it's
+given.
+
+**Fix** (deferred — needs interactive access this environment doesn't
+have): run, from `cliniqnovva/`:
+
+```bash
+firebase login
+flutterfire configure --project=cliniqnovva-prod   # or -dev/-staging as needed
+```
+
+This regenerates `firebase_options.dart` against the real project and
+registers proper Web/Android/iOS apps under it if they don't already
+exist. Alternatively, paste the real Web app's config (Firebase Console →
+Project Settings → your Web app → SDK setup and configuration) and hand-
+edit the `web` (and `android`/`ios`, if used) `FirebaseOptions` blocks
+directly.
+
+**Status**: acknowledged and deferred by explicit user decision
+(2026-07-24) — to be resolved in a later part/session focused on Firebase
+project administration. `flutter build web --release` and `flutter
+analyze` both succeed regardless (the mismatch is a runtime config value,
+not a compile error), so Part 18's TASK 6 build step is unaffected; the
+actual `firebase deploy --only hosting` step is intentionally not run
+against this mismatched config.

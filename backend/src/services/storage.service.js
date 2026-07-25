@@ -7,7 +7,7 @@
 // Flow: caller supplies the object key -> compressed with sharp if it's an
 // image -> uploaded via PutObjectCommand. The caller stores that KEY (not a
 // URL) in Firestore. To display later, the caller re-checks the requester's
-// role/branch/organization access as it would for any other read, then asks
+// role/branch/clinic access as it would for any other read, then asks
 // this module for a short-lived signed GetObjectCommand URL.
 
 const sharp = require('sharp');

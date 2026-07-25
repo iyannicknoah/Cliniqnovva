@@ -42,8 +42,9 @@ per-chart one-off.
 | `skyBlue` | `#38BDF8` | Second primary/accent (2026-07-23) — Overview revenue chart line + fill |
 | `avatarGradients` | 26 letter-keyed gradients | Avatar initials |
 
-`deepNavy` (`#0B2545`) still exists but is no longer used for any page/sidebar
-background — see the "no mixing colors" rule below.
+`deepNavy` was deleted entirely (2026-07-24) along with the five
+`sidebar*`-prefixed constants Part 17 added for it — see the "no mixing
+colors" rule below and the change log.
 
 ## No mixing colors (rule set 2026-07-23, copied from HRNova)
 
@@ -190,7 +191,7 @@ should use this instead of building their own Scaffold/Row/sidebar boilerplate.
 ## Centered modal panel
 
 A 480px-wide centered modal (`Add Clinic`, `features/super_admin/widgets/
-add_organization_panel.dart`) — `showGeneralDialog` + `Center` + a combined
+add_clinic_panel.dart`) — `showGeneralDialog` + `Center` + a combined
 `FadeTransition`/`ScaleTransition` (0.96 → 1.0). Rounded with `AppTheme.cardRadius`
 (18px) and a `context.appBorder` border, same as every other card/dialog surface
 (`Material(borderRadius: ..., clipBehavior: Clip.antiAlias)` wrapping a bordered
@@ -212,7 +213,9 @@ is an explicit in-app choice via `ThemeNotifier.setThemeMode`/`toggle`.
 
 `CliniqnovvaButton`, `CliniqnovvaTextField`, `CliniqnovvaCard`, `MetricCard`
 (label over 18px w600 value), `CliniqnovvaTableHeader` + `CliniqnovvaTableRow`
-(divider-bracketed header, `Expanded`-per-cell rows), `StatusBadge` (plain
+(divider-bracketed header, `Expanded`-per-cell rows, each row also followed by
+its own hairline divider — 2026-07-25, so every row is fully divided, not just
+the header), `StatusBadge` (plain
 colored text, no pill background — `brightGreen`/`brightRed` for
 success/error, see Colors above), `AvatarWidget`, `CliniqnovvaSidebar`
 (background matches the page, see Sidebar above), `AppIcon` (Heroicons
@@ -318,7 +321,7 @@ sit alongside it was removed 2026-07-23 along with the rest of the audit
 log feature — see the change log.)
 
 **Chart**: `fl_chart`'s `LineChart`, one series (real monthly revenue,
-summed server-side from every organization's recorded cash payments — see
+summed server-side from every clinic's recorded cash payments — see
 `GET /api/v1/platform/revenue-trend`), colored with `AppColors.skyBlue`
 (the system's second primary, 2026-07-23) and a more-transparent
 `skyBlue.withValues(alpha: 0.15)` area fill beneath. X-axis labels are
@@ -335,6 +338,240 @@ growth/trend chart rather than introducing a new chart style or color.
 
 ## Change log
 
+- **2026-07-25 (Super Admin's bell now shows a live badge)** — Explicit
+  user instruction, follow-up to the Chat-moved-to-topbar entry below:
+  `SuperAdminScaffold`'s topbar bell was a plain static `AppIcon` with no
+  unread count at all — it now renders the shared `NotificationBell`
+  widget (same one `AppShell` uses), so Super Admin gets the same live
+  red-circle unread badge every other role's topbar already had. The chat
+  icon next to it is unchanged (still a plain `AppIcon` + `context.push
+  ('/chat')` — Super Admin's chat access wasn't part of this ask).
+- **2026-07-25 (Chat moved from sidebar to topbar)** — Explicit user
+  instruction: the non-Super-Admin shell (`AppShell`, `app_shell.dart`) now
+  matches `SuperAdminScaffold`'s topbar layout — a chat icon
+  (`ChatBell`, new: `features/chat/widgets/chat_bell.dart`) sits directly
+  left of the existing `NotificationBell`, both right-aligned in the 56px
+  topbar `Container`. The `nav_chat` `SidebarNavItem` (Clinic
+  Admin/Branch Admin/Receptionist only) is removed entirely — same
+  `_chatEnabledRoles` list now gates the topbar icon instead, so access is
+  unchanged, only the location moved. `ChatBell` mirrors
+  `NotificationBell`'s icon-plus-circular-badge visual (same `AppColors
+  .brightRed` circle, white 10px w700 text, `9+` cap at >9) but has no
+  dropdown menu — it's a straight `context.push('/chat')`. Its badge count
+  is the same `chatTotalUnreadProvider(branchId)` the old sidebar badge
+  used; `null` branchId (Clinic Admin with no active branch selected yet)
+  just means no badge, the icon still navigates.
+- **2026-07-25 (distinct sidebar icons: Branches/Departments/Services)** —
+  Explicit user instruction: the Branches, Departments, and Services nav
+  items looked too similar (Branches and Services both reused
+  building-shaped Heroicons — Branches had `buildingOffice2`/`AppIcons.clinics`
+  and Services had `buildingOffice`/`AppIcons.department`, the same icon
+  Departments itself uses). Added two new icon-catalog entries:
+  `AppIcons.branchLocation` (`HeroIcons.mapPin`, now used by Branches) and
+  `AppIcons.service` (`HeroIcons.wrenchScrewdriver`, now used by Services).
+  Departments keeps `AppIcons.department`/`buildingOffice` unchanged — only
+  Branches and Services needed new icons to make all three visually
+  distinct in `appNavItems` (`app_shell.dart`).
+- **2026-07-25 (table rows fully divided)** — Explicit user instruction:
+  `CliniqnovvaTableRow` now renders its own hairline `Divider` (same
+  `height: 1, thickness: 1, color: context.appBorder` as the header's) after
+  every row, not just between the header and the first row. Since every
+  table in the app (Clinics, Staff, Services, Departments, Overview's
+  "Recent clinics", etc.) is built on this one shared component, the change
+  applies everywhere at once — no per-screen edits needed. This also means
+  the last row in any table is now followed by a trailing hairline before
+  the surrounding `CliniqnovvaCard`'s padding ends, which is intentional
+  (a closing rule, consistent with the divided-row look).
+- **2026-07-24 (terminology + Audit Log removed)** — Explicit user
+  instruction, two changes visible in the UI: (1) "Organization"
+  terminology retired system-wide in favor of "Clinic" — every visible
+  string that said "Organization Admin" now says "Clinic Admin" (via the
+  centralized `roleLabel()` helper), and the Super Admin section's own
+  nav/route naming (already "Clinics" since Part 17's translation keys)
+  stays consistent with the rest of the system. (2) The Audit Log feature
+  was removed entirely, so its sidebar nav item (and the `/audit-log`
+  screen behind it) no longer exists for Clinic Admin. Underneath these
+  two visible changes, `organizationId` was also renamed to `clinicId`
+  everywhere in the schema (Firestore fields, the `organizations`
+  collection → `clinics`, Firebase Auth custom claims) — not itself a
+  design-language change, but the reason the rename touched so much code;
+  see `docs/security-review.md` and the backend's own git history for the
+  full scope.
+- **2026-07-24 (Part 18 follow-up: sidebar navy-lock reverted)** — Explicit
+  user instruction: the sidebar should match the page background (white in
+  light mode, black in dark mode) everywhere, same as everything else in
+  the app, not stay locked to navy. `CliniqnovvaSidebar`'s Container is back
+  to `context.appBg`/`context.appBorder`; every color inside it (logo text,
+  nav icon/label, profile chip text/border/"more" icon) is back to
+  `context.appText`/`context.appSubtext`/`context.appBorder`. Active nav
+  pill uses `context.appSecondaryBg` (the same neutral highlight token used
+  everywhere else for this role); hover is a small inline black/white-alpha
+  tint (`0.04`) rather than a named token, since it's a one-off state with
+  no other user. `AppColors.deepNavy` and the five `sidebar*` constants
+  Part 17 added are deleted — nothing else referenced them. This directly
+  reverses the entry immediately below; treat THIS entry as the current
+  state of the sidebar, not the Part 17 one.
+- **2026-07-24 (Part 17: admin dashboard final polish)** — The biggest
+  structural change yet: `CliniqnovvaSidebar` is now used app-wide (via a
+  new `AppShell` + a `ShellRoute` in `app_router.dart`), not just by Super
+  Admin — every other screen's own bare `Scaffold` unchanged, just nested
+  inside the shell's content pane. **The sidebar is now ALWAYS
+  `AppColors.deepNavy` (`#0B2545`), regardless of light/dark mode** (Task
+  5, explicit instruction) — five new fixed on-navy constants
+  (`sidebarText`/`sidebarSubtext`/`sidebarBorder`/`sidebarHoverBg`/
+  `sidebarActiveBg`) replace every `context.appX` reference *inside the
+  sidebar's persistent Container only* — the floating profile/theme/
+  language popup menus it opens stay theme-reactive, since they're
+  detached overlays over the page, not part of the sidebar itself. Nav
+  item badges (small red pill, same shape as the notification bell's
+  unread count from Part 14) are the first per-nav-item indicator in the
+  app. `SidebarNavItem.label` changed meaning: it's now an
+  `easy_localization` translation KEY, not display text — rendered via
+  `.tr()`, first real wiring of language switching (Task 6) after it sat
+  design-only since Part 1; a missing key falls back to showing the key
+  itself, so nothing breaks for a label not yet translated. `EmptyState`
+  (icon + friendly message + optional action button) is the first empty
+  state anywhere in the app with an icon or CTA — every prior one was a
+  bare gray `Text`; `NoBranchSelectedState` collapses the 13-file-
+  duplicated "No branch to show yet." into one shared widget. The offline
+  banner (`OfflineBanner`, wired into `MaterialApp.router`'s `builder:`)
+  is a full-width `errorRed` strip pinned above the whole app — the
+  second "standing notice, not dismissible" banner pattern after Part
+  15's chat disclaimer, now in red for an active problem rather than a
+  neutral notice.
+- **2026-07-24 (Part 16: reviews, ratings, popular clinics)** — First use
+  of a **star rating row** (`_StarRow`, `reviews_screen.dart`) — five
+  `AppIcons.star`, filled `pillAmberText` up to the rating and
+  `appBorder`-colored beyond it. Amber was already reserved for "needs
+  attention" (low-stock, Part 13) but reads as "rating" here instead —
+  deliberately reused rather than adding a new brand color, since the two
+  meanings never appear on the same screen. A review card's clinic reply
+  is the same `appSecondaryBg`-tint block pattern as an unread chat bubble
+  (Part 15) — a quoted, subordinate piece of text sitting under the primary
+  content, not a new pattern. Popular Clinics' explanation card
+  (`_PopularityView`, "How this is calculated") is the first place this
+  app explains a computed number in plain language directly in the UI
+  rather than leaving it as a bare metric — appropriate here since
+  popularityScore is opaque by design (recency + confidence weighting) and
+  staff seeing "2.1" next to a 4.5 raw average need to know why. Two new
+  `AppIcons`: `star` and `trophy` (the latter only for that explanation
+  card's leading icon, not a repeating motif).
+- **2026-07-24 (Part 15: clinic chat)** — /chat is this app's first screen
+  reading/writing Firestore DIRECTLY (`cloud_firestore` via
+  `FirebaseService`), not through `ApiService`/the Node.js backend — chat's
+  established, deliberate exception (see `firebase/firestore.rules`'s
+  comment block; `FirebaseService.chatsRef()` was reserved for this back in
+  Part 1). Message bubbles are the first left/right-aligned two-party
+  layout in the app: sender-role text in `appCard` fill and receiver-role
+  in `appSecondaryBg`, both border-only, same "no filled color, no shadow"
+  card language as everywhere else, just mirrored left/right by who sent
+  it. The disclaimer banner (`_DisclaimerBanner`, "not for medical
+  emergencies…") is a full-width `appSecondaryBg` strip pinned under the
+  header, no icon, no dismiss control — deliberately impossible to miss or
+  close, since it's a standing legal/safety notice, not a dismissible tip.
+  Two new `AppIcons` entries: `back` (`arrowLeft`, thread header) and
+  `send` (`paperAirplane`, composer) — the first icons in the catalog added
+  specifically to complete a chat-style screen rather than an admin table.
+- **2026-07-24 (Part 14: notifications, reports, audit log)** — The
+  **Notification Bell** (`NotificationBell`, Admin Dashboard header) is the
+  first floating menu outside the sidebar to reuse its
+  `OverlayEntry` + `CompositedTransformTarget`/`Follower` pattern (previously
+  only the sidebar's profile chip and its language submenu) — same
+  `appCard`/16px-radius/border-only panel, confirming that pattern
+  generalizes beyond the sidebar and is worth reaching for anywhere else a
+  floating menu is needed. Unread count renders as a small solid-red circle
+  badge pinned to the bell icon's top-right corner (`AppColors.brightRed`,
+  white text) — the one deliberate exception to this app's "no filled pill
+  backgrounds" status-text convention, justified because a badge needs to
+  read at a glance over an icon, not sit in a text flow. An unread
+  notification's row gets a plain `appSecondaryBg` tint (no border, no
+  pill) plus a small green dot, rather than bold text — consistent with the
+  rest of the app using color/shape for state instead of weight changes.
+  /reports' trend visualization is a **plain proportional bar list**
+  (`_TrendBars` — label, `appPrimary`-filled bar sized by
+  `FractionallySizedBox`, value), not a charting library — deliberate,
+  even though `fl_chart` has been a dependency since Part 1: every other
+  screen in this app uses plain widgets with no charts, and a first chart
+  usage isn't worth the added visual-verification risk this session (no
+  screenshot access) for a Part 14-scope deliverable. Revisit with
+  `fl_chart` once there's a way to visually confirm it renders correctly.
+  CSV export has no dedicated UI treatment — it's a plain `CliniqnovvaButton.text`
+  next to "Export PDF", both firing on tap with no dialog; PDF export reuses
+  Part 12's `pw.Document`/`Printing.layoutPdf()` receipt pattern exactly,
+  now for a metrics table instead of a receipt.
+- **2026-07-24 (Part 13: inventory + pharmacy)** — /inventory reuses
+  `SegmentedTabs` for its Stock/Dispense/Log split rather than introducing a
+  new tab pattern. The stock table layers `StatusBadge` entries vertically
+  in one cell (Active/Inactive plus an optional amber "Low stock" and/or red
+  "Expired" badge) — the first place more than one status badge appears
+  stacked in a single cell, since an item can be low-stock AND expired at
+  once and both need to be visible without a tooltip. Low-stock quantity
+  text itself turns `pillAmberText` + semibold directly in the table (not
+  just the badge) so it's scannable without reading the badge column.
+  Adjust Stock introduces a small **direction-toggle chip pair**
+  (`_DirectionChip`, `adjust_stock_dialog.dart`) — "Restock (+)" / "Write
+  off (−)", `appSecondaryBg` fill + `appBorder`/`appPrimary` border on the
+  selected side — a lighter-weight sibling to the existing
+  `_BillingStatusChip` "selectable-option chip" pattern for exactly-one-of-2
+  choices; promote both to a shared widget together if a third caller shows
+  up. The dispense flow (`DispensePanel`) reuses Booking's numbered
+  step-card reveal (only step 2 renders once a patient is picked, step 3
+  once a prescription is picked) and its patient-search list item look
+  verbatim, plus a new **selectable list row** (bordered card, `appPrimary`
+  border + check icon when selected) reused for both the prescription list
+  and the matching-stock-item list.
+- **2026-07-24 (Part 12: billing + invoicing)** — Line items get their own
+  inline-editable row pattern (description + RWF amount + trash icon,
+  `IgnorePointer`-disabled once an invoice is voided) — same shape as the
+  doctor-schedule builder's rows, now applied to money instead of time. A
+  running total updates live as amounts are typed, shown only in the
+  editable state (a static invoice just shows the summary card below it,
+  no redundant live total). The summary card (`_SummaryCard`) is the first
+  place a "bold last row" total pattern appears — every prior line plain,
+  the final Balance Due row bold, set off by a plain `Divider` — reused
+  wherever a running-total breakdown is shown (Cash paid / Insurance
+  covered / Balance due). Void's confirmation dialog collects a required
+  reason via `CliniqnovvaTextField` inline in the dialog body — the first
+  dialog in the app to combine a confirm action with mandatory text input
+  rather than just a plain yes/no. Receipt PDF (`pdf` + `printing`
+  packages, A5 page) is plain black-on-white, no brand color — a legal/
+  financial document, not a themed UI surface.
+- **2026-07-24 (Part 11: appointment booking + queue)** — `SegmentedTabs`
+  (`shared/widgets/segmented_tabs.dart`) is the tab-selector pattern
+  promoted out of Patient Profile's private `_TabSelector` — same
+  `appSecondaryBg` track / `appCard` pill, now shared by Patient Profile's
+  Profile/Medical Records/Documents tabs AND Appointments' Today/Upcoming/
+  History tabs. Booking screen introduces a numbered step-card layout
+  ("1. Patient", "2. Department & Service", …) — each `_SectionCard` only
+  renders once its prerequisite is chosen, so the form reveals itself
+  progressively rather than showing every field disabled up front. Slot
+  buttons reuse the branch-form/doctor-schedule "chip with `appPrimary`
+  fill when selected" look, now applied to time-of-day picks specifically.
+  The Appointments table's Actions cell shows only the buttons a
+  status legally allows next (never a disabled "Mark Complete") — the UI
+  literally cannot offer an illegal transition, matching the server's own
+  state-machine enforcement. A `_QueueBanner` ("Now Serving #N · N
+  waiting · Last completed #N") sits between the page header and the tab
+  row — plain `cardDeco()` card, no color accent, since this is status
+  information, not a warning.
+- **2026-07-23 (Part 10: duplicate detection + patient merge)** — New
+  patterns: the Register Patient flow no longer pre-flight-checks before
+  submitting — it submits directly and branches on the server's response
+  (created vs. 409 possible-duplicate), which simplified the screen and is
+  now the reference pattern for "server decides, client reacts" flows
+  instead of a separate check-then-submit round trip. Merge Patients
+  (`/patients/merge`) introduces a two-slot side-by-side comparison layout
+  (`_PatientSlot`, each independently searchable, swappable via a "Change"
+  link) — the first screen in the app comparing two records of the same
+  type at once. A `_CountRow` (label left, bold value right) is the
+  compact stat-line pattern for the record/appointment/invoice/document
+  counts; reappears anywhere a quick side-by-side numeric comparison is
+  needed. The "Merge" action is gated behind a confirming `AlertDialog`
+  naming both patients by name (not just "are you sure") since it moves
+  clinical/financial history between records — the bar for a plain
+  confirm dialog vs. a stronger warning treatment is "does it move or
+  destroy data," and this clears it without needing the red/error
+  treatment (nothing is deleted, it's explained plainly instead).
 - **2026-07-23 (Part 9: patient records + front-desk registration)** — New
   patterns: a 3-segment tab selector (`_TabSelector` on Patient Profile —
   `appSecondaryBg` track, `appCard` selected pill, same shape as the
@@ -381,7 +618,7 @@ growth/trend chart rather than introducing a new chart style or color.
   deletion is blocked server-side (department with services attached,
   service with appointment/invoice history) — Deactivate stays available
   either way. Departments/Services screens share a `BranchSelector`
-  dropdown (styled like other label-above selects) for an Organization
+  dropdown (styled like other label-above selects) for a Clinic
   Admin choosing among branches; a Branch Admin never sees it (server-scoped
   to their own branch). Added `AppIcons.trash`/`plus`/`department`
   (Heroicons `trash`/`plus`/`buildingOffice`) to the icon catalog.
@@ -464,10 +701,10 @@ growth/trend chart rather than introducing a new chart style or color.
   platform audit log (Oversight screen + Overview's "Recent platform
   activity") was showing raw Firestore ids for Clinic and Actor, which read
   as fake/meaningless even though the entries were real. `getAuditLog`
-  (`platform.service.js`) now resolves `organizationId` → the clinic's real
+  (`platform.service.js`) now resolves `clinicId` → the clinic's real
   name and `actorId` → a real name/email (`/users` doc first, falling back
   to the Firebase Auth record for auth-only accounts like Super Admin) —
-  new `organizationName`/`actorLabel` fields on `AuditLogEntry`. Also fixed
+  new `clinicName`/`actorLabel` fields on `AuditLogEntry`. Also fixed
   the revenue chart's curve dipping below the axis and overlapping the
   month labels on a sharp flat-to-steep jump — see the Overview page's
   Chart section above for the `preventCurveOverShooting`/`clipData` fix.
@@ -499,7 +736,7 @@ growth/trend chart rather than introducing a new chart style or color.
   everywhere else in the system. **Recording a payment is only allowed once
   a clinic is marked `paid`** — the "+ Record Payment" button is disabled
   (with a one-line explanation) otherwise, enforced both client-side and
-  server-side (`PUT /api/v1/organizations/:id/billing-status`,
+  server-side (`PUT /api/v1/clinics/:id/billing-status`,
   `POST .../record-payment` now 400s if not yet marked paid). The Billing
   screen's metric row changed from 2 cards (paid/overdue) to 3 (paid /
   pending / not paid) to match.
@@ -512,19 +749,19 @@ growth/trend chart rather than introducing a new chart style or color.
   banners with a tinted background. Applies everywhere `StatusBadge` is used
   (Clinics list, Clinic detail, Billing, Support View).
 - **2026-07-23 (Add Clinic → centered modal)** — The "Add Clinic" panel
-  (`add_organization_panel.dart`) changed from a right-side 480px slide-out
+  (`add_clinic_panel.dart`) changed from a right-side 480px slide-out
   sheet to a centered 480px modal: `Center` + fade/scale transition, rounded
   `AppTheme.cardRadius` (18px) with a `context.appBorder` border, capped at
   85% of screen height. See "Centered modal panel" above — this is now the
   reference pattern for future quick-add forms (the slide-out pattern is
-  retired). Also: "Organization" renamed to "Clinic" throughout Super Admin
+  retired). Also: "Clinic" renamed to "Clinic" throughout Super Admin
   UI text (nav label, screen titles, button/field labels, dialogs) — internal
-  Dart identifiers, routes, and backend/Firestore field names (`organizationId`,
-  `organizations` collection) intentionally kept as-is.
+  Dart identifiers, routes, and backend/Firestore field names (`clinicId`,
+  `clinics` collection) intentionally kept as-is.
 - **2026-07-24 (Overview page + chart)** — New Super Admin landing page,
   `/super-admin/overview`, first sidebar item, first page reached after
   login. Real revenue-growth `LineChart` (single series, `appPrimary` +
-  low-alpha fill, no color accent). Add Organization panel gained a
+  low-alpha fill, no color accent). Add Clinic panel gained a
   "Subscription amount (RWF)" field (was previously only settable after
   creation, on the detail page).
 - **2026-07-24 (primary retired + dialogs)** — `AppColors.primary` (brand
@@ -534,7 +771,7 @@ growth/trend chart rather than introducing a new chart style or color.
   (`AppTheme._dialogTheme()`) — one title style, one content style, page-flat
   background, no shadow — fixing both the beige wash and the previously
   inconsistent per-dialog text styling. `StatusBadge` gained a `filled: false`
-  mode (plain colored text, no pill background); used for the Organizations
+  mode (plain colored text, no pill background); used for the Clinics
   table's Status column.
 - **2026-07-24 (date picker)** — `showDatePicker` explicitly themed
   black/white in both modes (`AppTheme._datePickerTheme()`) — was silently

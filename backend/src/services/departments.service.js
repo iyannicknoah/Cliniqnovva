@@ -9,29 +9,17 @@ function httpError(status, message) {
   return err;
 }
 
-async function auditLog({ actorId, actorRole }, action, targetId, organizationId) {
-  await db.collection('auditLogs').add({
-    actorId: actorId || null,
-    actorRole: actorRole || null,
-    action,
-    targetCollection: 'departments',
-    targetId,
-    organizationId,
-    timestamp: new Date().toISOString(),
-  });
-}
-
 /**
- * Departments of an organization (optionally one branch), each with
+ * Departments of a clinic (optionally one branch), each with
  * `serviceCount` — how many catalog services point at it. The client uses
  * that to decide between offering Delete (0 services) and Deactivate.
  */
-async function list({ organizationId, branchId }) {
-  let query = db.collection('departments').where('organizationId', '==', organizationId);
+async function list({ clinicId, branchId }) {
+  let query = db.collection('departments').where('clinicId', '==', clinicId);
   if (branchId) query = query.where('branchId', '==', branchId);
   const [deptSnap, serviceSnap] = await Promise.all([
     query.get(),
-    db.collection('services').where('organizationId', '==', organizationId).get(),
+    db.collection('services').where('clinicId', '==', clinicId).get(),
   ]);
 
   const serviceCounts = {};
@@ -57,35 +45,34 @@ async function getById(id) {
 /** Throws unless the department is inside the caller's scope. */
 function assertAccess(department, scope) {
   if (scope.level === 'platform') return;
-  if (department.organizationId !== scope.organizationId) {
-    throw httpError(403, 'This department belongs to a different organization');
+  if (department.clinicId !== scope.clinicId) {
+    throw httpError(403, 'This department belongs to a different clinic');
   }
   if (scope.level === 'branch' && department.branchId !== scope.branchId) {
     throw httpError(403, 'This department belongs to a different branch');
   }
 }
 
-async function create({ organizationId, branchId, name }, actor) {
+async function create({ clinicId, branchId, name }, actor) {
   if (!name || !name.trim()) throw httpError(400, 'Department name is required');
   if (!branchId) throw httpError(400, 'branchId is required');
 
-  // The branch must exist and belong to the same organization — a client
+  // The branch must exist and belong to the same clinic — a client
   // can't attach a department to another clinic's branch.
   const branchDoc = await db.collection('branches').doc(branchId).get();
   if (!branchDoc.exists) throw httpError(404, 'Branch not found');
-  if (branchDoc.data().organizationId !== organizationId) {
-    throw httpError(403, 'This branch belongs to a different organization');
+  if (branchDoc.data().clinicId !== clinicId) {
+    throw httpError(403, 'This branch belongs to a different clinic');
   }
 
   const data = {
-    organizationId,
+    clinicId,
     branchId,
     name: name.trim(),
     isActive: true,
     createdAt: new Date().toISOString(),
   };
   const ref = await db.collection('departments').add(data);
-  await auditLog(actor, 'department.created', ref.id, organizationId);
   return { id: ref.id, ...data };
 }
 
@@ -107,7 +94,6 @@ async function update(id, { name, isActive }, actor) {
   if (Object.keys(updates).length === 0) throw httpError(400, 'No editable fields provided');
 
   await db.collection('departments').doc(id).update(updates);
-  await auditLog(actor, 'department.updated', id, department.organizationId);
   return { ...department, ...updates };
 }
 
@@ -127,7 +113,6 @@ async function remove(id, actor) {
   }
 
   await db.collection('departments').doc(id).delete();
-  await auditLog(actor, 'department.deleted', id, department.organizationId);
 }
 
 module.exports = { list, getById, create, update, remove };

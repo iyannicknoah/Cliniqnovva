@@ -43,7 +43,7 @@ maintained alternative like `exceljs`. Not blocking for now since no report-expo
 
 ## Auth endpoints (Part 2)
 
-`POST /api/auth/invite-staff` (super_admin/organization_admin/branch_admin) and
+`POST /api/auth/invite-staff` (super_admin/clinic_admin/branch_admin) and
 `POST /api/auth/set-claims` (super_admin only) are real, not stubs — also reachable at
 `/api/v1/auth/invite-staff` / `/set-claims` (same router, mounted twice). Both are rate-limited.
 `invite-staff` creates the Firebase Auth user + Firestore `/users` doc, sets custom claims, and

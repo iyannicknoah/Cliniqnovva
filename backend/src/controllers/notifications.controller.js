@@ -1,27 +1,35 @@
-// Controller for /api/v1/notifications — spec section 6.11 / 9
-// Project-setup phase: handlers are stubs (501). Business logic — validation,
-// Firestore transactions, branch/org scoping via req.scope — is implemented in
-// Phase 1, not now. Keep controllers thin: parse/validate req, call the
-// matching notifications.service.js function, shape the response.
+// Controller for /api/v1/notifications — spec section 6.11 (Part 14).
+// list() is always scoped to the CALLER (req.user.uid) — there is no
+// "list someone else's notifications" capability for any role, this isn't
+// an admin-oversight collection.
+const notificationsService = require('../services/notifications.service');
 
-async function list(req, res) {
-  res.status(501).json({ error: 'Not implemented yet: list notifications' });
+async function list(req, res, next) {
+  try {
+    const notifications = await notificationsService.list(req.user.uid);
+    res.json({ notifications });
+  } catch (err) {
+    next(err);
+  }
 }
 
-async function getById(req, res) {
-  res.status(501).json({ error: 'Not implemented yet: get notifications by id' });
+/** The one narrow write exposed to clients — see notifications.service.js's markRead(). */
+async function markRead(req, res, next) {
+  try {
+    const notification = await notificationsService.markRead(req.params.id, req.user.uid);
+    res.json({ notification });
+  } catch (err) {
+    next(err);
+  }
 }
 
-async function create(req, res) {
-  res.status(501).json({ error: 'Not implemented yet: create notifications' });
+async function markAllRead(req, res, next) {
+  try {
+    const result = await notificationsService.markAllRead(req.user.uid);
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
 }
 
-async function update(req, res) {
-  res.status(501).json({ error: 'Not implemented yet: update notifications' });
-}
-
-async function remove(req, res) {
-  res.status(501).json({ error: 'Not implemented yet: remove notifications' });
-}
-
-module.exports = { list, getById, create, update, remove };
+module.exports = { list, markRead, markAllRead };

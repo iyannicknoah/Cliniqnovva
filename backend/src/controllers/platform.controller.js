@@ -13,8 +13,8 @@ async function getMetrics(req, res, next) {
 
 async function startSupportView(req, res, next) {
   try {
-    const result = await platformService.startSupportView(req.params.organizationId, req.user?.uid);
-    if (!result) return res.status(404).json({ error: 'Organization not found' });
+    const result = await platformService.startSupportView(req.params.clinicId, req.user?.uid);
+    if (!result) return res.status(404).json({ error: 'Clinic not found' });
     res.status(201).json(result);
   } catch (err) {
     next(err);
@@ -23,7 +23,7 @@ async function startSupportView(req, res, next) {
 
 async function endSupportView(req, res, next) {
   try {
-    await platformService.endSupportView(req.params.organizationId, req.body?.sessionId, req.user?.uid);
+    await platformService.endSupportView(req.params.clinicId, req.body?.sessionId, req.user?.uid);
     res.json({ success: true });
   } catch (err) {
     next(err);

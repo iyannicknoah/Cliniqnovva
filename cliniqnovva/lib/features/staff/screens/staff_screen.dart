@@ -7,6 +7,7 @@ import '../../../shared/utils/async_feedback.dart';
 import '../../../shared/widgets/avatar_widget.dart';
 import '../../../shared/widgets/cliniqnovva_button.dart';
 import '../../../shared/widgets/cliniqnovva_table.dart';
+import '../../../shared/widgets/empty_state.dart';
 import '../../../shared/widgets/loading_widget.dart';
 import '../../../shared/widgets/status_badge.dart';
 import '../../auth/providers/access_control_provider.dart';
@@ -16,15 +17,7 @@ import '../models/staff_model.dart';
 import '../providers/staff_provider.dart';
 import '../widgets/add_edit_staff_panel.dart';
 
-const _roleLabels = {
-  AppConstants.roleDoctor: 'Doctor',
-  AppConstants.roleNurse: 'Nurse',
-  AppConstants.roleReceptionist: 'Receptionist',
-  AppConstants.rolePharmacist: 'Pharmacist',
-  AppConstants.roleAccountant: 'Accountant',
-};
-
-/// Part 8 Task 1 — /staff. Organization Admin picks among their branches;
+/// Part 8 Task 1 — /staff. Clinic Admin picks among their branches;
 /// Branch Admin is auto-scoped to their own. Staff are never hard-deleted —
 /// only ever deactivated (server-enforced, no delete route even exists).
 class StaffScreen extends ConsumerWidget {
@@ -46,7 +39,7 @@ class StaffScreen extends ConsumerWidget {
           final isBranchScoped = role == AppConstants.roleBranchAdmin;
           final ownBranchId = data?['branchId'] as String?;
           final canManage =
-              role == AppConstants.roleOrganizationAdmin ||
+              role == AppConstants.roleClinicAdmin ||
               role == AppConstants.roleBranchAdmin;
 
           return _StaffBody(
@@ -152,12 +145,7 @@ class _StaffBody extends ConsumerWidget {
           const SizedBox(height: 28),
           Expanded(
             child: effectiveBranchId == null
-                ? Center(
-                    child: Text(
-                      'No branch to show yet.',
-                      style: TextStyle(color: context.appSubtext),
-                    ),
-                  )
+                ? const NoBranchSelectedState()
                 : _StaffList(
                     branchId: effectiveBranchId,
                     canManage: canManage,
@@ -294,7 +282,7 @@ class _RoleBadge extends StatelessWidget {
           borderRadius: BorderRadius.circular(20),
         ),
         child: Text(
-          _roleLabels[role] ?? role,
+          roleLabel(role),
           style: TextStyle(
             color: context.appText,
             fontSize: 12.5,

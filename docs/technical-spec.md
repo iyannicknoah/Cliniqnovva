@@ -3,7 +3,7 @@
 **Document purpose:** This is the complete functional and technical reference for the system. Hand this to an AI assistant or a developer so they understand every feature, rule, role, and data structure before any code is written.
 **Primary product:** The **Clinic Management System (CMS)** — the admin/staff-facing product sold to clinics. The Patient Mobile App is a companion booking channel feeding into the same backend.
 **Market:** Built specifically for **Rwanda**. Localization is not an afterthought — currency, address structure, phone format, ID numbers, language, timezone, insurance context, and public holidays follow Rwandan conventions throughout.
-**Business model:** Platform owner (you) sells subscriptions to clinic **Organizations**, which may have one or more **Branches**. Patient and clinic-level payments are cash-in-hand; your subscription revenue from organizations is also collected manually/offline. See section 4.
+**Business model:** Platform owner (you) sells subscriptions to clinic **Clinics**, which may have one or more **Branches**. Patient and clinic-level payments are cash-in-hand; your subscription revenue from clinics is also collected manually/offline. See section 4.
 
 ---
 
@@ -11,7 +11,7 @@
 1. Rwanda Localization
 2. Tech Stack
 3. System Architecture
-4. Platform Structure — Organizations & Branches
+4. Platform Structure — Clinics & Branches
 5. User Roles & Permissions
 6. Core Modules — Clinic Management System
 7. Patient Mobile App
@@ -77,37 +77,37 @@ These conventions apply across every module and every collection in the system �
 
 ---
 
-## 4. Platform Structure — Organizations & Branches
+## 4. Platform Structure — Clinics & Branches
 
-You sell to **Organizations** (a clinic business). Each Organization has one or more **Branches** (physical locations).
+You sell to **Clinics** (a clinic business). Each Clinic has one or more **Branches** (physical locations).
 
 ```
 Platform (you)
-   └── Organization (the customer you invoice — e.g. "Yan Clinic")
+   └── Clinic (the customer you invoice — e.g. "Ya Clinic")
           └── Branch(es) (physical locations — e.g. "Kimihurura", "Remera")
 ```
 
 | Level | Who controls it | Can do |
 |---|---|---|
-| **Platform** | **Super Admin (you)** | Create/suspend organizations; set subscription plan & branch limit; view platform-wide analytics; create a branch on an org's behalf for support (exception, not the norm) |
-| **Organization** | **Organization Admin** (clinic owner/customer) | Create/manage their own branches day-to-day, up to plan limit; add/manage staff across branches; move staff between branches; view combined reports |
+| **Platform** | **Super Admin (you)** | Create/suspend clinics; set subscription plan & branch limit; view platform-wide analytics; create a branch on an org's behalf for support (exception, not the norm) |
+| **Clinic** | **Clinic Admin** (clinic owner/customer) | Create/manage their own branches day-to-day, up to plan limit; add/manage staff across branches; move staff between branches; view combined reports |
 | **Branch** | **Branch Admin / Receptionist** | Day-to-day operations for one branch only — schedules, check-ins, patient records, billing at that location |
 
-**Who creates a branch?** The Organization Admin, as their normal everyday task, within their plan's branch limit. Super Admin creates the Organization itself and sets the plan/limit, and can create a branch on an org's behalf only as a support exception.
+**Who creates a branch?** The Clinic Admin, as their normal everyday task, within their plan's branch limit. Super Admin creates the Clinic itself and sets the plan/limit, and can create a branch on an org's behalf only as a support exception.
 
 **Branch creation is gated by subscription plan** (e.g. Basic = 1 branch, Pro = up to 5, Enterprise = unlimited). Backend checks current branch count against the plan limit before allowing a new one.
 
-**Suspension:** Super Admin can suspend an organization (e.g. non-payment of your subscription fee). This must immediately block API access for every user under that organization — checked on every request, not just at login.
+**Suspension:** Super Admin can suspend a clinic (e.g. non-payment of your subscription fee). This must immediately block API access for every user under that clinic — checked on every request, not just at login.
 
 **Worked example — branch data isolation:**
-"Yan Clinic" registers as one Organization, with branches "Kimihurura" and "Remera".
-- Every patient, appointment, invoice, and staff record is stamped with `branchId` (and `organizationId`).
+"Ya Clinic" registers as one Clinic, with branches "Kimihurura" and "Remera".
+- Every patient, appointment, invoice, and staff record is stamped with `branchId` (and `clinicId`).
 - Staff at Kimihurura can only see records where `branchId` matches their own — never Remera's data, even though it's the same clinic business.
-- The Organization Admin (Yan Clinic's owner) is tied to `organizationId` only, not one branch, so their view combines both branches.
-- Super Admin sees every organization.
+- The Clinic Admin (Ya Clinic's owner) is tied to `clinicId` only, not one branch, so their view combines both branches.
+- Super Admin sees every clinic.
 - This is enforced on the backend for every request — never assumed from the UI (see section 10).
 
-**Platform subscription billing (you ↔ organization):** Even though this is collected manually/in cash, the system should still **record** it — plan tier, billing cycle, amount due, payment history, and next-due date per organization — so Super Admin has a clear picture of who's paid and who's overdue, without needing an actual payment gateway. See `/organizations` in section 9.
+**Platform subscription billing (you ↔ clinic):** Even though this is collected manually/in cash, the system should still **record** it — plan tier, billing cycle, amount due, payment history, and next-due date per clinic — so Super Admin has a clear picture of who's paid and who's overdue, without needing an actual payment gateway. See `/clinics` in section 9.
 
 ---
 
@@ -115,17 +115,17 @@ Platform (you)
 
 | Role | App(s) | Scope |
 |---|---|---|
-| Super Admin | Admin Web Dashboard | All organizations |
-| Organization Admin | Admin Web Dashboard | Own organization, all its branches |
+| Super Admin | Admin Web Dashboard | All clinics |
+| Clinic Admin | Admin Web Dashboard | Own clinic, all its branches |
 | Branch Admin | Admin Web Dashboard | One branch |
 | Receptionist | Admin Web Dashboard | One branch |
-| Accountant *(optional)* | Admin Web Dashboard | Own organization or branch (configurable) |
+| Accountant *(optional)* | Admin Web Dashboard | Own clinic or branch (configurable) |
 | Pharmacist *(optional)* | Admin Web Dashboard or Staff App | One branch |
 | Doctor | Staff App | Patients they treat, within their branch |
 | Nurse | Staff App | Patients assigned for the day, within their branch |
 | Patient | Patient App | Own data only |
 
-Every account has exactly one role, assigned at creation, changeable only by Super Admin or Organization Admin — never self-assigned.
+Every account has exactly one role, assigned at creation, changeable only by Super Admin or Clinic Admin — never self-assigned.
 
 **Staff onboarding flow:** New staff accounts are created by an Admin (not self-registered). The Admin enters name, role, branch, and contact info; the system sends an **invite link** (SMS or email) for the staff member to set their own password and complete their profile — rather than the Admin typing a password on their behalf. This is more secure and more practical for a Rwandan front-desk setting where the Admin may be onboarding several staff at once.
 
@@ -141,31 +141,31 @@ Each module lists: **Purpose**, **Functions**, **Roles Allowed**, **Conditions/V
 - Staff invite & first-login password setup (see section 5)
 - Login (email or phone + password, Firebase Auth), logout, password reset
 - Session/token management (Firebase ID tokens, refreshed regularly)
-- Optional two-factor authentication for Super Admin and Organization Admin accounts (highest-privilege roles)
+- Optional two-factor authentication for Super Admin and Clinic Admin accounts (highest-privilege roles)
 - Role assignment & permission checks on every request
-**Roles allowed:** Super Admin creates Organization Admins; Organization Admin/Branch Admin creates Doctors/Nurses/Receptionists/Pharmacists/Accountants for their branch(es).
+**Roles allowed:** Super Admin creates Clinic Admins; Clinic Admin/Branch Admin creates Doctors/Nurses/Receptionists/Pharmacists/Accountants for their branch(es).
 **Conditions/Validation:**
 - Email/phone must be unique across the system
 - Password must meet minimum strength rules
 - A deactivated account (`isActive: false`) must lose API access immediately — checked on every request, not just login
 - Every API endpoint verifies the caller's role before executing — reject with 403 if mismatched
-- Staff accounts are linked to exactly one branch (except Super Admin/Organization Admin)
+- Staff accounts are linked to exactly one branch (except Super Admin/Clinic Admin)
 
-### 6.2 Organization & Branch Management
+### 6.2 Clinic & Branch Management
 **Purpose:** Manage the clinic business and its physical locations.
 **Functions:**
-- Super Admin: create/edit/suspend an organization; set subscription plan, branch limit, and billing cycle
-- Organization Admin: create/edit/deactivate branches within plan limit — the normal, everyday way branches get added (name, address using Rwanda's Province/District/Sector/Cell/Village structure, contact, working hours, Umuganda override, services offered)
+- Super Admin: create/edit/suspend a clinic; set subscription plan, branch limit, and billing cycle
+- Clinic Admin: create/edit/deactivate branches within plan limit — the normal, everyday way branches get added (name, address using Rwanda's Province/District/Sector/Cell/Village structure, contact, working hours, Umuganda override, services offered)
 - Super Admin can create a branch on an org's behalf for onboarding support — an exception path
 - Assign staff to a branch
-- View organization/branch list (scoped per role)
-**Roles allowed:** Super Admin (all organizations), Organization Admin (own organization's branches)
+- View clinic/branch list (scoped per role)
+**Roles allowed:** Super Admin (all clinics), Clinic Admin (own clinic's branches)
 **Conditions/Validation:**
-- Organization Admin can only edit/view data inside their `organizationId`
+- Clinic Admin can only edit/view data inside their `clinicId`
 - New branch creation blocked if plan's branch limit already reached
 - A branch cannot be hard-deleted if it has active appointments or staff — deactivate instead
 - Working hours validated (opening time < closing time)
-- Suspending an organization blocks all its users' API access immediately
+- Suspending a clinic blocks all its users' API access immediately
 
 ### 6.3 Staff Management
 **Purpose:** Manage doctors, nurses, receptionists, pharmacists, accountants within a branch.
@@ -174,11 +174,11 @@ Each module lists: **Purpose**, **Functions**, **Roles Allowed**, **Conditions/V
 - Assign/reassign staff to a branch
 - Set doctor/nurse schedules
 - View staff list & profiles
-**Roles allowed:** Organization Admin (full control across own branches), Branch Admin (own branch), Super Admin (all)
+**Roles allowed:** Clinic Admin (full control across own branches), Branch Admin (own branch), Super Admin (all)
 **Conditions/Validation:**
 - A doctor cannot be hard-deleted if they have appointment history — deactivate only
 - Schedule slots must not overlap for the same staff member
-- Only Organization Admin/Super Admin can change a staff member's role
+- Only Clinic Admin/Super Admin can change a staff member's role
 
 ### 6.4 Departments & Service Catalog *(new)*
 **Purpose:** Real clinics don't just have "doctors" — they organize by department/specialty (General Medicine, Dentistry, Pediatrics, Lab, etc.) and charge different, configurable prices for different services. This was missing from earlier drafts and matters for accurate booking and billing.
@@ -187,7 +187,7 @@ Each module lists: **Purpose**, **Functions**, **Roles Allowed**, **Conditions/V
 - Define a service catalog per branch: service name, default duration, default price in RWF, which department it belongs to
 - Assign doctors to one or more departments
 - When booking, patient/receptionist selects a service, which auto-fills expected duration and price (still editable by staff at billing time)
-**Roles allowed:** Organization Admin/Branch Admin (manage catalog), Receptionist/Patient (select service when booking), Doctor (view own department's services)
+**Roles allowed:** Clinic Admin/Branch Admin (manage catalog), Receptionist/Patient (select service when booking), Doctor (view own department's services)
 **Conditions/Validation:**
 - A service's default duration must be a positive number consistent with the branch's slot-duration configuration
 - Deleting a service that has appointment/invoice history is blocked — deactivate instead
@@ -238,8 +238,8 @@ Each module lists: **Purpose**, **Functions**, **Roles Allowed**, **Conditions/V
 **Functions:**
 - On new patient creation, check for existing records with matching phone number or National ID
 - If a likely match is found, prompt staff to confirm "is this the same person?" before creating a new record
-- Allow Organization Admin/Branch Admin to manually merge two patient records if a duplicate slipped through (merges appointment/medical history under one patient ID, logs the merge action)
-**Roles allowed:** Receptionist (prompted at registration), Branch Admin/Organization Admin (manual merge)
+- Allow Clinic Admin/Branch Admin to manually merge two patient records if a duplicate slipped through (merges appointment/medical history under one patient ID, logs the merge action)
+**Roles allowed:** Receptionist (prompted at registration), Branch Admin/Clinic Admin (manual merge)
 **Conditions/Validation:**
 - Merge action must be logged in the audit trail with both original record IDs
 - Medical record history must never be lost during a merge — only consolidated
@@ -252,9 +252,9 @@ Each module lists: **Purpose**, **Functions**, **Roles Allowed**, **Conditions/V
 - Check in a patient on arrival
 - Mark appointment completed
 - Handle walk-in bookings (section 6.5A)
-- **Queue/ticket display** — show a simple waiting-number/queue status for walk-in patients at the branch, so front desk and waiting patients know order of service *(new — common practical need in busy Rwandan clinics)*
+- **Queue/ticket display** — show a simple waiting-number/queue status for walk-in patients at the branch, so front desk and waiting patients know order of service *(new — common practical need in busy Rwanda clinics)*
 - Sync bookings from the Patient App in real time
-**Roles allowed:** Receptionist (full management), Doctor (view own, mark complete), Branch Admin/Organization Admin (full oversight)
+**Roles allowed:** Receptionist (full management), Doctor (view own, mark complete), Branch Admin/Clinic Admin (full oversight)
 **Conditions/Validation:**
 - **Double-booking prevention:** re-check slot availability at confirmation time using a Firestore transaction, to avoid race conditions between simultaneous bookings
 - Cancelling frees the slot and notifies the patient
@@ -271,7 +271,7 @@ Each module lists: **Purpose**, **Functions**, **Roles Allowed**, **Conditions/V
 - Record an insurance-covered portion (Mutuelle de Santé, RSSB, or private insurer) separately from the cash-paid portion
 - Track paid/unpaid/partial/voided status
 - Generate/print receipts (in RWF)
-**Roles allowed:** Receptionist/Accountant (create & manage), Branch Admin/Organization Admin (view/reports), Patient (view own invoice/receipt — read only)
+**Roles allowed:** Receptionist/Accountant (create & manage), Branch Admin/Clinic Admin (view/reports), Patient (view own invoice/receipt — read only)
 **Conditions/Validation:**
 - Invoice total always equals sum of line items — recalculated server-side, never trusted from client input
 - `insuranceCoveredAmountRwf + cashPaidAmountRwf` must never exceed `totalAmountRwf`
@@ -287,7 +287,7 @@ Each module lists: **Purpose**, **Functions**, **Roles Allowed**, **Conditions/V
 - Deduct stock when medicine is dispensed against a prescription
 - Low-stock alerts
 - Stock adjustment log (damages, corrections)
-**Roles allowed:** Pharmacist (full control), Branch Admin/Organization Admin (view/reports)
+**Roles allowed:** Pharmacist (full control), Branch Admin/Clinic Admin (view/reports)
 **Conditions/Validation:**
 - Stock quantity never goes negative — block dispensing if insufficient, flag for reorder instead
 - Every stock change logged with reason and staff ID
@@ -298,9 +298,9 @@ Each module lists: **Purpose**, **Functions**, **Roles Allowed**, **Conditions/V
 **Functions:**
 - Revenue reports (daily/weekly/monthly, per doctor, per branch, per service)
 - Patient volume/traffic reports, no-show rate
-- Multi-branch roll-up per organization, and multi-organization comparison (Super Admin only)
+- Multi-branch roll-up per clinic, and multi-clinic comparison (Super Admin only)
 - **Export reports** to CSV/PDF for offline sharing *(new)*
-**Roles allowed:** Branch Admin (own branch), Organization Admin (own organization, all branches), Super Admin (all organizations), Accountant (financial reports)
+**Roles allowed:** Branch Admin (own branch), Clinic Admin (own clinic, all branches), Super Admin (all clinics), Accountant (financial reports)
 **Conditions/Validation:**
 - Reports computed from finalized/completed records only, not pending/draft data
 - Date range filters validate start ≤ end
@@ -320,12 +320,21 @@ Each module lists: **Purpose**, **Functions**, **Roles Allowed**, **Conditions/V
 - Must respect notification preferences (opt-out for non-critical alerts)
 - Failed delivery retried or logged, not silently dropped
 
-### 6.12 Audit Logs
+### 6.12 Audit Logs — **REMOVED 2026-07-24**
+**Status:** this entire feature was removed by explicit instruction (general
+activity-log feature retired system-wide) — the `/auditLogs` collection, its
+backend service/controller/routes, and the `/audit-log` screen no longer
+exist. Kept below as a historical record of the original spec, not a
+description of the live system. `/patientMergeLogs` (6.6A) is a separate,
+narrower feature that was NOT removed — it's the merge tool's own history
+record, load-bearing for "medical record history must never be lost during
+a merge," not a general audit trail.
+
 **Purpose:** Accountability — who did what, when, especially for medical and financial data.
 **Functions:**
 - Log every create/update/delete on: patient records, appointments, invoices, staff accounts, patient merges
 - View logs (filter by user, date, action type)
-**Roles allowed:** Super Admin/Organization Admin (view only — logs are never editable by anyone)
+**Roles allowed:** Super Admin/Clinic Admin (view only — logs are never editable by anyone)
 **Conditions/Validation:**
 - Append-only — no update/delete operation ever exposed for this collection
 - Every entry includes actor ID, role, action, target record ID, timestamp
@@ -344,12 +353,12 @@ Each module lists: **Purpose**, **Functions**, **Roles Allowed**, **Conditions/V
 - Chat messages are **not part of the medical record** — they must not be treated as clinical advice or a diagnosis; consider a short in-app disclaimer ("For medical concerns, please book an appointment") shown in the chat screen.
 - Chat needs to feel instant, so — as a deliberate, documented exception to the "no direct client writes" rule elsewhere in this spec — chat messages may be written directly to Firestore by the client, using real-time listeners, **strictly scoped by security rules** to participants of that specific chat thread only (the patient who owns it, and any staff whose `branchId` matches).
 - Basic rate limiting on starting new chats, to prevent spam (e.g. one patient messaging many branches in a short burst)
-- Messages are soft-deleted only (never hard-deleted) — kept for accountability and viewable by Organization Admin/Super Admin if a dispute needs review
+- Messages are soft-deleted only (never hard-deleted) — kept for accountability and viewable by Clinic Admin/Super Admin if a dispute needs review
 
 **Data model addition:**
 ```
 /chats/{chatId}
-    patientId, branchId, organizationId
+    patientId, branchId, clinicId
     appointmentId (optional — null if it's a general inquiry, not tied to a visit)
     lastMessage, lastMessageAt, createdAt
     status: "open" | "closed"
@@ -382,7 +391,7 @@ Each module lists: **Purpose**, **Functions**, **Roles Allowed**, **Conditions/V
 
 ## 8. Staff Mobile App & Doctor Web Dashboard
 
-**Staff App is mobile-only and mandatory** for every employee — doctors, nurses, receptionists, pharmacists, accountants, branch/organization admins who need on-the-go access. If someone uses a tablet, it simply runs the same mobile app — there is no separate tablet-optimized build or UI; a tablet is treated as a (larger) phone.
+**Staff App is mobile-only and mandatory** for every employee — doctors, nurses, receptionists, pharmacists, accountants, branch/clinic admins who need on-the-go access. If someone uses a tablet, it simply runs the same mobile app — there is no separate tablet-optimized build or UI; a tablet is treated as a (larger) phone.
 
 **Doctor Web Dashboard is optional, additive, and doctor-only.** When a doctor is at a computer, they can log into a web dashboard (same backend, same data) for tasks that are easier on a bigger screen — e.g. reviewing longer patient histories, writing detailed notes. This does **not** replace the mandatory mobile app; it's an extra access point for doctors specifically, not for nurses/receptionists/other staff.
 
@@ -407,13 +416,13 @@ Each module lists: **Purpose**, **Functions**, **Roles Allowed**, **Conditions/V
 ## 9. Firebase Database Model (Firestore)
 
 ```
-/organizations/{organizationId}
+/clinics/{clinicId}
     name, ownerContact, subscriptionPlan: "basic" | "pro" | "enterprise"
     branchLimit, billingCycle, subscriptionAmountRwf, nextDueDate
     subscriptionPaymentHistory: [ { date, amountRwf, recordedBy } ]
     isActive, createdAt
 /branches/{branchId}
-    organizationId, name
+    clinicId, name
     location: { province, district, sector, cell, village }
     phone, workingHours, umugandaSaturdayHours (optional override)
     servicesOffered, isActive
@@ -422,9 +431,9 @@ Each module lists: **Purpose**, **Functions**, **Roles Allowed**, **Conditions/V
 /services/{serviceId}
     branchId, departmentId, name, defaultDurationMins, defaultPriceRwf, isActive
 /users/{userId}
-    role: "superAdmin" | "organizationAdmin" | "branchAdmin" | "doctor" | "nurse" | "receptionist" | "pharmacist" | "accountant" | "patient"
-    organizationId (null for superAdmin/patient)
-    branchId (null for superAdmin/organizationAdmin/patient)
+    role: "superAdmin" | "clinicAdmin" | "branchAdmin" | "doctor" | "nurse" | "receptionist" | "pharmacist" | "accountant" | "patient"
+    clinicId (null for superAdmin/patient)
+    branchId (null for superAdmin/clinicAdmin/patient)
     name, phone (+250 E.164 format), email, photoUrl
     preferredLanguage: "rw" | "en" | "fr"
     isActive, createdAt
@@ -439,7 +448,7 @@ Each module lists: **Purpose**, **Functions**, **Roles Allowed**, **Conditions/V
     registeredVia: "app" | "walkIn"
     linkedAppAccountId (null until a walk-in patient later links their app account)
 /appointments/{appointmentId}
-    patientId, doctorId, serviceId, branchId, organizationId
+    patientId, doctorId, serviceId, branchId, clinicId
     date, startTime, endTime
     status: "pending" | "confirmed" | "checkedIn" | "completed" | "cancelled"
     queueNumber (for walk-in display)
@@ -468,19 +477,19 @@ Each module lists: **Purpose**, **Functions**, **Roles Allowed**, **Conditions/V
     survivingPatientId, mergedPatientId, mergedBy, timestamp
 /notifications/{notificationId}
     userId, type, message, isRead, createdAt
-/auditLogs/{logId}
-    actorId, actorRole, action, targetCollection, targetId, timestamp
 ```
+(`/auditLogs/{logId}` — actorId, actorRole, action, targetCollection, targetId,
+timestamp — removed 2026-07-24, see section 6.12.)
 
 ---
 
 ## 10. Security Model
 
-- Every collection's Firestore rules check `request.auth.uid` against role, `organizationId`, and `branchId` before allowing read/write
+- Every collection's Firestore rules check `request.auth.uid` against role, `clinicId`, and `branchId` before allowing read/write
 - Clinical and financial writes (`medicalRecords`, `invoices`, `appointments` status changes) go through the Node.js backend using the Firebase Admin SDK — never direct client writes — so business logic (double-booking checks, invoice recalculation, branch-limit checks) is always enforced
-- `auditLogs` and `patientMergeLogs`: `allow write: if false` for all clients — written only by backend
-- **Branch data isolation is mandatory:** every query for patients, appointments, invoices, medical records, or staff must be filtered by the requester's `branchId` (or `organizationId` for an Organization Admin, or nothing for Super Admin). No endpoint should ever leak data across branches, even by an accidental missing filter
-- Two-factor authentication recommended for Super Admin/Organization Admin accounts
+- `patientMergeLogs`: `allow write: if false` for all clients — written only by backend (`auditLogs` no longer exists, removed 2026-07-24)
+- **Branch data isolation is mandatory:** every query for patients, appointments, invoices, medical records, or staff must be filtered by the requester's `branchId` (or `clinicId` for a Clinic Admin, or nothing for Super Admin). No endpoint should ever leak data across branches, even by an accidental missing filter
+- Two-factor authentication recommended for Super Admin/Clinic Admin accounts
 - API rate limiting on authentication endpoints to prevent brute-force attempts
 
 ---
@@ -498,7 +507,7 @@ Each module lists: **Purpose**, **Functions**, **Roles Allowed**, **Conditions/V
 
 ## 12. Non-Functional Requirements
 
-- **Scalability:** support multiple organizations, each with multiple branches, from day one in the data model
+- **Scalability:** support multiple clinics, each with multiple branches, from day one in the data model
 - **Security:** Firebase Auth + Firestore rules + backend role checks (defense in depth)
 - **Performance:** paginate large lists (patients, appointments, logs); avoid unbounded Firestore queries
 - **Compliance:** design with HIPAA/GDPR-style data protection principles in mind (encryption, access logs, data minimization, patient consent tracking)
@@ -517,7 +526,7 @@ Each module lists: **Purpose**, **Functions**, **Roles Allowed**, **Conditions/V
 - Subscription plan tiers, branch limits, and billing cycle (monthly/quarterly) — exact numbers in RWF
 - Data retention & backup policy for medical records
 - Default app language (Kinyarwanda vs English) and whether Swahili is needed
-- Whether to pre-load a static list of Rwandan public holidays for the current year or let Organization Admins manage their own
+- Whether to pre-load a static list of Rwandan public holidays for the current year or let Clinic Admins manage their own
 - Whether queue/ticket numbering is a simple in-app counter or needs a physical ticket printer integration at busy branches
 - Whether future USSD/SMS-based booking for non-smartphone patients is worth investing in, and on what timeline
 - Whether Receptionist needs a mobile option to reply to patient chats (section 6.13) on the go, in addition to the Admin Web Dashboard inbox, or if desk-based replying is sufficient for v1

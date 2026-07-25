@@ -299,7 +299,7 @@ class _DepartmentDropdown extends StatelessWidget {
             if (value != null)
               DepartmentModel(
                 id: value!,
-                organizationId: '',
+                clinicId: '',
                 branchId: '',
                 name: '(unknown department)',
               ),

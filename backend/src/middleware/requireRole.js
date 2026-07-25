@@ -4,7 +4,7 @@
 // keys, so a mismatch here silently breaks every role check.
 const ROLES = Object.freeze({
   SUPER_ADMIN: 'super_admin',
-  ORGANIZATION_ADMIN: 'organization_admin',
+  CLINIC_ADMIN: 'clinic_admin',
   BRANCH_ADMIN: 'branch_admin',
   RECEPTIONIST: 'receptionist',
   ACCOUNTANT: 'accountant',

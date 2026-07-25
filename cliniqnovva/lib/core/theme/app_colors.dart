@@ -4,8 +4,6 @@ import 'package:flutter/material.dart';
 /// project's design system — do not change them without an explicit
 /// instruction to update the design language.
 abstract final class AppColors {
-  static const Color deepNavy = Color(0xFF0B2545);
-
   /// Page/scaffold background, input fill, and container backgrounds across
   /// the whole app — pure white per explicit instruction (2026-07-19).
   static const Color pageBackground = Color(0xFFFFFFFF);

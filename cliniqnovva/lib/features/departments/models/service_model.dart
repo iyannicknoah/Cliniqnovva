@@ -7,7 +7,7 @@
 class ServiceModel {
   const ServiceModel({
     required this.id,
-    required this.organizationId,
+    required this.clinicId,
     required this.branchId,
     required this.departmentId,
     required this.name,
@@ -19,7 +19,7 @@ class ServiceModel {
   });
 
   final String id;
-  final String organizationId;
+  final String clinicId;
   final String branchId;
   final String departmentId;
   final String name;
@@ -37,7 +37,7 @@ class ServiceModel {
   factory ServiceModel.fromJson(Map<String, dynamic> json) {
     return ServiceModel(
       id: json['id'] as String,
-      organizationId: json['organizationId'] as String? ?? '',
+      clinicId: json['clinicId'] as String? ?? '',
       branchId: json['branchId'] as String? ?? '',
       departmentId: json['departmentId'] as String? ?? '',
       name: json['name'] as String? ?? '',

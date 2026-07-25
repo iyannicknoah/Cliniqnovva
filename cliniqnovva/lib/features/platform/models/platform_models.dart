@@ -1,15 +1,15 @@
 /// Part 5 Task 2 — platform-wide metrics, for Cliniqnovva's own business
-/// visibility only, never shown to any organization.
+/// visibility only, never shown to any clinic.
 class PlatformMetrics {
   const PlatformMetrics({
-    required this.totalOrganizations,
+    required this.totalClinics,
     required this.totalBranches,
     required this.totalActiveStaff,
     required this.totalPatients,
     required this.totalAppointmentsThisMonth,
   });
 
-  final int totalOrganizations;
+  final int totalClinics;
   final int totalBranches;
   final int totalActiveStaff;
   final int totalPatients;
@@ -17,7 +17,7 @@ class PlatformMetrics {
 
   factory PlatformMetrics.fromJson(Map<String, dynamic> json) {
     return PlatformMetrics(
-      totalOrganizations: json['totalOrganizations'] as int? ?? 0,
+      totalClinics: json['totalClinics'] as int? ?? 0,
       totalBranches: json['totalBranches'] as int? ?? 0,
       totalActiveStaff: json['totalActiveStaff'] as int? ?? 0,
       totalPatients: json['totalPatients'] as int? ?? 0,
@@ -27,7 +27,7 @@ class PlatformMetrics {
   }
 }
 
-/// One month's worth of real recorded revenue (sum of every organization's
+/// One month's worth of real recorded revenue (sum of every clinic's
 /// cash payments that month) — backs the Overview page's revenue chart.
 /// `month` is `"YYYY-MM"`.
 class RevenueTrendPoint {

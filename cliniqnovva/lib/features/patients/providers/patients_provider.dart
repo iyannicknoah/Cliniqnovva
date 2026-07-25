@@ -20,8 +20,8 @@ typedef PatientSearchParams = ({String? branchId, String query});
 final patientsSearchProvider = FutureProvider.autoDispose
     .family<List<PatientModel>, PatientSearchParams>((ref, params) async {
       // The path segment is the Part 9 Task 4 route shape
-      // (GET /api/patients/:organizationId); the server ignores it for
-      // every scoped caller (branch/org-level) and derives organizationId
+      // (GET /api/patients/:clinicId); the server ignores it for
+      // every scoped caller (branch/org-level) and derives clinicId
       // from their own token instead — real filtering is query params.
       final response = await ApiService.instance.get<Map<String, dynamic>>(
         '/api/v1/patients/search',
@@ -55,13 +55,15 @@ class PatientsNotifier extends AsyncNotifier<void> {
   @override
   Future<void> build() async {}
 
+  /// Part 10 Task 3 — POST (a reusable pre-flight; POST /api/patients also
+  /// runs this same check itself before creating, see [register]).
   Future<List<DuplicateMatch>> checkDuplicate({
     String? phone,
     String? nationalId,
   }) async {
-    final response = await ApiService.instance.get<Map<String, dynamic>>(
+    final response = await ApiService.instance.post<Map<String, dynamic>>(
       '/api/v1/patients/check-duplicate',
-      queryParameters: {
+      data: {
         if (phone != null && phone.isNotEmpty) 'phone': phone,
         if (nationalId != null && nationalId.isNotEmpty)
           'nationalId': nationalId,
@@ -73,7 +75,14 @@ class PatientsNotifier extends AsyncNotifier<void> {
         .toList();
   }
 
-  Future<PatientModel> register({
+  /// Part 10 Task 1 — the server itself checks for a duplicate before
+  /// creating and responds 409 `{possibleDuplicate: true, matches}` instead
+  /// of a created patient. This calls the Dio client directly (bypassing
+  /// ApiService's generic error-to-string wrapping, same reason
+  /// [uploadDocument] does) so that 409 response body survives intact for
+  /// the caller to branch on. Pass [confirmedDuplicate] true to skip the
+  /// server's check (the user already saw the prompt and chose to proceed).
+  Future<PatientCreateResult> register({
     required String branchId,
     required String name,
     required String phone,
@@ -82,23 +91,43 @@ class PatientsNotifier extends AsyncNotifier<void> {
     String? nationalId,
     EmergencyContact? emergencyContact,
     PatientLocation? location,
+    bool confirmedDuplicate = false,
   }) async {
-    final response = await ApiService.instance.post<Map<String, dynamic>>(
-      '/api/v1/patients',
-      data: {
-        'branchId': branchId,
-        'name': name,
-        'phone': phone,
-        'dateOfBirth': dateOfBirth?.toIso8601String(),
-        'gender': gender,
-        'nationalId': nationalId,
-        'emergencyContact': emergencyContact?.toMap(),
-        'location': location?.toMap(),
-      },
-    );
-    return PatientModel.fromJson(
-      response.data!['patient'] as Map<String, dynamic>,
-    );
+    try {
+      final response = await ApiService.instance.client.post<Map<String, dynamic>>(
+        '/api/v1/patients',
+        data: {
+          'branchId': branchId,
+          'name': name,
+          'phone': phone,
+          'dateOfBirth': dateOfBirth?.toIso8601String(),
+          'gender': gender,
+          'nationalId': nationalId,
+          'emergencyContact': emergencyContact?.toMap(),
+          'location': location?.toMap(),
+          'confirmedDuplicate': confirmedDuplicate,
+        },
+      );
+      ref.invalidate(patientsSearchProvider);
+      return PatientCreated(
+        PatientModel.fromJson(response.data!['patient'] as Map<String, dynamic>),
+      );
+    } on DioException catch (e) {
+      final data = e.response?.data;
+      if (e.response?.statusCode == 409 &&
+          data is Map<String, dynamic> &&
+          data['possibleDuplicate'] == true) {
+        final matches = (data['matches'] as List<dynamic>)
+            .map((m) => DuplicateMatch.fromJson(m as Map<String, dynamic>))
+            .toList();
+        return PatientPossibleDuplicate(matches);
+      }
+      final message = data is Map<String, dynamic> ? data['error'] as String? : null;
+      throw ApiException(
+        message ?? 'Something went wrong. Please try again.',
+        statusCode: e.response?.statusCode,
+      );
+    }
   }
 
   Future<void> updateProfile(String patientId, Map<String, dynamic> fields) async {
@@ -165,6 +194,29 @@ class PatientsNotifier extends AsyncNotifier<void> {
       '/api/v1/patients/$patientId/documents/${Uri.encodeComponent(key)}/signed-url',
     );
     return response.data!['url'] as String;
+  }
+
+  /// Part 10 Task 2 — merges [mergedPatientId] into [survivingPatientId]:
+  /// every appointment/medicalRecord/invoice is reassigned server-side,
+  /// nothing lost, logged to /patientMergeLogs. Branch Admin/Clinic
+  /// Admin only (enforced server-side too).
+  Future<PatientModel> mergePatients({
+    required String survivingPatientId,
+    required String mergedPatientId,
+  }) async {
+    final response = await ApiService.instance.post<Map<String, dynamic>>(
+      '/api/v1/patients/merge',
+      data: {
+        'survivingPatientId': survivingPatientId,
+        'mergedPatientId': mergedPatientId,
+      },
+    );
+    ref.invalidate(patientsSearchProvider);
+    ref.invalidate(patientDetailProvider(survivingPatientId));
+    ref.invalidate(patientDetailProvider(mergedPatientId));
+    return PatientModel.fromJson(
+      response.data!['survivingPatient'] as Map<String, dynamic>,
+    );
   }
 }
 

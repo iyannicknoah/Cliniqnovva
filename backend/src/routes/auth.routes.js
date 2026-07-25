@@ -16,7 +16,7 @@ router.post(
   authRateLimiter,
   verifyToken,
   attachScope,
-  requireRole(ROLES.SUPER_ADMIN, ROLES.ORGANIZATION_ADMIN, ROLES.BRANCH_ADMIN),
+  requireRole(ROLES.SUPER_ADMIN, ROLES.CLINIC_ADMIN, ROLES.BRANCH_ADMIN),
   controller.createUser
 );
 router.post(
@@ -32,7 +32,7 @@ router.post(
   authRateLimiter,
   verifyToken,
   attachScope,
-  requireRole(ROLES.SUPER_ADMIN, ROLES.ORGANIZATION_ADMIN),
+  requireRole(ROLES.SUPER_ADMIN, ROLES.CLINIC_ADMIN),
   controller.deactivateAccount
 );
 

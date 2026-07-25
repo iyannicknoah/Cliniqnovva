@@ -9,18 +9,6 @@ function httpError(status, message) {
   return err;
 }
 
-async function auditLog({ actorId, actorRole }, action, targetId, organizationId) {
-  await db.collection('auditLogs').add({
-    actorId: actorId || null,
-    actorRole: actorRole || null,
-    action,
-    targetCollection: 'services',
-    targetId,
-    organizationId,
-    timestamp: new Date().toISOString(),
-  });
-}
-
 /**
  * Positive integer check for duration (mins) and price (RWF) — both must be
  * whole numbers (spec section 6.4: "default price in RWF" as a whole
@@ -36,20 +24,20 @@ function assertPositiveInt(value, label) {
 }
 
 /**
- * Services of an organization (optionally one branch/department), each with
+ * Services of a clinic (optionally one branch/department), each with
  * `hasHistory` — whether any appointment references it. The client uses
  * that to decide between offering Delete (no history) and Deactivate-only
  * (spec 6.4: "deleting a service that has appointment/invoice history is
  * blocked").
  */
-async function list({ organizationId, branchId, departmentId }) {
-  let query = db.collection('services').where('organizationId', '==', organizationId);
+async function list({ clinicId, branchId, departmentId }) {
+  let query = db.collection('services').where('clinicId', '==', clinicId);
   if (branchId) query = query.where('branchId', '==', branchId);
   if (departmentId) query = query.where('departmentId', '==', departmentId);
 
   const [serviceSnap, apptSnap] = await Promise.all([
     query.get(),
-    db.collection('appointments').where('organizationId', '==', organizationId).get(),
+    db.collection('appointments').where('clinicId', '==', clinicId).get(),
   ]);
 
   const servicesWithHistory = new Set(
@@ -71,8 +59,8 @@ async function getById(id) {
 
 function assertAccess(service, scope) {
   if (scope.level === 'platform') return;
-  if (service.organizationId !== scope.organizationId) {
-    throw httpError(403, 'This service belongs to a different organization');
+  if (service.clinicId !== scope.clinicId) {
+    throw httpError(403, 'This service belongs to a different clinic');
   }
   if (scope.level === 'branch' && service.branchId !== scope.branchId) {
     throw httpError(403, 'This service belongs to a different branch');
@@ -80,7 +68,7 @@ function assertAccess(service, scope) {
 }
 
 async function create(
-  { organizationId, branchId, departmentId, name, defaultDurationMins, defaultPriceRwf },
+  { clinicId, branchId, departmentId, name, defaultDurationMins, defaultPriceRwf },
   actor
 ) {
   if (!name || !name.trim()) throw httpError(400, 'Service name is required');
@@ -89,18 +77,18 @@ async function create(
   assertPositiveInt(defaultDurationMins, 'Default duration');
   assertPositiveInt(defaultPriceRwf, 'Default price');
 
-  // The department must exist, belong to the same organization AND the
+  // The department must exist, belong to the same clinic AND the
   // same branch — a service can't be filed under another branch's
   // department (spec 6.4: "define a service catalog per branch").
   const deptDoc = await db.collection('departments').doc(departmentId).get();
   if (!deptDoc.exists) throw httpError(404, 'Department not found');
   const dept = deptDoc.data();
-  if (dept.organizationId !== organizationId || dept.branchId !== branchId) {
+  if (dept.clinicId !== clinicId || dept.branchId !== branchId) {
     throw httpError(400, 'That department does not belong to this branch');
   }
 
   const data = {
-    organizationId,
+    clinicId,
     branchId,
     departmentId,
     name: name.trim(),
@@ -110,7 +98,6 @@ async function create(
     createdAt: new Date().toISOString(),
   };
   const ref = await db.collection('services').add(data);
-  await auditLog(actor, 'service.created', ref.id, organizationId);
   return { id: ref.id, ...data };
 }
 
@@ -132,7 +119,7 @@ async function update(
     const deptDoc = await db.collection('departments').doc(departmentId).get();
     if (!deptDoc.exists) throw httpError(404, 'Department not found');
     const dept = deptDoc.data();
-    if (dept.organizationId !== service.organizationId || dept.branchId !== service.branchId) {
+    if (dept.clinicId !== service.clinicId || dept.branchId !== service.branchId) {
       throw httpError(400, 'That department does not belong to this branch');
     }
     updates.departmentId = departmentId;
@@ -152,7 +139,6 @@ async function update(
   if (Object.keys(updates).length === 0) throw httpError(400, 'No editable fields provided');
 
   await db.collection('services').doc(id).update(updates);
-  await auditLog(actor, 'service.updated', id, service.organizationId);
   return { ...service, ...updates };
 }
 
@@ -174,7 +160,6 @@ async function remove(id, actor) {
   }
 
   await db.collection('services').doc(id).delete();
-  await auditLog(actor, 'service.deleted', id, service.organizationId);
 }
 
 module.exports = { list, getById, create, update, remove };

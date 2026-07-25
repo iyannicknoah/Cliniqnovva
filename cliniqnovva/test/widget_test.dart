@@ -12,7 +12,7 @@ import 'package:cliniqnovva/features/auth/providers/auth_provider.dart';
 import 'package:cliniqnovva/features/auth/screens/login_screen.dart';
 import 'package:cliniqnovva/features/auth/screens/suspended_screen.dart';
 import 'package:cliniqnovva/features/dashboard/screens/dashboard_screen.dart';
-import 'package:cliniqnovva/features/organizations/models/organization.dart';
+import 'package:cliniqnovva/features/clinics/models/clinic.dart';
 import 'package:cliniqnovva/features/platform/models/platform_models.dart';
 import 'package:cliniqnovva/features/super_admin/widgets/payment_history_panel.dart';
 import 'package:cliniqnovva/shared/widgets/avatar_widget.dart';
@@ -128,7 +128,7 @@ void main() {
       const items = [
         SidebarNavItem(
           label: 'Dashboard',
-          icon: AppIcons.organizations,
+          icon: AppIcons.clinics,
           route: '/dashboard',
           allowedRoles: ['doctor'],
         ),
@@ -335,9 +335,9 @@ void main() {
   );
 
   test(
-    'Organization.fromJson parses a finite-plan org and computes branchLimitLabel',
+    'Clinic.fromJson parses a finite-plan org and computes branchLimitLabel',
     () {
-      final org = Organization.fromJson({
+      final org = Clinic.fromJson({
         'id': 'org1',
         'name': 'Kigali Family Clinic',
         'subscriptionPlan': 'pro',
@@ -361,9 +361,9 @@ void main() {
   );
 
   test(
-    'Organization.fromJson reports "Unlimited" for a null (enterprise) branchLimit',
+    'Clinic.fromJson reports "Unlimited" for a null (enterprise) branchLimit',
     () {
-      final org = Organization.fromJson({
+      final org = Clinic.fromJson({
         'id': 'org2',
         'name': 'Rwanda Health Group',
         'subscriptionPlan': 'enterprise',
@@ -380,9 +380,9 @@ void main() {
   );
 
   test(
-    'Organization.fromJson parses Part 4 billing fields and payment history',
+    'Clinic.fromJson parses Part 4 billing fields and payment history',
     () {
-      final org = Organization.fromJson({
+      final org = Clinic.fromJson({
         'id': 'org3',
         'name': 'Huye Clinic',
         'subscriptionPlan': 'basic',
@@ -415,9 +415,9 @@ void main() {
   );
 
   test(
-    'Organization defaults billingCycle to monthly, so monthlyEquivalentRwf is the raw amount',
+    'Clinic defaults billingCycle to monthly, so monthlyEquivalentRwf is the raw amount',
     () {
-      final org = Organization.fromJson({
+      final org = Clinic.fromJson({
         'id': 'org4',
         'name': 'Musanze Clinic',
         'subscriptionPlan': 'pro',
@@ -455,13 +455,13 @@ void main() {
 
   test('PlatformMetrics.fromJson parses all five counts', () {
     final metrics = PlatformMetrics.fromJson({
-      'totalOrganizations': 3,
+      'totalClinics': 3,
       'totalBranches': 7,
       'totalActiveStaff': 12,
       'totalPatients': 40,
       'totalAppointmentsThisMonth': 9,
     });
-    expect(metrics.totalOrganizations, 3);
+    expect(metrics.totalClinics, 3);
     expect(metrics.totalBranches, 7);
     expect(metrics.totalActiveStaff, 12);
     expect(metrics.totalPatients, 40);

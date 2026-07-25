@@ -49,14 +49,19 @@ class CliniqnovvaTableRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsetsDirectional.fromSTEB(0, 16, 0, 16),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            for (final cell in cells) Expanded(child: cell),
-          ].divideWith(const SizedBox(width: 20)),
-        ),
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsetsDirectional.fromSTEB(0, 16, 0, 16),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                for (final cell in cells) Expanded(child: cell),
+              ].divideWith(const SizedBox(width: 20)),
+            ),
+          ),
+          Divider(height: 1, thickness: 1, color: context.appBorder),
+        ],
       ),
     );
   }

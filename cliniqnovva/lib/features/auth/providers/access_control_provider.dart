@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/services/firebase_service.dart';
 import 'auth_provider.dart';
 
-/// Custom claims (role/organizationId/branchId) for the signed-in user.
+/// Custom claims (role/clinicId/branchId) for the signed-in user.
 /// Re-fetches whenever the signed-in user changes; null while signed out.
 ///
 /// Watches both auth providers: on Flutter web the authStateChanges()
@@ -17,30 +17,30 @@ final userClaimsProvider = FutureProvider<Map<String, dynamic>?>((ref) async {
   return FirebaseService.getCurrentUserClaims();
 });
 
-/// Whether the given organization is active (spec section 4/10 — a
-/// suspended organization must lose access immediately). Defaults to true
+/// Whether the given clinic is active (spec section 4/10 — a
+/// suspended clinic must lose access immediately). Defaults to true
 /// if the field is missing, so incomplete test/dev docs aren't treated as
 /// suspended by accident.
-final organizationStatusProvider = FutureProvider.family<bool, String>((
+final clinicStatusProvider = FutureProvider.family<bool, String>((
   ref,
-  organizationId,
+  clinicId,
 ) async {
-  final doc = await FirebaseService.organizationsRef()
-      .doc(organizationId)
+  final doc = await FirebaseService.clinicsRef()
+      .doc(clinicId)
       .get();
   final data = doc.data();
   if (data == null) return true;
   return (data['isActive'] as bool?) ?? true;
 });
 
-/// Whether the given organization has at least one branch yet — drives the
-/// organization_admin onboarding redirect (spec Task 5 / section 6.2).
+/// Whether the given clinic has at least one branch yet — drives the
+/// clinic_admin onboarding redirect (spec Task 5 / section 6.2).
 final hasBranchesProvider = FutureProvider.family<bool, String>((
   ref,
-  organizationId,
+  clinicId,
 ) async {
   final snapshot = await FirebaseService.branchesRef(
-    organizationId,
+    clinicId,
   ).limit(1).get();
   return snapshot.docs.isNotEmpty;
 });

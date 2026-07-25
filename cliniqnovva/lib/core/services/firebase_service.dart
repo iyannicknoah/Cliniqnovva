@@ -6,14 +6,14 @@ import 'package:firebase_storage/firebase_storage.dart';
 /// collection references. Screens/providers should go through this class
 /// rather than calling `FirebaseFirestore.instance` directly, so scoping
 /// conventions stay consistent everywhere (spec section 10/11: every query
-/// must be scoped to organizationId, branch-level roles also to branchId).
+/// must be scoped to clinicId, branch-level roles also to branchId).
 abstract final class FirebaseService {
   static FirebaseFirestore get db => FirebaseFirestore.instance;
   static FirebaseAuth get auth => FirebaseAuth.instance;
   static FirebaseStorage get storage => FirebaseStorage.instance;
   static String? get currentUserId => auth.currentUser?.uid;
 
-  /// Decoded custom claims (role, organizationId, branchId) for the signed-in
+  /// Decoded custom claims (role, clinicId, branchId) for the signed-in
   /// user. Returns null if nobody is signed in.
   static Future<Map<String, dynamic>?> getCurrentUserClaims() async {
     final user = auth.currentUser;
@@ -22,12 +22,12 @@ abstract final class FirebaseService {
     return result.claims;
   }
 
-  static CollectionReference<Map<String, dynamic>> organizationsRef() =>
-      db.collection('organizations');
+  static CollectionReference<Map<String, dynamic>> clinicsRef() =>
+      db.collection('clinics');
 
-  static Query<Map<String, dynamic>> branchesRef(String organizationId) => db
+  static Query<Map<String, dynamic>> branchesRef(String clinicId) => db
       .collection('branches')
-      .where('organizationId', isEqualTo: organizationId);
+      .where('clinicId', isEqualTo: clinicId);
 
   static CollectionReference<Map<String, dynamic>> usersRef() =>
       db.collection('users');
@@ -49,7 +49,4 @@ abstract final class FirebaseService {
 
   static Query<Map<String, dynamic>> reviewsRef(String branchId) =>
       db.collection('reviews').where('branchId', isEqualTo: branchId);
-
-  static CollectionReference<Map<String, dynamic>> auditLogsRef() =>
-      db.collection('auditLogs');
 }

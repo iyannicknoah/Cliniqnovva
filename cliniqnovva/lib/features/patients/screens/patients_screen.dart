@@ -8,6 +8,7 @@ import '../../../shared/widgets/avatar_widget.dart';
 import '../../../shared/widgets/cliniqnovva_button.dart';
 import '../../../shared/widgets/cliniqnovva_table.dart';
 import '../../../shared/widgets/cliniqnovva_text_field.dart';
+import '../../../shared/widgets/empty_state.dart';
 import '../../../shared/widgets/loading_widget.dart';
 import '../../auth/providers/access_control_provider.dart';
 import '../../departments/providers/departments_provider.dart';
@@ -65,18 +66,23 @@ class _PatientsScreenState extends ConsumerState<PatientsScreen> {
         ),
         data: (data) {
           final role = data?['role'] as String?;
-          final isOrgAdmin = role == AppConstants.roleOrganizationAdmin;
+          final isOrgAdmin = role == AppConstants.roleClinicAdmin;
           final ownBranchId = data?['branchId'] as String?;
           final canRegister = [
             AppConstants.roleReceptionist,
             AppConstants.roleBranchAdmin,
-            AppConstants.roleOrganizationAdmin,
+            AppConstants.roleClinicAdmin,
+          ].contains(role);
+          final canMerge = [
+            AppConstants.roleBranchAdmin,
+            AppConstants.roleClinicAdmin,
           ].contains(role);
 
           return _PatientsBody(
             branchId: isOrgAdmin ? null : ownBranchId,
             showBranchSelector: isOrgAdmin,
             canRegister: canRegister,
+            canMerge: canMerge,
             searchController: _searchController,
             query: _query,
             onQueryChanged: (value) => setState(() => _query = value),
@@ -92,6 +98,7 @@ class _PatientsBody extends ConsumerWidget {
     required this.branchId,
     required this.showBranchSelector,
     required this.canRegister,
+    required this.canMerge,
     required this.searchController,
     required this.query,
     required this.onQueryChanged,
@@ -100,6 +107,7 @@ class _PatientsBody extends ConsumerWidget {
   final String? branchId;
   final bool showBranchSelector;
   final bool canRegister;
+  final bool canMerge;
   final TextEditingController searchController;
   final String query;
   final ValueChanged<String> onQueryChanged;
@@ -130,6 +138,14 @@ class _PatientsBody extends ConsumerWidget {
                 const BranchSelector(),
                 const SizedBox(width: 12),
               ],
+              if (canMerge) ...[
+                CliniqnovvaButton.text(
+                  label: 'Merge Patients',
+                  color: context.appText,
+                  onPressed: () => context.go('/patients/merge'),
+                ),
+                const SizedBox(width: 4),
+              ],
               if (canRegister)
                 SizedBox(
                   width: 190,
@@ -153,12 +169,7 @@ class _PatientsBody extends ConsumerWidget {
           const SizedBox(height: 28),
           Expanded(
             child: effectiveBranchId == null
-                ? Center(
-                    child: Text(
-                      'No branch to show yet.',
-                      style: TextStyle(color: context.appSubtext),
-                    ),
-                  )
+                ? const NoBranchSelectedState()
                 : _PatientsList(branchId: effectiveBranchId, query: query),
           ),
         ],

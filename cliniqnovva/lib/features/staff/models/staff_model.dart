@@ -5,7 +5,7 @@
 class StaffModel {
   const StaffModel({
     required this.id,
-    required this.organizationId,
+    required this.clinicId,
     required this.branchId,
     required this.name,
     required this.role,
@@ -17,10 +17,12 @@ class StaffModel {
     this.departmentIds = const [],
     this.schedule = const [],
     this.blockedSlots = const [],
+    this.averageRating = 0,
+    this.reviewCount = 0,
   });
 
   final String id;
-  final String organizationId;
+  final String clinicId;
   final String branchId;
   final String name;
   final String role;
@@ -35,10 +37,15 @@ class StaffModel {
   final List<DoctorScheduleEntry> schedule;
   final List<BlockedSlot> blockedSlots;
 
+  /// Part 16 Task 2 — cached, server-recalculated on every review write;
+  /// never live-computed here.
+  final double averageRating;
+  final int reviewCount;
+
   factory StaffModel.fromJson(Map<String, dynamic> json) {
     return StaffModel(
       id: json['id'] as String,
-      organizationId: json['organizationId'] as String? ?? '',
+      clinicId: json['clinicId'] as String? ?? '',
       branchId: json['branchId'] as String? ?? '',
       name: json['name'] as String? ?? '',
       role: json['role'] as String? ?? '',
@@ -66,6 +73,8 @@ class StaffModel {
               ?.map((e) => BlockedSlot.fromJson(e as Map<String, dynamic>))
               .toList() ??
           const [],
+      averageRating: (json['averageRating'] as num?)?.toDouble() ?? 0,
+      reviewCount: (json['reviewCount'] as num?)?.toInt() ?? 0,
     );
   }
 }

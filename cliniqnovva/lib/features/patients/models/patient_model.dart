@@ -67,7 +67,7 @@ class PatientLocation {
 class PatientModel {
   const PatientModel({
     required this.id,
-    required this.organizationId,
+    required this.clinicId,
     required this.branchId,
     required this.name,
     required this.phone,
@@ -81,10 +81,14 @@ class PatientModel {
     this.lastVisitDate,
     this.medicalRecords,
     this.documents,
+    this.appointmentCount,
+    this.invoiceCount,
+    this.isActive = true,
+    this.mergedInto,
   });
 
   final String id;
-  final String organizationId;
+  final String clinicId;
   final String branchId;
   final String name;
   final String phone;
@@ -104,10 +108,21 @@ class PatientModel {
   final List<MedicalRecordModel>? medicalRecords;
   final List<PatientDocumentModel>? documents;
 
+  /// Server-computed, same role gate as [medicalRecords]/[documents] (Part
+  /// 10 Task 2 — the merge tool's side-by-side count preview).
+  final int? appointmentCount;
+  final int? invoiceCount;
+
+  /// False once this record has been merged away into another patient
+  /// (Part 10 Task 2 — deactivated, never deleted). [mergedInto] then names
+  /// the surviving patient's id.
+  final bool isActive;
+  final String? mergedInto;
+
   factory PatientModel.fromJson(Map<String, dynamic> json) {
     return PatientModel(
       id: json['id'] as String,
-      organizationId: json['organizationId'] as String? ?? '',
+      clinicId: json['clinicId'] as String? ?? '',
       branchId: json['branchId'] as String? ?? '',
       name: json['name'] as String? ?? '',
       phone: json['phone'] as String? ?? '',
@@ -146,6 +161,10 @@ class PatientModel {
                 )
                 .toList()
           : null,
+      appointmentCount: json['appointmentCount'] as int?,
+      invoiceCount: json['invoiceCount'] as int?,
+      isActive: json['isActive'] as bool? ?? true,
+      mergedInto: json['mergedInto'] as String?,
     );
   }
 
@@ -183,4 +202,23 @@ class DuplicateMatch {
         phone: json['phone'] as String? ?? '',
         nationalId: json['nationalId'] as String?,
       );
+}
+
+/// Part 10 Task 1 — POST /api/patients now returns one of two shapes: the
+/// created patient, or a 409 "possible duplicate" with matches instead of
+/// creating. This is the outcome of [PatientsNotifier.register] so the
+/// caller can branch on it directly rather than catching a special
+/// exception type.
+sealed class PatientCreateResult {
+  const PatientCreateResult();
+}
+
+class PatientCreated extends PatientCreateResult {
+  const PatientCreated(this.patient);
+  final PatientModel patient;
+}
+
+class PatientPossibleDuplicate extends PatientCreateResult {
+  const PatientPossibleDuplicate(this.matches);
+  final List<DuplicateMatch> matches;
 }
