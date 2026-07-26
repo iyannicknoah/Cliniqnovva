@@ -36,7 +36,7 @@ These conventions apply across every module and every collection in the system �
 | **Address structure** | Province → District → Sector → Cell → Village, not a flat free-text address. Province/District required; Sector/Cell/Village optional refinement. |
 | **Language** | Kinyarwanda, English, and French (Rwanda's official languages; Swahili optional as a 4th). Language picker at first launch. All UI text built from translation keys from day one — never hardcoded strings. |
 | **Timezone** | `Africa/Kigali` (UTC+2, no daylight saving). Store all timestamps in UTC, display in this timezone. |
-| **Public holidays** | Rwandan public holidays (Liberation Day, Umuganura, Genocide Memorial period, Independence Day, Christmas, Eid dates, etc.) stored and configurable so schedules auto-block them instead of relying on staff memory. |
+| **Public holidays** | ~~Rwandan public holidays... stored and configurable so schedules auto-block them~~ — reversed 2026-07-26 (explicit user instruction): Rwandan clinics operate on public holidays like any other day, so booking is never auto-blocked on one. See section 6.5. |
 | **Umuganda** | Mandatory community work on the last Saturday of each month affects operating hours for many businesses. Configurable per branch (e.g. "opens at 12pm on Umuganda Saturdays"). |
 | **Health insurance context** | Many patients pay through **Mutuelle de Santé** (community-based insurance), **RSSB** medical schemes, or private insurers rather than 100% cash. Invoices must record the insurance-covered portion separately from the cash-paid portion, even without integrating an actual insurer API (section 6.7). |
 | **Connectivity reality** | Not every patient has a smartphone or reliable data. The system must support **staff registering and booking on behalf of walk-in/non-app patients** (section 6.5A) — the Patient App is one channel in, not the only one. |
@@ -196,9 +196,39 @@ Each module lists: **Purpose**, **Functions**, **Roles Allowed**, **Conditions/V
 **Purpose:** Define when each doctor is bookable and drive real-time slot availability.
 **Functions:**
 - Set recurring weekly availability
+- Set a break (minutes) required between one appointment and the next
 - Block specific dates/times (leave, emergencies)
-- Auto-block Rwandan public holidays and respect Umuganda-Saturday overrides
+- Respect Umuganda-Saturday overrides
 - View calendar of upcoming appointments per doctor
+
+**2026-07-26 addition (explicit user instruction) — per-doctor appointment
+buffer:** `doctors/{uid}.breakMinutes` (integer, default 0), set on the same
+"Weekly schedule" card as the recurring-availability editor
+(`_WeeklyScheduleSection` in `doctor_schedule_screen.dart`), saved together
+via the existing `PUT /staff/:id/schedule` endpoint (now
+`{schedule, breakMinutes}` instead of just `{schedule}`). `getAvailableSlots`
+in `appointments.service.js` pads every booked appointment AND every
+manually blocked slot by `breakMinutes` on both sides before checking a
+candidate slot against it (`overlapsWithBuffer`) — so e.g. a 60-min
+appointment at 2:00 with a 10-min break makes 3:10 the next real slot, not
+3:00. Padding both sides (not just after) means the gap holds regardless of
+which of two appointments got booked first. `book()` and `reschedule()`
+re-apply the same buffered check inside their transactions — never trust a
+slot list the client fetched moments earlier, same principle as the
+double-booking guard. See `backend/test/appointments.test.js` for the
+worked examples.
+
+**2026-07-26 reversal (explicit user instruction):** public holidays no
+longer auto-block booking — Rwandan clinics operate on public holidays same
+as any other day, so this line's original "auto-block Rwandan public
+holidays" is no longer accurate. The blocking check was removed from
+`effectiveScheduleWindows` in `backend/src/services/appointments.service.js`,
+and the "Public holidays" section (with its "Auto-blocked unless overridden"
+copy and per-holiday override toggle) was removed from the Doctor Schedule
+screen along with its now-dead frontend provider/model. The `publicHolidays`
+Firestore collection, its CRUD routes, and `branches.holidayOverrides` are
+left in place (harmless, unused) rather than torn out — no in-app UI ever
+wrote to them beyond the now-removed toggle.
 **Roles allowed:** Doctor (view own), Branch Admin/Receptionist (edit any doctor's schedule in their branch)
 **Conditions/Validation:**
 - Blocking a date/time that conflicts with existing bookings must flag them for staff review, never silently drop them
@@ -440,7 +470,8 @@ a merge," not a general audit trail.
 /doctors/{userId}                       // extends /users via same ID
     specialty, bio, departmentIds: [ ]
     schedule: [ { day, startTime, endTime, slotDurationMins } ]
-    blockedSlots: [ { date, startTime, endTime, reason } ]   // includes public holidays
+    breakMinutes                            // buffer required between appointments, default 0 (2026-07-26)
+    blockedSlots: [ { date, startTime, endTime, reason } ]
 /patients/{patientId}                   // extends /users via same ID
     nationalId (16-digit, optional)
     dateOfBirth, gender, emergencyContact, allergies, chronicConditions

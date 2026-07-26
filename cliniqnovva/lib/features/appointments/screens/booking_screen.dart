@@ -11,6 +11,7 @@ import '../../../shared/widgets/avatar_widget.dart';
 import '../../../shared/widgets/cliniqnovva_button.dart';
 import '../../../shared/widgets/cliniqnovva_text_field.dart';
 import '../../../shared/widgets/loading_widget.dart';
+import '../../../shared/widgets/searchable_dropdown.dart';
 import '../../auth/providers/access_control_provider.dart';
 import '../../departments/providers/departments_provider.dart';
 import '../../departments/providers/services_provider.dart';
@@ -169,7 +170,8 @@ class _BookingFormState extends ConsumerState<_BookingForm> {
 
   @override
   Widget build(BuildContext context) {
-    final effectiveBranchId = widget.branchId ?? ref.watch(activeBranchIdProvider);
+    final effectiveBranchId =
+        widget.branchId ?? ref.watch(activeBranchIdProvider);
 
     return Align(
       alignment: Alignment.topCenter,
@@ -277,9 +279,7 @@ class _BookingFormState extends ConsumerState<_BookingForm> {
                               ),
                             ),
                             child: Text(
-                              _date == null
-                                  ? 'Pick a date'
-                                  : _isoDate(_date!),
+                              _date == null ? 'Pick a date' : _isoDate(_date!),
                               style: TextStyle(
                                 color: _date == null
                                     ? context.appSubtext
@@ -311,9 +311,7 @@ class _BookingFormState extends ConsumerState<_BookingForm> {
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
                       color: AppColors.pillRedBg,
-                      borderRadius: BorderRadius.circular(
-                        AppTheme.inputRadius,
-                      ),
+                      borderRadius: BorderRadius.circular(AppTheme.inputRadius),
                     ),
                     child: Text(
                       _error!,
@@ -446,10 +444,7 @@ class _PatientPicker extends ConsumerWidget {
                                   ),
                                   child: Row(
                                     children: [
-                                      AvatarWidget(
-                                        firstName: p.name,
-                                        size: 28,
-                                      ),
+                                      AvatarWidget(firstName: p.name, size: 28),
                                       const SizedBox(width: 10),
                                       Expanded(
                                         child: Column(
@@ -576,15 +571,12 @@ class _DepartmentAndService extends ConsumerWidget {
                   final servicesAsync = ref.watch(servicesProvider(branchId));
                   return servicesAsync.when(
                     loading: () => const LoadingWidget(),
-                    error: (e, _) => Text(
-                      '$e',
-                      style: TextStyle(color: context.appSubtext),
-                    ),
+                    error: (e, _) =>
+                        Text('$e', style: TextStyle(color: context.appSubtext)),
                     data: (services) {
                       final options = services
                           .where(
-                            (s) =>
-                                s.departmentId == departmentId && s.isActive,
+                            (s) => s.departmentId == departmentId && s.isActive,
                           )
                           .toList();
                       final selected = options
@@ -600,9 +592,7 @@ class _DepartmentAndService extends ConsumerWidget {
                                 ? 'No services in this department'
                                 : 'Select service',
                             items: options.map((s) => s.id).toList(),
-                            itemLabels: {
-                              for (final s in options) s.id: s.name,
-                            },
+                            itemLabels: {for (final s in options) s.id: s.name},
                             onChanged: onServiceChanged,
                           ),
                           if (selected.isNotEmpty) ...[
@@ -663,7 +653,7 @@ class _DoctorPicker extends ConsumerWidget {
             style: TextStyle(color: context.appSubtext),
           );
         }
-        return LabeledDropdown(
+        return SearchableDropdown(
           label: 'Doctor',
           value: doctorId,
           hint: 'Select doctor',

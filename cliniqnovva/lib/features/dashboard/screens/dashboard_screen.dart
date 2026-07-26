@@ -8,24 +8,20 @@ import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/theme_ext.dart';
-import '../../../shared/widgets/app_icon.dart';
-import '../../../shared/widgets/avatar_widget.dart';
 import '../../../shared/widgets/cliniqnovva_button.dart';
 import '../../../shared/widgets/cliniqnovva_card.dart';
 import '../../../shared/widgets/empty_state.dart';
 import '../../../shared/widgets/loading_widget.dart';
 import '../../../shared/widgets/metric_card.dart';
 import '../../appointments/providers/appointments_provider.dart';
+import '../../appointments/screens/appointments_screen.dart' show AppointmentsList;
 import '../../auth/providers/access_control_provider.dart';
 import '../../billing/providers/invoices_provider.dart';
-import '../../chat/providers/chats_provider.dart';
+import '../../clinics/providers/branches_provider.dart' show showAllBranchesProvider;
 import '../../departments/providers/departments_provider.dart';
 import '../../departments/providers/services_provider.dart';
 import '../../departments/widgets/branch_selector.dart';
-import '../../inventory/providers/inventory_provider.dart';
-import '../../patients/providers/patients_provider.dart';
 import '../../reports/providers/reports_provider.dart';
-import '../../reviews/providers/reviews_provider.dart';
 import '../../super_admin/widgets/payment_history_panel.dart' show formatRwf;
 
 String _todayIso() {
@@ -56,6 +52,12 @@ class DashboardScreen extends ConsumerWidget {
           final isOrgAdmin = role == AppConstants.roleClinicAdmin;
           final ownBranchId = data?['branchId'] as String?;
           final branchId = isOrgAdmin ? ref.watch(activeBranchIdProvider) : ownBranchId;
+          final isAllBranches = isOrgAdmin && ref.watch(showAllBranchesProvider);
+          final canManage = [
+            AppConstants.roleClinicAdmin,
+            AppConstants.roleBranchAdmin,
+            AppConstants.roleReceptionist,
+          ].contains(role);
 
           return Padding(
             padding: const EdgeInsets.all(40),
@@ -75,7 +77,7 @@ class DashboardScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 24),
                 Expanded(
-                  child: branchId == null
+                  child: branchId == null && !isAllBranches
                       ? EmptyState(
                           icon: AppIcons.clinics,
                           message: isOrgAdmin
@@ -83,7 +85,10 @@ class DashboardScreen extends ConsumerWidget {
                               : 'empty_no_branch'.tr(),
                         )
                       : SingleChildScrollView(
-                          child: _DashboardBody(branchId: branchId),
+                          child: _DashboardBody(
+                            branchId: isAllBranches ? null : branchId,
+                            canManage: canManage,
+                          ),
                         ),
                 ),
               ],
@@ -96,9 +101,10 @@ class DashboardScreen extends ConsumerWidget {
 }
 
 class _DashboardBody extends ConsumerWidget {
-  const _DashboardBody({required this.branchId});
+  const _DashboardBody({required this.branchId, required this.canManage});
 
-  final String branchId;
+  final String? branchId;
+  final bool canManage;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -109,51 +115,13 @@ class _DashboardBody extends ConsumerWidget {
       children: [
         _MetricsRow(branchId: branchId, today: today),
         const SizedBox(height: 20),
-        LayoutBuilder(
-          builder: (context, constraints) {
-            final isWide = constraints.maxWidth > 900;
-            final left = _TodayAppointmentsCard(branchId: branchId);
-            final right = _RevenueByDepartmentCard(branchId: branchId, today: today);
-            return isWide
-                ? IntrinsicHeight(
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Expanded(flex: 6, child: left),
-                        const SizedBox(width: 16),
-                        Expanded(flex: 4, child: right),
-                      ],
-                    ),
-                  )
-                : Column(children: [left, const SizedBox(height: 16), right]);
-          },
-        ),
+        _TodayAppointmentsCard(branchId: branchId, canManage: canManage),
         const SizedBox(height: 16),
         LayoutBuilder(
           builder: (context, constraints) {
             final isWide = constraints.maxWidth > 900;
-            final left = _RecentChatsCard(branchId: branchId);
+            final left = _RevenueByDepartmentCard(branchId: branchId, today: today);
             final right = const _QuickActionsCard();
-            return isWide
-                ? IntrinsicHeight(
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Expanded(child: left),
-                        const SizedBox(width: 16),
-                        Expanded(child: right),
-                      ],
-                    ),
-                  )
-                : Column(children: [left, const SizedBox(height: 16), right]);
-          },
-        ),
-        const SizedBox(height: 16),
-        LayoutBuilder(
-          builder: (context, constraints) {
-            final isWide = constraints.maxWidth > 900;
-            final left = _LowStockCard(branchId: branchId);
-            final right = _ReviewsNeedingReplyCard(branchId: branchId);
             return isWide
                 ? IntrinsicHeight(
                     child: Row(
@@ -178,7 +146,7 @@ class _DashboardBody extends ConsumerWidget {
 class _MetricsRow extends ConsumerWidget {
   const _MetricsRow({required this.branchId, required this.today});
 
-  final String branchId;
+  final String? branchId;
   final String today;
 
   @override
@@ -224,108 +192,38 @@ class _MetricsRow extends ConsumerWidget {
   }
 }
 
-/// Row 2 left (60%) — today's appointment list with status badges.
-class _TodayAppointmentsCard extends ConsumerWidget {
-  const _TodayAppointmentsCard({required this.branchId});
+/// Full-width "Today's Appointments" section (2026-07-25) — reuses the same
+/// Patient/Doctor/Date & time/Status/Actions table the Appointments screen's
+/// Today tab renders, Confirm/Reschedule/Cancel included, instead of the old
+/// compact time+name+status-dot list confined to 60% of the row.
+class _TodayAppointmentsCard extends StatelessWidget {
+  const _TodayAppointmentsCard({required this.branchId, required this.canManage});
 
-  final String branchId;
+  final String? branchId;
+  final bool canManage;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final apptsAsync = ref.watch(
-      appointmentsListProvider((branchId: branchId, doctorId: null, patientId: null, tab: 'today')),
-    );
-
+  Widget build(BuildContext context) {
     return CliniqnovvaCard(
       title: 'dashboard_metric_appointments_today'.tr(),
-      child: apptsAsync.when(
-        loading: () => const LoadingWidget(),
-        error: (e, _) => Text('$e', style: TextStyle(color: context.appSubtext)),
-        data: (appts) {
-          if (appts.isEmpty) {
-            return Text(
-              'Nothing on the books today yet.',
-              style: TextStyle(color: context.appSubtext),
-            );
-          }
-          final sorted = [...appts]..sort((a, b) => a.startTime.compareTo(b.startTime));
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: sorted
-                .take(8)
-                .map(
-                  (appt) => Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 6),
-                    child: Row(
-                      children: [
-                        SizedBox(
-                          width: 60,
-                          child: Text(appt.startTime, style: TextStyle(color: context.appSubtext, fontSize: 12.5)),
-                        ),
-                        Expanded(child: _PatientName(patientId: appt.patientId)),
-                        _StatusDot(status: appt.status),
-                      ],
-                    ),
-                  ),
-                )
-                .toList(),
-          );
-        },
+      child: AppointmentsList(
+        branchId: branchId,
+        doctorId: null,
+        tab: 'today',
+        canManage: canManage,
+        embedded: true,
       ),
     );
   }
 }
 
-class _PatientName extends ConsumerWidget {
-  const _PatientName({required this.patientId});
-
-  final String patientId;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final patientAsync = ref.watch(patientDetailProvider(patientId));
-    return Text(
-      patientAsync.valueOrNull?.name ?? '…',
-      overflow: TextOverflow.ellipsis,
-      style: TextStyle(color: context.appText, fontWeight: FontWeight.w500),
-    );
-  }
-}
-
-class _StatusDot extends StatelessWidget {
-  const _StatusDot({required this.status});
-
-  final String status;
-
-  static const _labels = {
-    'pending': 'Pending',
-    'confirmed': 'Confirmed',
-    'checkedIn': 'Checked In',
-    'completed': 'Completed',
-    'cancelled': 'Cancelled',
-  };
-
-  Color _color() => switch (status) {
-    'completed' => AppColors.brightGreen,
-    'cancelled' => AppColors.brightRed,
-    'confirmed' || 'checkedIn' => AppColors.pillTealText,
-    _ => AppColors.pillAmberText,
-  };
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      _labels[status] ?? status,
-      style: TextStyle(color: _color(), fontSize: 12, fontWeight: FontWeight.w600),
-    );
-  }
-}
-
-/// Row 2 right (40%) — revenue by department, bar chart.
+/// Pairs with Quick Actions (2026-07-25, briefly full width for one
+/// revision, now back to sharing a row — Reviews Needing Reply is the one
+/// that's full width now) — revenue by department, bar chart.
 class _RevenueByDepartmentCard extends ConsumerWidget {
   const _RevenueByDepartmentCard({required this.branchId, required this.today});
 
-  final String branchId;
+  final String? branchId;
   final String today;
 
   @override
@@ -432,64 +330,9 @@ class _RevenueByDepartmentCard extends ConsumerWidget {
   }
 }
 
-/// Row 3 left — recent chat threads needing a reply.
-class _RecentChatsCard extends ConsumerWidget {
-  const _RecentChatsCard({required this.branchId});
-
-  final String branchId;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final chatsAsync = ref.watch(chatsInboxStreamProvider(branchId));
-
-    return CliniqnovvaCard(
-      title: 'dashboard_recent_chats'.tr(),
-      child: chatsAsync.when(
-        loading: () => const LoadingWidget(),
-        error: (e, _) => Text('$e', style: TextStyle(color: context.appSubtext)),
-        data: (chats) {
-          if (chats.isEmpty) {
-            return Text(
-              'No conversations yet — they\'ll show up here once a patient reaches out.',
-              style: TextStyle(color: context.appSubtext),
-            );
-          }
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              ...chats.take(5).map(
-                (chat) => InkWell(
-                  onTap: () => context.go('/chat/${chat.id}'),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 6),
-                    child: Row(
-                      children: [
-                        Expanded(child: _PatientName(patientId: chat.patientId)),
-                        Expanded(
-                          flex: 2,
-                          child: Text(
-                            chat.lastMessage ?? 'No messages yet.',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(color: context.appSubtext, fontSize: 12.5),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 8),
-              CliniqnovvaButton.text(label: 'Open Chat Inbox', onPressed: () => context.go('/chat')),
-            ],
-          );
-        },
-      ),
-    );
-  }
-}
-
-/// Row 3 right — Quick Actions.
+/// Quick Actions — now pairs with Revenue by Department (2026-07-25, briefly
+/// paired with Reviews Needing Reply for one revision; Reviews is full width
+/// on its own row now, with a "View all" link instead).
 class _QuickActionsCard extends StatelessWidget {
   const _QuickActionsCard();
 
@@ -528,109 +371,3 @@ class _QuickActionsCard extends StatelessWidget {
   }
 }
 
-/// Row 4 left — low-stock alerts.
-class _LowStockCard extends ConsumerWidget {
-  const _LowStockCard({required this.branchId});
-
-  final String branchId;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final itemsAsync = ref.watch(inventoryListProvider(branchId));
-
-    return CliniqnovvaCard(
-      title: 'dashboard_low_stock'.tr(),
-      child: itemsAsync.when(
-        loading: () => const LoadingWidget(),
-        error: (e, _) => Text('$e', style: TextStyle(color: context.appSubtext)),
-        data: (items) {
-          final low = items.where((i) => i.needsReorder && i.isActive).toList();
-          if (low.isEmpty) {
-            return Row(
-              children: [
-                AppIcon(AppIcons.star, size: 16, color: AppColors.brightGreen),
-                const SizedBox(width: 8),
-                Text('Stock levels look healthy.', style: TextStyle(color: context.appSubtext)),
-              ],
-            );
-          }
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              ...low.take(6).map(
-                (item) => Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 5),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(item.name, style: TextStyle(color: context.appText)),
-                      ),
-                      Text(
-                        '${item.quantity} ${item.unit} left',
-                        style: const TextStyle(color: AppColors.pillAmberText, fontWeight: FontWeight.w600, fontSize: 12.5),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 8),
-              CliniqnovvaButton.text(label: 'Open Inventory', onPressed: () => context.go('/inventory')),
-            ],
-          );
-        },
-      ),
-    );
-  }
-}
-
-/// Row 4 right — recent reviews needing a reply.
-class _ReviewsNeedingReplyCard extends ConsumerWidget {
-  const _ReviewsNeedingReplyCard({required this.branchId});
-
-  final String branchId;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final reviewsAsync = ref.watch(reviewsListProvider(branchId));
-
-    return CliniqnovvaCard(
-      title: 'dashboard_reviews_needing_reply'.tr(),
-      child: reviewsAsync.when(
-        loading: () => const LoadingWidget(),
-        error: (e, _) => Text('$e', style: TextStyle(color: context.appSubtext)),
-        data: (reviews) {
-          final needsReply = reviews.where((r) => !r.isHidden && r.staffReply == null).toList();
-          if (needsReply.isEmpty) {
-            return Text('You\'re all caught up on reviews.', style: TextStyle(color: context.appSubtext));
-          }
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              ...needsReply.take(5).map(
-                (review) => Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 6),
-                  child: Row(
-                    children: [
-                      AvatarWidget(firstName: '?', size: 22),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          review.branchComment ?? review.doctorComment ?? '${review.branchRating}★ rating',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(color: context.appText, fontSize: 13),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 8),
-              CliniqnovvaButton.text(label: 'Open Reviews', onPressed: () => context.go('/reviews')),
-            ],
-          );
-        },
-      ),
-    );
-  }
-}

@@ -25,10 +25,12 @@ buttons, etc.) that reads `colorScheme.primary` automatically follows suit —
 don't reintroduce a colored accent as "primary" anywhere.
 
 **`AppColors.skyBlue` (`#38BDF8`) is the system's second primary color
-(2026-07-23)** — the one deliberate exception to "no color accent." Currently
-used for the Overview revenue chart (line + a more-transparent fill beneath
-it). Reach for this before introducing any other accent color; it isn't a
-per-chart one-off.
+(2026-07-23)** — the one deliberate exception to "no color accent." Used for
+the Overview revenue chart (line + a more-transparent fill beneath it),
+`AvatarWidget`'s ring (2026-07-25, was `context.appPrimary`), and every star
+rating + rating-distribution bar in the Reviews feature (2026-07-25, was
+`AppColors.pillAmberText`/amber). Reach for this before introducing any other
+accent color; it isn't a per-chart one-off.
 
 | Token | Value | Use |
 |---|---|---|
@@ -338,6 +340,367 @@ growth/trend chart rather than introducing a new chart style or color.
 
 ## Change log
 
+- **2026-07-26 (SearchableDropdown clears on focus, like a normal
+  dropdown)** — Explicit user instruction: clicking `SearchableDropdown`
+  (`shared/widgets/searchable_dropdown.dart`) was behaving like a plain
+  text field pre-filled with the current selection's label — the user had
+  to manually delete that text before typing would filter anything, unlike
+  a normal dropdown where clicking immediately shows every option. Fixed
+  in `_onFocusChange`: gaining focus now clears the controller (which
+  re-triggers `optionsBuilder` with an empty query, i.e. every option) —
+  losing focus without picking anything still reverts to the last
+  confirmed selection's label, unchanged from before.
+- **2026-07-26 (Per-doctor break-between-appointments buffer)** — Explicit
+  user instruction, confirmed via clarifying questions before building:
+  break minutes is one value per doctor (not per schedule-slot), and it
+  applies around manually blocked slots too, not just real appointments.
+  `/doctor-schedule`'s "Weekly schedule" card (`_WeeklyScheduleSection` in
+  `doctor_schedule_screen.dart`) gained a `CliniqnovvaTextField` labeled
+  "Break between appointments (minutes)" between the header row and the
+  slot list, 260px wide, same `IgnorePointer(ignoring: !canEdit)` read-only
+  pattern as the rest of the card, saved together with the schedule via the
+  same "Save schedule" button (one PUT call, `{schedule, breakMinutes}`).
+  Backend: `getAvailableSlots`, `book()`, and `reschedule()` in
+  `appointments.service.js` all now pad every booked appointment and
+  blocked slot by the doctor's `breakMinutes` on both sides
+  (`overlapsWithBuffer`) before checking a candidate slot against it — a
+  60-min appointment at 2:00 with a 10-min break makes 3:10 the next real
+  slot, not 3:00, per the request's own example. Covered by two new backend
+  tests in `appointments.test.js`. See `docs/technical-spec.md` section 6.5
+  and the `/doctors/{userId}` field list for the corresponding spec note.
+- **2026-07-26 (Public holidays no longer block booking; the section is
+  removed from Doctor Schedule)** — Explicit user instruction: Rwandan
+  clinics operate on public holidays like any other day, so the
+  "Auto-blocked for booking unless overridden for this branch" behavior
+  (and the section explaining/toggling it) was wrong for this market.
+  Backend: removed the holiday check from `effectiveScheduleWindows`
+  (`backend/src/services/appointments.service.js`) — a doctor's normal
+  weekly schedule now applies on a public holiday same as any other day;
+  Umuganda-Saturday clipping is untouched. Frontend: removed the whole
+  "Public holidays" card from `/doctor-schedule` (`_PublicHolidaysSection`
+  in `doctor_schedule_screen.dart`) along with its now-fully-unused
+  `publicHolidaysProvider`/`PublicHolidayModel` files (deleted, zero
+  remaining references). Left in place, deliberately: the `publicHolidays`
+  Firestore collection, its CRUD routes, and `branches.holidayOverrides` —
+  no in-app UI ever created a holiday (only read the list + toggled the
+  override, both now gone), so this is inert rather than reachable dead
+  code, and removing a whole collection/route set wasn't what was asked.
+  See `docs/technical-spec.md` section 6.5 for the corresponding spec note.
+- **2026-07-26 (Doctor pickers are now searchable, system-wide)** — Explicit
+  user instruction: the doctor-selection dropdown must be type-to-filter,
+  everywhere it appears, not just on `/doctor-schedule`. New shared
+  component `SearchableDropdown` (`shared/widgets/searchable_dropdown.dart`)
+  — same optional-label-above-a-bordered-field shape as the existing
+  `LabeledDropdown` (`patient_form_fields.dart`), but built on
+  `RawAutocomplete` (no new package) so typing filters the list instead of
+  only scrolling it. Suffix icon is `AppIcon(AppIcons.search)` — Heroicons,
+  never raw `Icons.search`. There were exactly two doctor pickers in the
+  whole app and both now use it: `doctor_schedule_screen.dart`'s
+  `_DoctorPicker` (was a bare `DropdownButtonFormField`, no label — kept
+  label-less) and `booking_screen.dart`'s `_DoctorPicker` (was
+  `LabeledDropdown`, kept its `label: 'Doctor'`). `LabeledDropdown` itself
+  is untouched and still used as-is for every non-doctor dropdown (Province/
+  District, Gender, Department, Service) — those didn't need search and
+  weren't part of the request.
+- **2026-07-26 (Staff row tap opens a details popup)** — Explicit user
+  instruction: tapping a `/staff` table row now opens a details dialog
+  (`showStaffDetailsDialog`, new `staff_details_dialog.dart`) — same
+  `showGeneralDialog` fade+scale shell as the existing Add/Edit Staff panel
+  (`AppTheme.cardRadius`, `context.appCard`/`appBorder`, close `AppIcon` top
+  right). Shows name + `StatusBadge`, then Role/Specialty/Phone/Email as
+  label-left/value-right rows (same shape as `branches_screen.dart`'s
+  `_InfoRow`). For `canManage` roles, two buttons at the bottom: "Edit"
+  (filled, closes the dialog and opens the existing edit panel) and
+  "Deactivate"/"Activate" (`.text()`, `AppColors.pillRedText`/`pillGreenText`
+  — the same semantic-color-on-a-text-button convention as "Unarchive"/
+  "Delete clinic" on the Super Admin clinic detail screen). The row's "..."
+  menu (`RowActionsMenu`, Edit/Deactivate) is untouched — this is an
+  additional entry point onto the same actions, not a replacement.
+- **2026-07-26 (`CliniqnovvaTextField` gains a `prefixIcon` slot; Staff gets
+  a search field)** — Explicit user instruction: `/staff` now has a
+  `CliniqnovvaTextField` (label "Search", same styling as the existing
+  Patients/Clinics search fields) filtering the table client-side by name,
+  role, specialty, or status (Active/Inactive), case-insensitive substring
+  match. It sits in its own row under the title, search field on the left
+  (`Expanded`) and "+ Add Staff" sharing that row on the right — the button
+  moved out of the title row into this one; the title row now only has
+  "Staff" + the branch selector. New component-level addition: `CliniqnovvaTextField`
+  takes an optional `prefixIcon`, rendered via `InputDecoration.prefixIcon`
+  same as the existing `suffixIcon`. Staff's field passes `AppIcon(AppIcons.search)`
+  (already cataloged, previously unused) at 18px/`context.appSubtext` — per
+  the Heroicons-only rule, never a raw `Icons.search`. The existing
+  Patients/Clinics search fields are untouched (not asked for) and still
+  have no icon — a candidate for a follow-up consistency pass, not done here.
+- **2026-07-26 (Staff table row drops the name avatar)** — Explicit user
+  instruction: the initials-circle `AvatarWidget` in front of the staff
+  member's name on `/staff`'s table (`staff_screen.dart`) is removed; the
+  row now shows just the name text, no other row's cell changed. `AvatarWidget`
+  itself is untouched and still used everywhere else (Patients, Reviews,
+  Doctor Schedule, etc.) — this was a Staff-table-only removal, not a
+  component change.
+- **2026-07-26 (`.text()` button now theme-aware, fixing invisible
+  Dark-mode text buttons)** — `CliniqnovvaButton.text()` defaulted its
+  color to `AppColors.textPrimary` (`#0B2545`, a light-mode-only navy per
+  this doc's own token table), so any `.text()` button that didn't pass an
+  explicit `color` was near-invisible on a dark background — reported via
+  the Dashboard's "Run Reports" button. Same root cause as the 2026-07-23
+  login-screen fix below, just in a shared component instead of one screen.
+  Fixed at the component level: the default now resolves the same way the
+  filled variant already did (`isDark ? Colors.white : Colors.black`), so
+  every unstyled `.text()` button across the app — Reports' Export CSV/PDF,
+  the empty-state action link, "+ Register new" on Booking, "Cancel" on
+  Adjust Stock, "Change" on Dispense, "View as Clinic Admin" — is fixed at
+  once, not just the one that got reported.
+- **2026-07-26 (Dashboard joins the combined "All branches" view)** — Explicit
+  user instruction reversing part of the same-day entry below: picking "All
+  branches" on `/dashboard` no longer shows the "Pick a branch above to get
+  started" empty state. It now renders the same metrics/appointments/revenue
+  layout with every branch's data combined — the metric row, Today's
+  Appointments table, and Revenue by Department chart all query with
+  `branchId: null`, which their underlying providers already treated as
+  "every branch in the org" (same convention Billing/Staff/Inventory/etc.
+  already used). No new visual pattern; same cards/chart, org-wide numbers.
+- **2026-07-26 (BranchSelector gains an "All branches" option)** — Explicit
+  user instruction: a Clinic Admin's shared branch-filter dropdown (used
+  across Dashboard, Departments, Services, Staff, Doctor Schedule, Patients,
+  Merge Patients, Appointments, Billing, Inventory, Reports, Reviews, Popular
+  Clinics, and Register Patient) now lists "All branches" above the real
+  branch options, same dropdown styling, no new visual pattern. Selecting it
+  shows every branch's data combined instead of forcing a single-branch pick.
+  Screens that are inherently single-branch (Booking, Doctor Schedule's
+  actual schedule editor, Popular Clinics' rank-among-siblings view,
+  Inventory's Dispense tab) keep requiring one specific branch — "All"
+  behaves there exactly like "nothing chosen yet" always has.
+- **2026-07-25 (Clinic "Delete" archives + auto-purges after 14 days,
+  instead of the old branch-count-gated hard delete)** — Explicit user
+  instruction, replacing two earlier same-day entries below (the
+  branch-count restriction and the original hard-delete implementation).
+  `clinics.service.js#archive` now backs "Delete clinic": sets
+  `isActive: false` + `isArchived: true` + `archivedAt` on the clinic and
+  every branch under it — nothing is removed, fully reversible via
+  `unarchive()`. A new daily cron job (`jobs/purgeArchivedClinics.job.js`,
+  02:30 Africa/Kigali, same `node-cron` pattern as `popularityRecalc.job.js`)
+  calls `permanentlyDeleteArchivedClinics()`, which finds every clinic
+  archived more than `PURGE_AFTER_DAYS` (14) ago and cascade-deletes it via
+  `cascadeDeleteClinic()` — branches, staff/doctor Firestore docs AND
+  Firebase Auth accounts, patients (+ their `documents` subcollection
+  metadata — the underlying Cloudflare R2 files are NOT deleted, a known
+  gap noted in the code), medical records, appointments, invoices,
+  departments, services, reviews, inventory (+ adjustment log),
+  publicHolidays, queueCounters, chats (+ `messages` subcollection), and
+  patientMergeLogs, before the clinic doc itself. `archivedAt` is filtered
+  in JS rather than a Firestore range query, so no new composite index was
+  needed. Frontend: `Clinic` gained `isArchived`/`archivedAt`/
+  `daysUntilPurge` (replacing the old `canDelete` getter entirely — deletion
+  now works regardless of what's linked, since nothing is destroyed
+  immediately). Clinics list gained an "Archived (N)" MetricCard and a
+  "Show archived" toggle revealing archived rows with an
+  "Archived — Nd left" red `StatusBadge` and a single "Unarchive"
+  `RowActionsMenu` action instead of View/Suspend/Delete. Clinic detail
+  page gained a red banner (`AppColors.pillRedBg`/`pillRedText`, matching
+  the warning-banner pattern `support_view_screen.dart` already
+  established) with the days-left count and an inline "Unarchive" button
+  when `org.isArchived`; Save changes/Suspend/View as Clinic
+  Admin/+ Create branch all hide in that state, since there's nothing
+  useful to do to an archived clinic except restore or wait it out.
+- **2026-07-25 (+ Add Branch is now two steps: branch, then its admin)** —
+  Explicit user instruction. Creating a branch now immediately opens the
+  existing "+ Add Staff" panel a second time, pre-locked to the Branch
+  Admin role, so a new branch is never left without one. No new UI
+  component — `showStaffPanel` (`add_edit_staff_panel.dart`) gained an
+  optional `lockedRole` param: when set, the title becomes "Add {role
+  label}" (e.g. "Add Branch Admin"), the role dropdown shows only that one
+  role and is disabled (same visual treatment Edit mode already used for
+  a fixed role), and the doctor-only fields stay hidden exactly as they
+  already did for any non-Doctor role. Dismissible like every other
+  panel — closing it doesn't undo the branch, it just skips assigning an
+  admin right now (can still be done later from the Staff screen once
+  Branch Admin creation is exposed there too — currently only reachable
+  through this chained step). Backend: `staff.service.js` now accepts
+  `branch_admin` as a creatable/listable role — gated to Clinic
+  Admin/Super Admin callers, one per branch, so the new admin shows up in
+  that branch's own Staff list with the "Branch Admin" role badge like any
+  other staff member (`roleLabel()` already mapped this role — no
+  frontend display change needed there).
+- **2026-07-25 (Today's Appointments card border restored)** — Explicit
+  user instruction reverting the entry two below: the Dashboard's Today's
+  Appointments card no longer passes `showBorder: false` — it's back to
+  the default bordered `CliniqnovvaCard` like every other card. The
+  `showBorder` flag itself stays on `CliniqnovvaCard` (harmless, defaults
+  `true`, no current caller uses `false`) in case a future card needs it.
+- **2026-07-25 (Dashboard's Reviews section removed)** — Explicit user
+  instruction: the Reviews Needing Reply card is gone from `/dashboard`
+  entirely, along with `_ReviewsNeedingReplyCard`/`_NeedsReplyPreviewCard`/
+  `_relativeDate` and the now-unused `patients_provider.dart`/
+  `reviews/models/review_model.dart`/`reviews/providers/reviews_provider.dart`/
+  `reviews/widgets/review_display.dart` imports. Quick Actions now pairs
+  with Revenue by Department as the last row on the Dashboard. The shared
+  `review_display.dart` (`RatingSummaryHeader`/`SimpleReviewCard`/sample
+  data) stays — the real Reviews page (`reviews_screen.dart`) still uses it.
+- **2026-07-25 (Dashboard's Today's Appointments card has no border;
+  CliniqnovvaCard gets a `showBorder` opt-out)** — Explicit user
+  instruction: `CliniqnovvaCard` now takes `showBorder` (default `true`,
+  every existing card keeps its border unchanged). The Dashboard's Today's
+  Appointments card is the first (and so far only) caller passing
+  `showBorder: false` — background and 18px radius stay, the
+  `Border.fromBorderSide(...)` is just `null` instead.
+- **2026-07-25 (RowActionsMenu: hover truly gone + left-aligned under
+  "Actions")** — Explicit user instruction, correcting the two entries
+  below: neither fix actually worked as intended once seen live.
+  (1) **Hover**: `PopupMenuButton`'s `icon:` path wraps in a Material 3
+  `IconButton`, which paints its own grey hover/focus overlay from
+  `IconButtonThemeData` and **ignores** `ThemeData.hoverColor` entirely —
+  the earlier "wrap in a transparent `Theme`" fix only ever reached the
+  dropdown's own items (which use a plain `InkWell`), never the trigger
+  button itself. Switched to `PopupMenuButton(child: …)` instead of
+  `icon: …` — per `popup_menu.dart` source, the `child` path wraps in a
+  plain `InkWell` too, which *does* respect the ambient `Theme`, so the
+  same transparent-`Theme` wrap now actually removes the hover fill on the
+  "⋯" trigger. (2) **Alignment**: wrapping both the icon and the empty-state
+  "—" in a fixed 40×40 `SizedBox` didn't work either — `Expanded`
+  (`Flexible` with `FlexFit.tight`) forces its child to the *full* column
+  width on the main axis regardless of the `SizedBox`'s requested width, so
+  the icon was centering within the whole cell, not a 40px box. Replaced
+  with `Align(alignment: Alignment.centerLeft)`, which gives its child
+  loose constraints and positions it at the child's own natural size — now
+  both the icon and "—" render at their natural (small) size, left-edge
+  flush with the "Actions" header text above them.
+- **2026-07-25 (RowActionsMenu: empty state lines up with the "⋯" icon)** —
+  Explicit user instruction: a row with no actions used to render a plain
+  left-aligned `Text('—')` while a row with actions rendered the "⋯" icon
+  button (which has its own internal padding) — the two didn't sit in the
+  same column. `RowActionsMenu` now owns both states itself: an empty
+  `actions` list renders a centered "—" inside the same fixed
+  `_kActionsCellSize` (40×40) box the icon button is also wrapped in, so
+  every row's Actions cell lines up in one vertical line regardless of
+  whether that row has actions. `doctor_today_screen.dart` and
+  `appointments_screen.dart`'s `_ActionsCell` no longer branch on
+  `actions.isEmpty` themselves — they just always call `RowActionsMenu`,
+  passing an empty list when there's nothing to show.
+- **2026-07-25 (RowActionsMenu: no hover tint on dropdown items)** —
+  Explicit user instruction, follow-up to the row-actions-dropdown entry
+  below: `RowActionsMenu`'s dropdown items no longer show Material's
+  default hover/highlight/splash tint. Implemented by wrapping the
+  `PopupMenuButton` in a local `Theme` with `hoverColor`/`highlightColor`/
+  `splashColor` all `Colors.transparent` — `PopupMenuButton` captures the
+  ambient `Theme` into the overlay route it opens, so this reaches the
+  dropdown items themselves, not just the "⋯" button.
+- **2026-07-25 (Table rows taller + row actions moved to a "⋯" dropdown,
+  system-wide)** — Explicit user instruction, two reference screenshots
+  (a taller Catalog row; a small "⋯" dropdown with Edit/Delete). (1)
+  `CliniqnovvaTableRow`'s vertical padding grew 16→26px — since every table
+  in the app shares this one component, every row got taller in one edit.
+  (2) New shared `shared/widgets/row_actions_menu.dart`: `RowActionsMenu`
+  (a `PopupMenuButton` behind `AppIcons.moreHoriz`, `context.appCard`
+  background, `context.appBorder` outline, 10px radius) + `RowAction`
+  (`label`, `onTap`, optional `isDestructive` → `AppColors.brightRed` text).
+  Renders nothing if the action list is empty, same as the inline-buttons
+  row it replaces did. Rolled out everywhere a table had a row of
+  inline `CliniqnovvaButton.text`/`IconButton` actions: Super Admin
+  Clinics (View/Suspend/Delete), Staff (Edit/Deactivate), Branches
+  (Edit/Deactivate), Inventory (Edit/Adjust/Deactivate), Services
+  (Edit/Deactivate/Delete), Departments (Rename/Deactivate/Delete),
+  Doctor Today (Mark Complete), and the shared `AppointmentsList`
+  (Confirm/Check-In/Mark Complete/Reschedule/Cancel — the biggest one,
+  used by both the Appointments screen and the Dashboard). One visual
+  regression accepted as part of this: the "Has services"/"Has history"/
+  "clinic has branches" muted-tooltip-label pattern (2026-07-23/24 entries
+  below) that explained why Delete was blocked is gone — a blocked delete
+  now just doesn't appear in the menu at all, with no inline reason shown.
+  Tables with no per-row action buttons (Patients, Billing/Invoices,
+  clinic detail's Branches sub-table, Nurse Today) were left untouched, as
+  was Doctor Schedule's weekly-schedule editor (an add/remove-row editing
+  UI, not a static data table with an Actions column — a single delete
+  icon-tap suits it better than a menu).
+- **2026-07-25 (Dashboard's Reviews card now mirrors the real Reviews
+  page)** — Explicit user instruction, follow-up to the Reviews redesign
+  below: the shared bits (`ReviewStarRow`, `ReviewDistributionRow`,
+  `RatingSummaryHeader`, `SimpleReviewCard`, the `sample*` data constants)
+  moved out of `reviews_screen.dart` into a new
+  `features/reviews/widgets/review_display.dart`, so both the Reviews page
+  and the Dashboard's "Reviews Needing Reply" card render the identical
+  rating-summary-header + distribution-bars + comment-first-card look
+  instead of two designs drifting apart. `RatingSummaryHeader` takes an
+  `asCard` flag (`true` on the Reviews page — its own `CliniqnovvaCard`;
+  `false` on the Dashboard — embedded as plain content inside the
+  Dashboard's own card, avoiding a card-inside-a-card). Same sample-data
+  fallback (4.8 / 1.1K ratings / three sample cards) when the branch has
+  zero reviews, same "Sample preview" labeling.
+- **2026-07-25 (Reviews page redesigned + sky blue everywhere in Reviews)**
+  — Explicit user instruction, screenshot-driven. `/reviews`
+  (`reviews_screen.dart`) now opens with a rating-summary `CliniqnovvaCard`:
+  big average rating + "`N`K ratings"/"`N` rating(s)" + a star row on the
+  left, the 5/4/3/2/1 distribution bars (`_DistributionRow`, new) on the
+  right. Below it, a Rating filter dropdown (All/5..1 stars) and a Filter
+  by patient dropdown (built from the unique patient IDs in the branch's
+  own review list, names resolved via `patientDetailProvider` same as the
+  cards already did) — both filter the real list client-side, no new
+  endpoint. `_StarRow` (both here and `doctor_reviews_screen.dart`'s own
+  copy) changed from `AppColors.pillAmberText`/amber to `AppColors.skyBlue`
+  for filled stars — explicit instruction: stars and the distribution bars
+  both use the system's one sky-blue accent, never the black/white
+  "primary", across every reviews screen. Added a sample-data fallback
+  (`_sampleAverageRating` 4.8 / `_sampleRatingCount` 1100 /
+  `_sampleDistribution` / `_sampleReviewCards`, matching the reference
+  screenshot's numbers) shown only when a branch has zero reviews — same
+  "Sample preview" labeling convention as the Dashboard's Reviews card.
+  `CliniqnovvaCard` gained an optional `trailing` widget parameter
+  (right-aligned next to `title`, ignored if `title` is null) — first used
+  by this page's "View all" link on the Dashboard's Reviews card (see the
+  Dashboard entry below); every other `CliniqnovvaCard` call site is
+  unaffected since `trailing` defaults to null.
+- **2026-07-25 (Dashboard: Revenue+Quick Actions combined, Reviews full
+  width with "View all")** — Explicit user instruction. Revenue by
+  Department and Quick Actions now share one row again (briefly full-width
+  solo for one revision each). Reviews Needing Reply is now full width,
+  standalone, with a "View all" text link on the title row (via
+  `CliniqnovvaCard`'s new `trailing` param) linking to `/reviews`, replacing
+  the old "Open Reviews" button that sat at the bottom of the card's list.
+- **2026-07-25 (Avatar ring is now sky blue system-wide)** — Explicit user
+  instruction: `AvatarWidget`'s 1.5px circular ring (`avatar_widget.dart`)
+  was `context.appPrimary` (black in light mode, white in dark mode) — now
+  hardcoded to `AppColors.skyBlue`, the system's one deliberate accent color
+  (see Colors section above, previously only used for the Overview revenue
+  chart). Since `AvatarWidget` is the single shared avatar component used
+  everywhere a person's initials-circle appears (patient booking flow,
+  reviews, dashboard, etc.), this one-file change applies system-wide with
+  no other edits needed. `theme_ext.dart` import dropped from the file —
+  nothing else in it used `context.*`.
+- **2026-07-25 (Dashboard: Recent Chats/Low Stock removed, Revenue full
+  width, sample reviews)** — Explicit user instruction, follow-up to the
+  Today's Appointments change below. Removed the "Recent Chats" card
+  (`_RecentChatsCard`) and the "Low Stock" card (`_LowStockCard`) from
+  `/dashboard` entirely — along with their now-unused `_PatientName` helper
+  and `chats_provider.dart`/`inventory_provider.dart`/
+  `patients_provider.dart`/`app_icon.dart` imports. Revenue by Department is
+  now its own full-width row (was the right 40% of a row shared with Recent
+  Chats) and its chart height grew 220→280 to fill the extra width better.
+  Reviews Needing Reply now pairs with Quick Actions (was paired with Low
+  Stock) — Reviews on the left, Quick Actions on the right, per explicit
+  instruction on left/right placement. Reviews Needing Reply also gained a
+  sample-data fallback (`_sampleReviews`, 3 hardcoded name/rating/comment
+  tuples) shown — clearly labeled "Sample preview" in italic — only when
+  there are zero real reviews needing a reply, so the card's look can be
+  previewed without waiting for real review data. Sample rows are never
+  mixed with real ones; the moment a real review needing a reply exists,
+  the sample block disappears entirely.
+- **2026-07-25 (Dashboard's "Today's Appointments" is now the full
+  Patient/Doctor/Date & time/Status/Actions table)** — Explicit user
+  instruction: the compact 60%-width time+name+status-dot list on
+  `/dashboard` (Clinic Admin, Branch Admin, AND Receptionist all share this
+  one screen — there's no separate per-role dashboard) is replaced with the
+  same table the Appointments screen's Today tab already uses, full width,
+  Confirm/Reschedule/Cancel actions included. `AppointmentsScreen`'s
+  previously-private `_AppointmentsList` is now the public
+  `AppointmentsList` (`appointments_screen.dart`) with a new `embedded`
+  flag: `false` (default, used by the Appointments screen itself) keeps the
+  original `Expanded`+`ListView` so it fills the screen; `true` (used by
+  the Dashboard) renders a plain non-scrolling `Column` of rows instead,
+  since the Dashboard's own `SingleChildScrollView` already owns scrolling
+  for the whole page and `Expanded` needs a bounded-height ancestor it
+  doesn't have there. Reshuffled the rows below it to keep pairs even:
+  Revenue by Department + Recent Chats, then Quick Actions + Low Stock,
+  then Reviews Needing Reply full-width alone at the bottom.
 - **2026-07-25 (Super Admin's bell now shows a live badge)** — Explicit
   user instruction, follow-up to the Chat-moved-to-topbar entry below:
   `SuperAdminScaffold`'s topbar bell was a plain static `AppIcon` with no

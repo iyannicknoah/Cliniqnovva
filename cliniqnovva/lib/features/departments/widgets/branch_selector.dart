@@ -5,11 +5,18 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/theme_ext.dart';
 import '../../clinics/providers/branches_provider.dart';
 
+/// Sentinel dropdown value for "All branches" — never a real Firestore
+/// branch id, so it can share the same `DropdownButtonFormField<String>`
+/// as the real branch options.
+const _kAllBranchesValue = '__all_branches__';
+
 /// Branch picker for an Clinic Admin viewing per-branch data
 /// (Departments/Services — Part 7 Tasks 1-2 both say "per branch"). Writes
 /// through [selectedBranchProvider] (Part 6) so the choice is shared with
-/// /branches' "click a branch → filter" behavior. Hidden entirely by the
-/// caller for branch-scoped roles, who only ever see their own branch.
+/// /branches' "click a branch → filter" behavior, plus [showAllBranchesProvider]
+/// for the "All branches" option (2026-07-26) that lets a Clinic Admin view
+/// every branch's data combined instead of picking just one. Hidden entirely
+/// by the caller for branch-scoped roles, who only ever see their own branch.
 class BranchSelector extends ConsumerWidget {
   const BranchSelector({super.key});
 
@@ -17,6 +24,7 @@ class BranchSelector extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final branchesAsync = ref.watch(branchesProvider);
     final selected = ref.watch(selectedBranchProvider);
+    final showAll = ref.watch(showAllBranchesProvider);
 
     return branchesAsync.when(
       loading: () => const SizedBox(
@@ -29,13 +37,16 @@ class BranchSelector extends ConsumerWidget {
         final branches = result.branches;
         if (branches.isEmpty) return const SizedBox.shrink();
         final currentId = selected?.id ?? branches.first.id;
+        final currentValue = showAll
+            ? _kAllBranchesValue
+            : (branches.any((b) => b.id == currentId)
+                  ? currentId
+                  : branches.first.id);
 
         return SizedBox(
           width: 240,
           child: DropdownButtonFormField<String>(
-            initialValue: branches.any((b) => b.id == currentId)
-                ? currentId
-                : branches.first.id,
+            initialValue: currentValue,
             isExpanded: true,
             style: TextStyle(color: context.appText, fontSize: 14),
             dropdownColor: context.appCard,
@@ -56,16 +67,25 @@ class BranchSelector extends ConsumerWidget {
                 borderSide: BorderSide(color: context.appBorder),
               ),
             ),
-            items: branches
-                .map(
-                  (b) => DropdownMenuItem(
-                    value: b.id,
-                    child: Text(b.name, overflow: TextOverflow.ellipsis),
-                  ),
-                )
-                .toList(),
+            items: [
+              const DropdownMenuItem(
+                value: _kAllBranchesValue,
+                child: Text('All branches', overflow: TextOverflow.ellipsis),
+              ),
+              ...branches.map(
+                (b) => DropdownMenuItem(
+                  value: b.id,
+                  child: Text(b.name, overflow: TextOverflow.ellipsis),
+                ),
+              ),
+            ],
             onChanged: (id) {
+              if (id == _kAllBranchesValue) {
+                ref.read(showAllBranchesProvider.notifier).state = true;
+                return;
+              }
               final branch = branches.firstWhere((b) => b.id == id);
+              ref.read(showAllBranchesProvider.notifier).state = false;
               ref.read(selectedBranchProvider.notifier).state = branch;
             },
           ),

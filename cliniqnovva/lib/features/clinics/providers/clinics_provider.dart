@@ -79,12 +79,23 @@ class ClinicsNotifier extends AsyncNotifier<void> {
     ref.invalidate(clinicDetailProvider(id));
   }
 
-  /// Hard-deletes a clinic with zero branches (server rejects it otherwise —
-  /// see clinics.service.js#remove). Suspend (setStatus) stays the way to
-  /// disable a clinic that has real usage.
-  Future<void> remove(String id) async {
+  /// "Delete clinic" (2026-07-25) — archives, doesn't hard-delete. See
+  /// clinics.service.js#archive: the clinic and every branch under it go
+  /// inactive, nothing is removed, and it's reversible via [unarchive] any
+  /// time in the next 14 days before the daily purge cron job permanently
+  /// cascade-deletes it.
+  Future<void> archive(String id) async {
     await ApiService.instance.delete<void>('/api/v1/clinics/$id');
     ref.invalidate(clinicsListProvider);
+    ref.invalidate(clinicDetailProvider(id));
+  }
+
+  Future<void> unarchive(String id) async {
+    await ApiService.instance.put<Map<String, dynamic>>(
+      '/api/v1/clinics/$id/unarchive',
+    );
+    ref.invalidate(clinicsListProvider);
+    ref.invalidate(clinicDetailProvider(id));
   }
 
   Future<void> setStatus(String id, bool isActive) async {

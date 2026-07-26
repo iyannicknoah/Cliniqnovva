@@ -28,10 +28,17 @@ String _generatePassword() {
 /// edit otherwise (name/phone/email/specialty/department only — changing an
 /// existing account's password is a separate "change password" flow, not
 /// part of this form).
+///
+/// [lockedRole] (2026-07-25) — step 2 of "+ Add Branch": pass
+/// `AppConstants.roleBranchAdmin` to open this panel pre-set to that role
+/// with the dropdown disabled and the doctor-only fields (specialty/
+/// department) hidden, since a Branch Admin has neither. Only meaningful
+/// when creating (ignored for edit).
 Future<void> showStaffPanel(
   BuildContext context, {
   String? branchId,
   StaffModel? staff,
+  String? lockedRole,
 }) {
   assert(
     staff != null || branchId != null,
@@ -44,7 +51,7 @@ Future<void> showStaffPanel(
     barrierColor: Colors.black45,
     transitionDuration: const Duration(milliseconds: 200),
     pageBuilder: (context, animation, secondaryAnimation) =>
-        Center(child: _StaffPanel(branchId: branchId, staff: staff)),
+        Center(child: _StaffPanel(branchId: branchId, staff: staff, lockedRole: lockedRole)),
     transitionBuilder: (context, animation, secondaryAnimation, child) {
       final curved = CurvedAnimation(parent: animation, curve: Curves.easeOut);
       return FadeTransition(
@@ -59,10 +66,11 @@ Future<void> showStaffPanel(
 }
 
 class _StaffPanel extends ConsumerStatefulWidget {
-  const _StaffPanel({this.branchId, this.staff});
+  const _StaffPanel({this.branchId, this.staff, this.lockedRole});
 
   final String? branchId;
   final StaffModel? staff;
+  final String? lockedRole;
 
   @override
   ConsumerState<_StaffPanel> createState() => _StaffPanelState();
@@ -82,6 +90,7 @@ class _StaffPanelState extends ConsumerState<_StaffPanel> {
 
   bool get _isEdit => widget.staff != null;
   bool get _isDoctor => _role == AppConstants.roleDoctor;
+  bool get _isLockedRole => !_isEdit && widget.lockedRole != null;
 
   @override
   void initState() {
@@ -96,6 +105,8 @@ class _StaffPanelState extends ConsumerState<_StaffPanel> {
       _departmentId = staff.departmentIds.isNotEmpty
           ? staff.departmentIds.first
           : null;
+    } else if (widget.lockedRole != null) {
+      _role = widget.lockedRole!;
     }
   }
 
@@ -226,7 +237,11 @@ class _StaffPanelState extends ConsumerState<_StaffPanel> {
                   children: [
                     Expanded(
                       child: Text(
-                        _isEdit ? 'Edit Staff' : 'Add Staff',
+                        _isEdit
+                            ? 'Edit Staff'
+                            : _isLockedRole
+                            ? 'Add ${roleLabel(widget.lockedRole!)}'
+                            : 'Add Staff',
                         style: TextStyle(
                           color: context.appText,
                           fontSize: 18,
@@ -276,8 +291,12 @@ class _StaffPanelState extends ConsumerState<_StaffPanel> {
                   ),
                   // Role is fixed once the account exists — changing it is a
                   // distinct capability the spec reserves for
-                  // Clinic Admin/Super Admin elsewhere, not this form.
-                  items: AppConstants.staffRoles
+                  // Clinic Admin/Super Admin elsewhere, not this form. Same
+                  // for the locked-role mode (step 2 of "+ Add Branch") —
+                  // this panel only ever creates that one role then.
+                  items: (_isLockedRole
+                          ? [widget.lockedRole!]
+                          : AppConstants.staffRoles)
                       .map(
                         (role) => DropdownMenuItem(
                           value: role,
@@ -285,7 +304,7 @@ class _StaffPanelState extends ConsumerState<_StaffPanel> {
                         ),
                       )
                       .toList(),
-                  onChanged: _isEdit
+                  onChanged: _isEdit || _isLockedRole
                       ? null
                       : (value) => setState(() => _role = value ?? _role),
                 ),

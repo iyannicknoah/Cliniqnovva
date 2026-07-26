@@ -17,5 +17,6 @@ router.put('/:id/billing-status', requireRole(ROLES.SUPER_ADMIN), controller.set
 router.post('/:id/record-payment', requireRole(ROLES.SUPER_ADMIN), controller.recordPayment);
 router.get('/:id/payment-history', requireRole(ROLES.SUPER_ADMIN), controller.getPaymentHistory);
 router.delete('/:id', requireRole(ROLES.SUPER_ADMIN), controller.remove);
+router.put('/:id/unarchive', requireRole(ROLES.SUPER_ADMIN), controller.unarchive);
 
 module.exports = router;

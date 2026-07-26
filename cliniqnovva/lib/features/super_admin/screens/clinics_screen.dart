@@ -2,15 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/theme_ext.dart';
 import '../../../shared/utils/async_feedback.dart';
-import '../../../shared/widgets/app_icon.dart';
 import '../../../shared/widgets/cliniqnovva_button.dart';
 import '../../../shared/widgets/cliniqnovva_card.dart';
 import '../../../shared/widgets/cliniqnovva_table.dart';
 import '../../../shared/widgets/cliniqnovva_text_field.dart';
 import '../../../shared/widgets/metric_card.dart';
+import '../../../shared/widgets/row_actions_menu.dart';
 import '../../../shared/widgets/status_badge.dart';
 import '../../clinics/models/clinic.dart';
 import '../../clinics/providers/clinics_provider.dart';
@@ -31,6 +30,7 @@ class ClinicsScreen extends ConsumerStatefulWidget {
 class _ClinicsScreenState extends ConsumerState<ClinicsScreen> {
   final _searchController = TextEditingController();
   String _search = '';
+  bool _showArchived = false;
 
   @override
   void dispose() {
@@ -38,14 +38,19 @@ class _ClinicsScreenState extends ConsumerState<ClinicsScreen> {
     super.dispose();
   }
 
-  Future<void> _confirmDelete(Clinic org) async {
+  /// "Delete clinic" (2026-07-25) — archives, doesn't hard-delete. Works
+  /// regardless of what's linked to the clinic (branches, staff, patients,
+  /// etc. — everything), unlike the old branch-count-gated hard delete.
+  Future<void> _confirmArchive(Clinic org) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('Delete clinic?'),
         content: Text(
-          'This permanently removes "${org.name}" and its admin account. '
-          'This cannot be undone.',
+          '"${org.name}" and everything linked to it (branches, staff, '
+          'patients, appointments, invoices) will be archived immediately '
+          'and permanently deleted in 14 days unless you restore it before '
+          'then.',
         ),
         actions: [
           TextButton(
@@ -64,13 +69,22 @@ class _ClinicsScreenState extends ConsumerState<ClinicsScreen> {
     try {
       await runWithFeedback(
         context,
-        () => ref.read(clinicsNotifierProvider.notifier).remove(org.id),
-        loadingMessage: 'Deleting clinic…',
-        successMessage: 'Clinic deleted.',
+        () => ref.read(clinicsNotifierProvider.notifier).archive(org.id),
+        loadingMessage: 'Archiving clinic…',
+        successMessage: 'Clinic archived — permanently deleted in 14 days.',
       );
     } catch (_) {
-      // runWithFeedback already surfaced the server's reason (e.g. has branches).
+      // runWithFeedback already surfaced the server's reason.
     }
+  }
+
+  Future<void> _unarchive(Clinic org) async {
+    await runWithFeedback(
+      context,
+      () => ref.read(clinicsNotifierProvider.notifier).unarchive(org.id),
+      loadingMessage: 'Restoring clinic…',
+      successMessage: 'Clinic restored.',
+    );
   }
 
   Future<void> _confirmSetStatus(Clinic org, bool activate) async {
@@ -109,12 +123,16 @@ class _ClinicsScreenState extends ConsumerState<ClinicsScreen> {
         ),
         error: (err, _) => Text('Failed to load clinics: $err'),
         data: (clinics) {
-          final total = clinics.length;
-          final active = clinics.where((o) => o.isActive).length;
+          final live = clinics.where((o) => !o.isArchived).toList();
+          final archived = clinics.where((o) => o.isArchived).toList();
+          final total = live.length;
+          final active = live.where((o) => o.isActive).length;
           final suspended = total - active;
+
+          final base = _showArchived ? archived : live;
           final filtered = _search.isEmpty
-              ? clinics
-              : clinics
+              ? base
+              : base
                     .where(
                       (o) =>
                           o.name.toLowerCase().contains(_search.toLowerCase()),
@@ -137,6 +155,13 @@ class _ClinicsScreenState extends ConsumerState<ClinicsScreen> {
                   Expanded(
                     child: MetricCard(value: '$suspended', label: 'Suspended'),
                   ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: MetricCard(
+                      value: '${archived.length}',
+                      label: 'Archived',
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: 24),
@@ -152,6 +177,24 @@ class _ClinicsScreenState extends ConsumerState<ClinicsScreen> {
                     ),
                   ),
                   const SizedBox(width: 16),
+                  if (archived.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 16, bottom: 12),
+                      child: InkWell(
+                        onTap: () =>
+                            setState(() => _showArchived = !_showArchived),
+                        child: Text(
+                          _showArchived
+                              ? 'Show active clinics'
+                              : 'Show archived (${archived.length})',
+                          style: TextStyle(
+                            color: context.appText,
+                            fontWeight: FontWeight.w600,
+                            decoration: TextDecoration.underline,
+                          ),
+                        ),
+                      ),
+                    ),
                   CliniqnovvaButton(
                     label: '+ Add Clinic',
                     isFullWidth: false,
@@ -178,7 +221,9 @@ class _ClinicsScreenState extends ConsumerState<ClinicsScreen> {
                       Padding(
                         padding: const EdgeInsets.symmetric(vertical: 24),
                         child: Text(
-                          'No clinics yet.',
+                          _showArchived
+                              ? 'No archived clinics.'
+                              : 'No clinics yet.',
                           style: TextStyle(color: context.appSubtext),
                         ),
                       )
@@ -200,60 +245,52 @@ class _ClinicsScreenState extends ConsumerState<ClinicsScreen> {
                               '${org.subscriptionPlan[0].toUpperCase()}${org.subscriptionPlan.substring(1)}',
                             ),
                             Text(org.branchLimitLabel),
-                            StatusBadge(
-                              text: org.isActive ? 'Active' : 'Suspended',
-                              type: org.isActive
-                                  ? BadgeType.success
-                                  : BadgeType.error,
-                            ),
-                            Text(_formatDate(org.createdAt)),
-                            Row(
-                              children: [
-                                IconButton(
-                                  icon: const AppIcon(AppIcons.view, size: 18),
-                                  tooltip: 'View',
-                                  onPressed: () => context.push(
-                                    '/super-admin/clinics/${org.id}',
-                                  ),
-                                ),
-                                IconButton(
-                                  icon: AppIcon(
-                                    org.isActive
-                                        ? AppIcons.pause
-                                        : AppIcons.play,
-                                    size: 18,
-                                  ),
-                                  tooltip: org.isActive
-                                      ? 'Suspend'
-                                      : 'Activate',
-                                  onPressed: () =>
-                                      _confirmSetStatus(org, !org.isActive),
-                                ),
-                                if (org.canDelete)
-                                  IconButton(
-                                    icon: const AppIcon(
-                                      AppIcons.trash,
-                                      size: 18,
-                                    ),
-                                    tooltip: 'Delete',
-                                    onPressed: () => _confirmDelete(org),
+                            org.isArchived
+                                ? StatusBadge(
+                                    text:
+                                        'Archived — ${org.daysUntilPurge}d left',
+                                    type: BadgeType.error,
                                   )
-                                else
-                                  Tooltip(
-                                    message:
-                                        'This clinic has branches — suspend '
-                                        'it instead of deleting.',
-                                    child: Padding(
-                                      padding: const EdgeInsets.all(8),
-                                      child: AppIcon(
-                                        AppIcons.trash,
-                                        size: 18,
-                                        color: context.appSubtext,
-                                      ),
-                                    ),
+                                : StatusBadge(
+                                    text: org.isActive ? 'Active' : 'Suspended',
+                                    type: org.isActive
+                                        ? BadgeType.success
+                                        : BadgeType.error,
                                   ),
-                              ],
-                            ),
+                            Text(_formatDate(org.createdAt)),
+                            org.isArchived
+                                ? RowActionsMenu(
+                                    actions: [
+                                      RowAction(
+                                        label: 'Unarchive',
+                                        onTap: () => _unarchive(org),
+                                      ),
+                                    ],
+                                  )
+                                : RowActionsMenu(
+                                    actions: [
+                                      RowAction(
+                                        label: 'View',
+                                        onTap: () => context.push(
+                                          '/super-admin/clinics/${org.id}',
+                                        ),
+                                      ),
+                                      RowAction(
+                                        label: org.isActive
+                                            ? 'Suspend'
+                                            : 'Activate',
+                                        onTap: () => _confirmSetStatus(
+                                          org,
+                                          !org.isActive,
+                                        ),
+                                      ),
+                                      RowAction(
+                                        label: 'Delete',
+                                        isDestructive: true,
+                                        onTap: () => _confirmArchive(org),
+                                      ),
+                                    ],
+                                  ),
                           ],
                         ),
                   ],

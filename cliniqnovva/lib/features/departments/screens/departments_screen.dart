@@ -8,8 +8,10 @@ import '../../../shared/widgets/cliniqnovva_button.dart';
 import '../../../shared/widgets/cliniqnovva_table.dart';
 import '../../../shared/widgets/empty_state.dart';
 import '../../../shared/widgets/loading_widget.dart';
+import '../../../shared/widgets/row_actions_menu.dart';
 import '../../../shared/widgets/status_badge.dart';
 import '../../auth/providers/access_control_provider.dart';
+import '../../clinics/providers/branches_provider.dart' show showAllBranchesProvider;
 import '../models/department_model.dart';
 import '../providers/departments_provider.dart';
 import '../widgets/add_department_dialog.dart';
@@ -107,6 +109,7 @@ class _DepartmentsBody extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final effectiveBranchId = branchId ?? ref.watch(activeBranchIdProvider);
+    final isAllBranches = branchId == null && ref.watch(showAllBranchesProvider);
 
     return Padding(
       padding: const EdgeInsets.all(40),
@@ -132,7 +135,7 @@ class _DepartmentsBody extends ConsumerWidget {
               ],
               if (canManage)
                 SizedBox(
-                  width: 170,
+                  width: 200,
                   child: CliniqnovvaButton(
                     label: '+ Add Department',
                     onPressed: effectiveBranchId == null
@@ -147,10 +150,10 @@ class _DepartmentsBody extends ConsumerWidget {
           ),
           const SizedBox(height: 28),
           Expanded(
-            child: effectiveBranchId == null
+            child: effectiveBranchId == null && !isAllBranches
                 ? const NoBranchSelectedState()
                 : _DepartmentsList(
-                    branchId: effectiveBranchId,
+                    branchId: isAllBranches ? null : effectiveBranchId,
                     canManage: canManage,
                     onDelete: (dept) => _confirmDelete(context, ref, dept),
                   ),
@@ -168,7 +171,7 @@ class _DepartmentsList extends ConsumerWidget {
     required this.onDelete,
   });
 
-  final String branchId;
+  final String? branchId;
   final bool canManage;
   final ValueChanged<DepartmentModel> onDelete;
 
@@ -223,22 +226,20 @@ class _DepartmentsList extends ConsumerWidget {
                                     : BadgeType.error,
                               ),
                               if (canManage)
-                                Row(
-                                  children: [
-                                    CliniqnovvaButton.text(
+                                RowActionsMenu(
+                                  actions: [
+                                    RowAction(
                                       label: 'Rename',
-                                      color: context.appText,
-                                      onPressed: () => showDepartmentDialog(
+                                      onTap: () => showDepartmentDialog(
                                         context,
                                         department: dept,
                                       ),
                                     ),
-                                    CliniqnovvaButton.text(
+                                    RowAction(
                                       label: dept.isActive
                                           ? 'Deactivate'
                                           : 'Activate',
-                                      color: context.appSubtext,
-                                      onPressed: () => ref
+                                      onTap: () => ref
                                           .read(
                                             departmentsNotifierProvider
                                                 .notifier,
@@ -246,22 +247,10 @@ class _DepartmentsList extends ConsumerWidget {
                                           .setActive(dept.id, !dept.isActive),
                                     ),
                                     if (dept.canDelete)
-                                      CliniqnovvaButton.text(
+                                      RowAction(
                                         label: 'Delete',
-                                        color: context.appSubtext,
-                                        onPressed: () => onDelete(dept),
-                                      )
-                                    else
-                                      Tooltip(
-                                        message:
-                                            'Has services attached — deactivate instead.',
-                                        child: Text(
-                                          'Has services',
-                                          style: TextStyle(
-                                            color: context.appSubtext,
-                                            fontSize: 12,
-                                          ),
-                                        ),
+                                        isDestructive: true,
+                                        onTap: () => onDelete(dept),
                                       ),
                                   ],
                                 ),

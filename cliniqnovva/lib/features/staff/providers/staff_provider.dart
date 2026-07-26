@@ -79,9 +79,7 @@ class StaffNotifier extends AsyncNotifier<void> {
       },
     );
     ref.invalidate(staffListProvider);
-    return StaffModel.fromJson(
-      response.data!['staff'] as Map<String, dynamic>,
-    );
+    return StaffModel.fromJson(response.data!['staff'] as Map<String, dynamic>);
   }
 
   Future<void> updateStaff(
@@ -117,13 +115,21 @@ class StaffNotifier extends AsyncNotifier<void> {
 
   /// Saves a doctor's full weekly recurring schedule (Part 8 Task 2) — the
   /// server rejects (400) any overlapping slots on the same day.
+  ///
+  /// [breakMinutes] (2026-07-26) — the buffer required between one
+  /// appointment and the next for this doctor; saved alongside the schedule
+  /// since both live on the same "Weekly schedule" card.
   Future<void> setSchedule(
     String doctorId,
     List<DoctorScheduleEntry> entries,
+    int breakMinutes,
   ) async {
     await ApiService.instance.put<Map<String, dynamic>>(
       '/api/v1/staff/$doctorId/schedule',
-      data: {'schedule': entries.map((e) => e.toJson()).toList()},
+      data: {
+        'schedule': entries.map((e) => e.toJson()).toList(),
+        'breakMinutes': breakMinutes,
+      },
     );
     ref.invalidate(staffDetailProvider(doctorId));
   }

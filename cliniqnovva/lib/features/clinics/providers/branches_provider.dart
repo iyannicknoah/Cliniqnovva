@@ -46,9 +46,17 @@ final branchDetailProvider = FutureProvider.autoDispose
     });
 
 /// The branch the dashboard is currently filtered to (Part 6 Task 3:
-/// "Click a branch → filter dashboard data to that branch"). Null = all
-/// branches combined. The dashboard screen consumes this when it's built.
+/// "Click a branch → filter dashboard data to that branch"). Null before
+/// the Clinic Admin has picked anything, which [activeBranchIdProvider]
+/// defaults to the org's first branch — [showAllBranchesProvider] is the
+/// explicit "All branches" choice, kept separate so the two "null" cases
+/// (not chosen yet vs. deliberately viewing everything) aren't conflated.
 final selectedBranchProvider = StateProvider<BranchModel?>((ref) => null);
+
+/// True once a Clinic Admin explicitly picks "All branches" from
+/// [BranchSelector], as opposed to [selectedBranchProvider] simply being
+/// unset. Reset to false whenever a specific branch is chosen instead.
+final showAllBranchesProvider = StateProvider.autoDispose<bool>((ref) => false);
 
 /// Owns every branch/department write action (Part 6) — screens call these
 /// instead of hitting ApiService directly.

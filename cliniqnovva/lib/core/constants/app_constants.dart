@@ -120,6 +120,14 @@ String homeRouteForRole(String role) {
       return '/nurse-today';
     case AppConstants.rolePatient:
       return '/patient-home';
+    case AppConstants.roleAccountant:
+      // Accountant has no /dashboard nav item — Billing (recording/voiding
+      // payments) is their actual day-to-day screen, not Reports (revenue
+      // viewing is secondary to processing payments).
+      return '/billing';
+    case AppConstants.rolePharmacist:
+      // Same reasoning — Pharmacist's only nav item is /inventory.
+      return '/inventory';
     default:
       return '/dashboard';
   }

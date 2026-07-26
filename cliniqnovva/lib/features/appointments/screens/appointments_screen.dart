@@ -12,9 +12,11 @@ import '../../../shared/widgets/cliniqnovva_button.dart';
 import '../../../shared/widgets/cliniqnovva_table.dart';
 import '../../../shared/widgets/empty_state.dart';
 import '../../../shared/widgets/loading_widget.dart';
+import '../../../shared/widgets/row_actions_menu.dart';
 import '../../../shared/widgets/segmented_tabs.dart';
 import '../../../shared/widgets/status_badge.dart';
 import '../../auth/providers/access_control_provider.dart';
+import '../../clinics/providers/branches_provider.dart' show showAllBranchesProvider;
 import '../../departments/providers/departments_provider.dart';
 import '../../departments/widgets/branch_selector.dart';
 import '../../patients/providers/patients_provider.dart';
@@ -115,6 +117,7 @@ class _AppointmentsBody extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final effectiveBranchId = branchId ?? ref.watch(activeBranchIdProvider);
+    final isAllBranches = branchId == null && ref.watch(showAllBranchesProvider);
 
     return Padding(
       padding: const EdgeInsets.all(40),
@@ -163,10 +166,10 @@ class _AppointmentsBody extends ConsumerWidget {
           ),
           const SizedBox(height: 24),
           Expanded(
-            child: effectiveBranchId == null
+            child: effectiveBranchId == null && !isAllBranches
                 ? const NoBranchSelectedState()
-                : _AppointmentsList(
-                    branchId: effectiveBranchId,
+                : AppointmentsList(
+                    branchId: isAllBranches ? null : effectiveBranchId,
                     doctorId: doctorId,
                     tab: _tabKeys[tab],
                     canManage: canManage,
@@ -230,18 +233,32 @@ class _QueueBanner extends ConsumerWidget {
   }
 }
 
-class _AppointmentsList extends ConsumerWidget {
-  const _AppointmentsList({
+/// Patient/Doctor/Date & time/Status/Actions table — the same one the
+/// Appointments screen's Today/Upcoming/History tabs use. Public (2026-07-25)
+/// so the Dashboard's "Today's Appointments" section can reuse it verbatim
+/// instead of the old compact time+name+status-dot list, giving Clinic
+/// Admin/Branch Admin/Receptionist the same Confirm/Reschedule/Cancel
+/// actions right from the dashboard.
+class AppointmentsList extends ConsumerWidget {
+  const AppointmentsList({
+    super.key,
     required this.branchId,
     required this.doctorId,
     required this.tab,
     required this.canManage,
+    this.embedded = false,
   });
 
-  final String branchId;
+  final String? branchId;
   final String? doctorId;
   final String tab;
   final bool canManage;
+
+  /// True when embedded in a page that already scrolls as a whole (e.g. the
+  /// Dashboard) — renders a plain, non-scrolling `Column` of rows instead of
+  /// `Expanded`+`ListView`, which would otherwise need a bounded-height
+  /// ancestor the Dashboard's `SingleChildScrollView` doesn't provide.
+  final bool embedded;
 
   Future<void> _confirmCancel(
     BuildContext context,
@@ -340,78 +357,89 @@ class _AppointmentsList extends ConsumerWidget {
           return byDate != 0 ? byDate : a.startTime.compareTo(b.startTime);
         });
 
+        final rows = sorted
+            .map(
+              (appt) => CliniqnovvaTableRow(
+                cells: [
+                  _PatientCell(patientId: appt.patientId),
+                  _DoctorCell(doctorId: appt.doctorId),
+                  Text(
+                    '${appt.date} · ${appt.startTime}–${appt.endTime}',
+                    style: TextStyle(color: context.appText),
+                  ),
+                  StatusBadge(
+                    text: _statusLabels[appt.status] ?? appt.status,
+                    type: _badgeTypeFor(appt.status),
+                  ),
+                  canManage || appt.status == 'checkedIn'
+                      ? _ActionsCell(
+                          appointment: appt,
+                          canManage: canManage,
+                          onConfirm: () => _setStatus(
+                            context,
+                            ref,
+                            appt,
+                            'confirmed',
+                            'Confirming…',
+                            'Appointment confirmed.',
+                          ),
+                          onCheckIn: () => _setStatus(
+                            context,
+                            ref,
+                            appt,
+                            'checkedIn',
+                            'Checking in…',
+                            'Patient checked in.',
+                          ),
+                          onComplete: () => _setStatus(
+                            context,
+                            ref,
+                            appt,
+                            'completed',
+                            'Marking complete…',
+                            'Appointment completed.',
+                          ),
+                          onCancel: () => _confirmCancel(context, ref, appt),
+                          onReschedule: () => showDialog<void>(
+                            context: context,
+                            builder: (_) =>
+                                _RescheduleDialog(appointment: appt),
+                          ),
+                        )
+                      : const SizedBox.shrink(),
+                ],
+              ),
+            )
+            .toList();
+
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: embedded ? MainAxisSize.min : MainAxisSize.max,
           children: [
             const CliniqnovvaTableHeader(
               columns: ['Patient', 'Doctor', 'Date & time', 'Status', 'Actions'],
             ),
-            Expanded(
-              child: sorted.isEmpty
-                  ? Center(
+            if (embedded)
+              sorted.isEmpty
+                  ? Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 24),
                       child: Text(
                         'No appointments here.',
                         style: TextStyle(color: context.appSubtext),
                       ),
                     )
-                  : ListView(
-                      children: sorted
-                          .map(
-                            (appt) => CliniqnovvaTableRow(
-                              cells: [
-                                _PatientCell(patientId: appt.patientId),
-                                _DoctorCell(doctorId: appt.doctorId),
-                                Text(
-                                  '${appt.date} · ${appt.startTime}–${appt.endTime}',
-                                  style: TextStyle(color: context.appText),
-                                ),
-                                StatusBadge(
-                                  text: _statusLabels[appt.status] ?? appt.status,
-                                  type: _badgeTypeFor(appt.status),
-                                ),
-                                canManage || appt.status == 'checkedIn'
-                                    ? _ActionsCell(
-                                        appointment: appt,
-                                        canManage: canManage,
-                                        onConfirm: () => _setStatus(
-                                          context,
-                                          ref,
-                                          appt,
-                                          'confirmed',
-                                          'Confirming…',
-                                          'Appointment confirmed.',
-                                        ),
-                                        onCheckIn: () => _setStatus(
-                                          context,
-                                          ref,
-                                          appt,
-                                          'checkedIn',
-                                          'Checking in…',
-                                          'Patient checked in.',
-                                        ),
-                                        onComplete: () => _setStatus(
-                                          context,
-                                          ref,
-                                          appt,
-                                          'completed',
-                                          'Marking complete…',
-                                          'Appointment completed.',
-                                        ),
-                                        onCancel: () =>
-                                            _confirmCancel(context, ref, appt),
-                                        onReschedule: () => showDialog<void>(
-                                          context: context,
-                                          builder: (_) =>
-                                              _RescheduleDialog(appointment: appt),
-                                        ),
-                                      )
-                                    : const SizedBox.shrink(),
-                              ],
-                            ),
-                          )
-                          .toList(),
-                    ),
-            ),
+                  : Column(children: rows)
+            else
+              Expanded(
+                child: sorted.isEmpty
+                    ? Center(
+                        child: Text(
+                          'No appointments here.',
+                          style: TextStyle(color: context.appSubtext),
+                        ),
+                      )
+                    : ListView(children: rows),
+              ),
           ],
         );
       },
@@ -482,71 +510,32 @@ class _ActionsCell extends StatelessWidget {
   Widget build(BuildContext context) {
     // Mark Complete only enabled after Check-In (Part 11 Task 3 DONE
     // CONDITION) — this mirrors the server's state machine exactly, so the
-    // button is simply absent rather than present-but-disabled whenever
+    // action is simply absent rather than present-but-disabled whenever
     // that transition isn't legal yet.
-    final buttons = <Widget>[];
+    final actions = <RowAction>[];
     switch (appointment.status) {
       case 'pending':
         if (canManage) {
-          buttons.add(
-            CliniqnovvaButton.text(label: 'Confirm', onPressed: onConfirm),
-          );
-          buttons.add(
-            CliniqnovvaButton.text(
-              label: 'Reschedule',
-              color: context.appSubtext,
-              onPressed: onReschedule,
-            ),
-          );
-          buttons.add(
-            CliniqnovvaButton.text(
-              label: 'Cancel',
-              color: context.appSubtext,
-              onPressed: onCancel,
-            ),
-          );
+          actions.add(RowAction(label: 'Confirm', onTap: onConfirm));
+          actions.add(RowAction(label: 'Reschedule', onTap: onReschedule));
+          actions.add(RowAction(label: 'Cancel', isDestructive: true, onTap: onCancel));
         }
       case 'confirmed':
         if (canManage) {
-          buttons.add(
-            CliniqnovvaButton.text(label: 'Check-In', onPressed: onCheckIn),
-          );
-          buttons.add(
-            CliniqnovvaButton.text(
-              label: 'Reschedule',
-              color: context.appSubtext,
-              onPressed: onReschedule,
-            ),
-          );
-          buttons.add(
-            CliniqnovvaButton.text(
-              label: 'Cancel',
-              color: context.appSubtext,
-              onPressed: onCancel,
-            ),
-          );
+          actions.add(RowAction(label: 'Check-In', onTap: onCheckIn));
+          actions.add(RowAction(label: 'Reschedule', onTap: onReschedule));
+          actions.add(RowAction(label: 'Cancel', isDestructive: true, onTap: onCancel));
         }
       case 'checkedIn':
-        buttons.add(
-          CliniqnovvaButton.text(label: 'Mark Complete', onPressed: onComplete),
-        );
+        actions.add(RowAction(label: 'Mark Complete', onTap: onComplete));
         if (canManage) {
-          buttons.add(
-            CliniqnovvaButton.text(
-              label: 'Cancel',
-              color: context.appSubtext,
-              onPressed: onCancel,
-            ),
-          );
+          actions.add(RowAction(label: 'Cancel', isDestructive: true, onTap: onCancel));
         }
       default:
         break;
     }
 
-    if (buttons.isEmpty) {
-      return Text('—', style: TextStyle(color: context.appSubtext));
-    }
-    return Wrap(spacing: 4, children: buttons);
+    return RowActionsMenu(actions: actions);
   }
 }
 

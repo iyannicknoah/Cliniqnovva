@@ -31,7 +31,7 @@ class _StarRow extends StatelessWidget {
         (i) => AppIcon(
           AppIcons.star,
           size: 14,
-          color: i < rating ? AppColors.pillAmberText : context.appBorder,
+          color: i < rating ? AppColors.skyBlue : context.appBorder,
         ),
       ),
     );

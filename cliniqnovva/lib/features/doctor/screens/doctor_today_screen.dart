@@ -5,10 +5,10 @@ import 'package:go_router/go_router.dart';
 import '../../../core/services/firebase_service.dart';
 import '../../../core/theme/theme_ext.dart';
 import '../../../shared/utils/async_feedback.dart';
-import '../../../shared/widgets/cliniqnovva_button.dart';
 import '../../../shared/widgets/cliniqnovva_table.dart';
 import '../../../shared/widgets/empty_state.dart';
 import '../../../shared/widgets/loading_widget.dart';
+import '../../../shared/widgets/row_actions_menu.dart';
 import '../../../shared/widgets/status_badge.dart';
 import '../../appointments/models/appointment_model.dart';
 import '../../appointments/providers/appointments_provider.dart';
@@ -147,12 +147,16 @@ class _TodayList extends ConsumerWidget {
                                   text: _statusLabels[appt.status] ?? appt.status,
                                   type: _badgeTypeFor(appt.status),
                                 ),
-                                appt.status == 'checkedIn'
-                                    ? CliniqnovvaButton.text(
-                                        label: 'Mark Complete',
-                                        onPressed: () => _markComplete(context, ref, appt),
-                                      )
-                                    : Text('—', style: TextStyle(color: context.appSubtext)),
+                                RowActionsMenu(
+                                  actions: appt.status == 'checkedIn'
+                                      ? [
+                                          RowAction(
+                                            label: 'Mark Complete',
+                                            onTap: () => _markComplete(context, ref, appt),
+                                          ),
+                                        ]
+                                      : [],
+                                ),
                               ],
                             ),
                           )

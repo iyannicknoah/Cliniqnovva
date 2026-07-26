@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
 
 enum _ButtonVariant { filled, text }
@@ -9,9 +8,10 @@ enum _ButtonVariant { filled, text }
 /// fully-rounded pill radius. Never use ElevatedButton/TextButton directly
 /// in a screen.
 ///
-/// Filled buttons are theme-inverted by design (explicit instruction,
-/// 2026-07-19): black with white text in light mode, white with black text
-/// in dark mode. Leave `color` null to get that behavior.
+/// Both variants are theme-inverted by design (explicit instruction,
+/// 2026-07-19): black in light mode, white in dark mode. Leave `color` null
+/// to get that behavior — only pass `color` for a deliberate semantic
+/// override (e.g. a destructive action's warning color).
 ///
 /// `.text()` is the transparent, underline-capable secondary style (e.g.
 /// "Forgot password?", "Sign up").
@@ -32,7 +32,7 @@ class CliniqnovvaButton extends StatelessWidget {
     required this.onPressed,
     this.isLoading = false,
     this.isFullWidth = false,
-    this.color = AppColors.textPrimary,
+    this.color,
     this.underline = false,
   }) : _variant = _ButtonVariant.text;
 

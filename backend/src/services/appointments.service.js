@@ -45,8 +45,17 @@ function fromMinutes(mins) {
   return `${h}:${m}`;
 }
 
-function overlaps(aStart, aEnd, bStart, bEnd) {
-  return toMinutes(aStart) < toMinutes(bEnd) && toMinutes(aEnd) > toMinutes(bStart);
+/**
+ * True if [aStart,aEnd) overlaps `b` (an existing booked appointment or
+ * blocked slot) padded by `bufferMins` on BOTH sides — this is what
+ * enforces a doctor's required recovery time between one appointment and
+ * the next (2026-07-26, explicit user instruction; pass 0 for a plain,
+ * unbuffered overlap check). Padding both sides of `b`, not just after it,
+ * means the gap holds no matter which of two appointments for the same
+ * doctor got booked first.
+ */
+function overlapsWithBuffer(aStart, aEnd, bStart, bEnd, bufferMins) {
+  return toMinutes(aStart) < toMinutes(bEnd) + bufferMins && toMinutes(aEnd) > toMinutes(bStart) - bufferMins;
 }
 
 /** True Saturday whose date+7 falls in the next month — the last Saturday. */
@@ -63,31 +72,22 @@ function kigaliDateString(date = new Date()) {
   return new Date(date.getTime() + 2 * 60 * 60 * 1000).toISOString().slice(0, 10);
 }
 
-async function getPublicHolidayFor(dateStr) {
-  const snap = await db.collection('publicHolidays').where('date', '==', dateStr).limit(1).get();
-  if (snap.empty) return null;
-  return { id: snap.docs[0].id, ...snap.docs[0].data() };
-}
-
 /**
- * The doctor's working window(s) for one date, after applying holiday
- * blocking and Umuganda-Saturday clipping (Part 8 Task 2's rules, now
- * actually enforced against real bookable slots):
- *   - A public holiday the branch hasn't overridden → [] (whole day closed).
+ * The doctor's working window(s) for one date, after applying
+ * Umuganda-Saturday clipping (Part 8 Task 2's rule, actually enforced
+ * against real bookable slots):
  *   - The last Saturday of the month → clipped to the branch's
  *     umugandaSaturdayHours if set, else defaults to "closed until midday"
  *     (starts no earlier than 12:00, unless the override is is24Hours).
+ *
+ * Public holidays no longer close the day (2026-07-26, explicit user
+ * instruction — Rwandan clinics operate on public holidays same as any
+ * other day) — this used to also return [] for an un-overridden holiday.
  */
 async function effectiveScheduleWindows({ doctor, branch, dateStr }) {
   const dayName = DAY_NAMES[new Date(`${dateStr}T00:00:00Z`).getUTCDay()];
   let entries = (doctor.schedule || []).filter((e) => e.day === dayName);
   if (entries.length === 0) return [];
-
-  const holiday = await getPublicHolidayFor(dateStr);
-  if (holiday) {
-    const overridden = (branch.holidayOverrides || []).includes(holiday.id);
-    if (!overridden) return [];
-  }
 
   if (dayName === 'saturday' && isLastSaturdayOfMonth(dateStr)) {
     const override = branch.umugandaSaturdayHours;
@@ -109,11 +109,14 @@ async function effectiveScheduleWindows({ doctor, branch, dateStr }) {
 
 /**
  * Every candidate slot start/end for one doctor/date/service, minus
- * whatever's already booked or blocked. Slot START times step at the
- * doctor's own configured slotDurationMins (booking granularity); each
- * slot's actual span is the SELECTED SERVICE's defaultDurationMins (a
- * 30-min consultation reserves more of the doctor's day than a 10-min
- * vaccination, even on a clinic that offers slots every 15 minutes).
+ * whatever's already booked or blocked, and minus the doctor's own
+ * `breakMinutes` buffer around each of those (2026-07-26, explicit user
+ * instruction — e.g. a 60-min appointment at 2:00 with a 10-min break makes
+ * 3:10 the next real slot, not 3:00). Slot START times step at the doctor's
+ * own configured slotDurationMins (booking granularity); each slot's actual
+ * span is the SELECTED SERVICE's defaultDurationMins (a 30-min consultation
+ * reserves more of the doctor's day than a 10-min vaccination, even on a
+ * clinic that offers slots every 15 minutes).
  */
 async function getAvailableSlots({ doctorId, branchId, serviceId, date }) {
   const [doctorDoc, branchDoc, serviceDoc] = await Promise.all([
@@ -128,6 +131,7 @@ async function getAvailableSlots({ doctorId, branchId, serviceId, date }) {
   const doctor = doctorDoc.data();
   const branch = branchDoc.data();
   const durationMins = serviceDoc.data().defaultDurationMins;
+  const bufferMins = doctor.breakMinutes || 0;
 
   const windows = await effectiveScheduleWindows({ doctor, branch, dateStr: date });
   if (windows.length === 0) return [];
@@ -148,8 +152,8 @@ async function getAvailableSlots({ doctorId, branchId, serviceId, date }) {
       const startTime = fromMinutes(cursor);
       const endTime = fromMinutes(cursor + durationMins);
       const taken =
-        booked.some((b) => overlaps(startTime, endTime, b.startTime, b.endTime)) ||
-        blocked.some((b) => overlaps(startTime, endTime, b.startTime, b.endTime));
+        booked.some((b) => overlapsWithBuffer(startTime, endTime, b.startTime, b.endTime, bufferMins)) ||
+        blocked.some((b) => overlapsWithBuffer(startTime, endTime, b.startTime, b.endTime, bufferMins));
       if (!taken) slots.push({ startTime, endTime });
     }
   }
@@ -182,9 +186,15 @@ function assertAccess(appt, scope) {
  * succeed. If the query's result would change (a conflicting appointment
  * committed by a concurrent transaction), Firestore aborts and retries this
  * transaction, so the retry sees the fresh conflict and rejects cleanly.
+ * Re-applies the doctor's `breakMinutes` buffer here too (not just in
+ * `getAvailableSlots`), for the same never-trust-a-client-fetched-list
+ * reason: two near-simultaneous bookings could each look buffer-valid
+ * against the slot list they fetched moments earlier.
  */
 async function book({ clinicId, branchId, patientId, doctorId, serviceId, date, startTime, endTime }, actor) {
   const apptRef = db.collection('appointments').doc();
+  const doctorDoc = await db.collection('doctors').doc(doctorId).get();
+  const bufferMins = doctorDoc.data()?.breakMinutes || 0;
 
   await db.runTransaction(async (tx) => {
     const conflictSnap = await tx.get(
@@ -196,7 +206,7 @@ async function book({ clinicId, branchId, patientId, doctorId, serviceId, date, 
     );
     const conflict = conflictSnap.docs.some((doc) => {
       const d = doc.data();
-      return overlaps(startTime, endTime, d.startTime, d.endTime);
+      return overlapsWithBuffer(startTime, endTime, d.startTime, d.endTime, bufferMins);
     });
     if (conflict) {
       throw httpError(409, 'That slot was just taken — please pick another.');
@@ -305,6 +315,9 @@ async function reschedule(id, { date, startTime, endTime }, actor) {
     throw httpError(400, `Cannot reschedule a ${appt.status} appointment`);
   }
 
+  const doctorDoc = await db.collection('doctors').doc(appt.doctorId).get();
+  const bufferMins = doctorDoc.data()?.breakMinutes || 0;
+
   const apptRef = db.collection('appointments').doc(id);
   await db.runTransaction(async (tx) => {
     const conflictSnap = await tx.get(
@@ -317,7 +330,7 @@ async function reschedule(id, { date, startTime, endTime }, actor) {
     const conflict = conflictSnap.docs.some((doc) => {
       if (doc.id === id) return false;
       const d = doc.data();
-      return overlaps(startTime, endTime, d.startTime, d.endTime);
+      return overlapsWithBuffer(startTime, endTime, d.startTime, d.endTime, bufferMins);
     });
     if (conflict) {
       throw httpError(409, 'That slot is no longer available — please pick another.');

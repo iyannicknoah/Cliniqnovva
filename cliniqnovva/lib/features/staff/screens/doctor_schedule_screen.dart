@@ -12,12 +12,12 @@ import '../../../shared/widgets/cliniqnovva_button.dart';
 import '../../../shared/widgets/cliniqnovva_text_field.dart';
 import '../../../shared/widgets/empty_state.dart';
 import '../../../shared/widgets/loading_widget.dart';
+import '../../../shared/widgets/searchable_dropdown.dart';
 import '../../auth/providers/access_control_provider.dart';
 import '../../departments/providers/departments_provider.dart';
 import '../../departments/widgets/branch_selector.dart';
 import '../../clinics/providers/branches_provider.dart';
 import '../models/staff_model.dart';
-import '../providers/public_holidays_provider.dart';
 import '../providers/staff_provider.dart';
 
 const _days = [
@@ -78,7 +78,10 @@ class DoctorScheduleScreen extends ConsumerWidget {
         data: (data) {
           final role = data?['role'] as String?;
           final isDoctor = role == AppConstants.roleDoctor;
-          final isBranchScoped = isDoctor || role == AppConstants.roleBranchAdmin || role == AppConstants.roleReceptionist;
+          final isBranchScoped =
+              isDoctor ||
+              role == AppConstants.roleBranchAdmin ||
+              role == AppConstants.roleReceptionist;
           final ownBranchId = data?['branchId'] as String?;
 
           return _ScheduleBody(
@@ -147,9 +150,7 @@ class _ScheduleBodyState extends ConsumerState<_ScheduleBody> {
           ),
           const SizedBox(height: 24),
           if (effectiveBranchId == null)
-            Expanded(
-              child: const NoBranchSelectedState(),
-            )
+            Expanded(child: const NoBranchSelectedState())
           else
             Expanded(
               child: SingleChildScrollView(
@@ -227,36 +228,11 @@ class _DoctorPicker extends ConsumerWidget {
           children: [
             SizedBox(
               width: 280,
-              child: DropdownButtonFormField<String>(
-                initialValue: currentId,
-                isExpanded: true,
-                style: TextStyle(color: context.appText, fontSize: 15),
-                dropdownColor: context.appCard,
-                decoration: InputDecoration(
-                  isDense: true,
-                  filled: true,
-                  fillColor: context.appCard,
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 12,
-                  ),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(AppTheme.inputRadius),
-                    borderSide: BorderSide(color: context.appBorder),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(AppTheme.inputRadius),
-                    borderSide: BorderSide(color: context.appBorder),
-                  ),
-                ),
-                items: doctors
-                    .map(
-                      (d) => DropdownMenuItem(
-                        value: d.id,
-                        child: Text(d.name, overflow: TextOverflow.ellipsis),
-                      ),
-                    )
-                    .toList(),
+              child: SearchableDropdown(
+                value: currentId,
+                hint: 'Select doctor',
+                items: doctors.map((d) => d.id).toList(),
+                itemLabels: {for (final d in doctors) d.id: d.name},
                 onChanged: onChanged,
               ),
             ),
@@ -290,8 +266,6 @@ class _DoctorScheduleContent extends StatelessWidget {
         const SizedBox(height: 32),
         _BlockedSlotsSection(doctorId: doctorId, canEdit: canEdit),
         const SizedBox(height: 32),
-        _PublicHolidaysSection(branchId: branchId, canEdit: canEdit),
-        const SizedBox(height: 32),
         _UmugandaSection(branchId: branchId),
       ],
     );
@@ -322,8 +296,15 @@ class _WeeklyScheduleSection extends ConsumerStatefulWidget {
 class _WeeklyScheduleSectionState
     extends ConsumerState<_WeeklyScheduleSection> {
   List<_EditableEntry>? _entries;
+  TextEditingController? _breakMinutesController;
   bool _saving = false;
   String? _error;
+
+  @override
+  void dispose() {
+    _breakMinutesController?.dispose();
+    super.dispose();
+  }
 
   static TimeOfDay? _parseTime(String hhmm) {
     if (!hhmm.contains(':')) return null;
@@ -337,7 +318,10 @@ class _WeeklyScheduleSectionState
   static String _formatTime(TimeOfDay t) =>
       '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
 
-  Future<void> _pickTime(TimeOfDay? current, ValueChanged<TimeOfDay> onPicked) async {
+  Future<void> _pickTime(
+    TimeOfDay? current,
+    ValueChanged<TimeOfDay> onPicked,
+  ) async {
     final picked = await showTimePicker(
       context: context,
       initialTime: current ?? const TimeOfDay(hour: 8, minute: 0),
@@ -349,9 +333,20 @@ class _WeeklyScheduleSectionState
     final entries = _entries!;
     for (final e in entries) {
       if (e.start == null || e.end == null || e.duration == null) {
-        setState(() => _error = 'Fill in every slot\'s time and duration, or remove it.');
+        setState(
+          () =>
+              _error = 'Fill in every slot\'s time and duration, or remove it.',
+        );
         return;
       }
+    }
+
+    final breakMinutes = int.tryParse(_breakMinutesController!.text.trim());
+    if (breakMinutes == null || breakMinutes < 0) {
+      setState(
+        () => _error = 'Break minutes must be a whole number, 0 or more.',
+      );
+      return;
     }
 
     setState(() {
@@ -360,19 +355,22 @@ class _WeeklyScheduleSectionState
     });
 
     try {
-      await ref.read(staffNotifierProvider.notifier).setSchedule(
-        widget.doctorId,
-        entries
-            .map(
-              (e) => DoctorScheduleEntry(
-                day: e.day,
-                startTime: _formatTime(e.start!),
-                endTime: _formatTime(e.end!),
-                slotDurationMins: e.duration!,
-              ),
-            )
-            .toList(),
-      );
+      await ref
+          .read(staffNotifierProvider.notifier)
+          .setSchedule(
+            widget.doctorId,
+            entries
+                .map(
+                  (e) => DoctorScheduleEntry(
+                    day: e.day,
+                    startTime: _formatTime(e.start!),
+                    endTime: _formatTime(e.end!),
+                    slotDurationMins: e.duration!,
+                  ),
+                )
+                .toList(),
+            breakMinutes,
+          );
       if (!mounted) return;
       setState(() => _saving = false);
       ScaffoldMessenger.of(context)
@@ -408,6 +406,9 @@ class _WeeklyScheduleSectionState
             )
             .toList();
         final entries = _entries!;
+        _breakMinutesController ??= TextEditingController(
+          text: '${doctor.breakMinutes}',
+        );
 
         return Container(
           width: double.infinity,
@@ -437,7 +438,20 @@ class _WeeklyScheduleSectionState
                     ),
                 ],
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: 260,
+                child: IgnorePointer(
+                  ignoring: !widget.canEdit,
+                  child: CliniqnovvaTextField(
+                    label: 'Break between appointments (minutes)',
+                    controller: _breakMinutesController,
+                    hint: 'e.g. 10',
+                    keyboardType: TextInputType.number,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
               if (entries.isEmpty)
                 Text(
                   'No recurring availability set.',
@@ -489,8 +503,9 @@ class _WeeklyScheduleSectionState
                                     ),
                                   )
                                   .toList(),
-                              onChanged: (value) =>
-                                  setState(() => entry.day = value ?? entry.day),
+                              onChanged: (value) => setState(
+                                () => entry.day = value ?? entry.day,
+                              ),
                             ),
                           ),
                         ),
@@ -549,8 +564,8 @@ class _WeeklyScheduleSectionState
                                   ),
                                 ),
                               ),
-                              onChanged: (value) => entry.duration =
-                                  int.tryParse(value.trim()),
+                              onChanged: (value) =>
+                                  entry.duration = int.tryParse(value.trim()),
                             ),
                           ),
                         ),
@@ -562,7 +577,8 @@ class _WeeklyScheduleSectionState
                               size: 16,
                               color: context.appSubtext,
                             ),
-                            onPressed: () => setState(() => entries.removeAt(i)),
+                            onPressed: () =>
+                                setState(() => entries.removeAt(i)),
                           ),
                         ],
                       ],
@@ -678,7 +694,10 @@ class _BlockedSlotsSectionState extends ConsumerState<_BlockedSlotsSection> {
     if (picked != null) setState(() => _date = picked);
   }
 
-  Future<void> _pickTime(TimeOfDay? current, ValueChanged<TimeOfDay> onPicked) async {
+  Future<void> _pickTime(
+    TimeOfDay? current,
+    ValueChanged<TimeOfDay> onPicked,
+  ) async {
     final picked = await showTimePicker(
       context: context,
       initialTime: current ?? const TimeOfDay(hour: 8, minute: 0),
@@ -699,8 +718,7 @@ class _BlockedSlotsSectionState extends ConsumerState<_BlockedSlotsSection> {
     });
 
     String two(int n) => n.toString().padLeft(2, '0');
-    final dateStr =
-        '${_date!.year}-${two(_date!.month)}-${two(_date!.day)}';
+    final dateStr = '${_date!.year}-${two(_date!.month)}-${two(_date!.day)}';
     final startStr = '${two(_start!.hour)}:${two(_start!.minute)}';
     final endStr = '${two(_end!.hour)}:${two(_end!.minute)}';
 
@@ -925,129 +943,6 @@ class _BlockedSlotsSectionState extends ConsumerState<_BlockedSlotsSection> {
                         )
                         .toList(),
                   ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _PublicHolidaysSection extends ConsumerWidget {
-  const _PublicHolidaysSection({required this.branchId, required this.canEdit});
-
-  final String branchId;
-  final bool canEdit;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final holidaysAsync = ref.watch(publicHolidaysProvider);
-    final branchAsync = ref.watch(branchDetailProvider(branchId));
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: context.cardDeco(),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Public holidays',
-            style: TextStyle(
-              color: context.appText,
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'Auto-blocked for booking unless overridden for this branch.',
-            style: TextStyle(color: context.appSubtext, fontSize: 12.5),
-          ),
-          const SizedBox(height: 16),
-          holidaysAsync.when(
-            loading: () => const LoadingWidget(),
-            error: (e, _) =>
-                Text('$e', style: TextStyle(color: context.appSubtext)),
-            data: (holidays) {
-              if (holidays.isEmpty) {
-                return Text(
-                  'No public holidays configured yet.',
-                  style: TextStyle(color: context.appSubtext, fontSize: 13),
-                );
-              }
-              return branchAsync.when(
-                loading: () => const LoadingWidget(),
-                error: (e, _) =>
-                    Text('$e', style: TextStyle(color: context.appSubtext)),
-                data: (branch) => Column(
-                  children: holidays.map((holiday) {
-                    final overridden = branch.holidayOverrides.contains(
-                      holiday.id,
-                    );
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 10),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  holiday.name,
-                                  style: TextStyle(
-                                    color: context.appText,
-                                    fontSize: 13.5,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                                Text(
-                                  holiday.date != null
-                                      ? _formatDate(holiday.date!)
-                                      : '',
-                                  style: TextStyle(
-                                    color: context.appSubtext,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Text(
-                            overridden ? 'Open' : 'Auto-blocked',
-                            style: TextStyle(
-                              color: overridden
-                                  ? AppColors.brightGreen
-                                  : context.appSubtext,
-                              fontSize: 12.5,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          if (canEdit)
-                            Switch(
-                              value: overridden,
-                              activeTrackColor: context.appPrimary,
-                              onChanged: (value) {
-                                final updated = [...branch.holidayOverrides];
-                                if (value) {
-                                  updated.add(holiday.id);
-                                } else {
-                                  updated.remove(holiday.id);
-                                }
-                                ref
-                                    .read(branchesNotifierProvider.notifier)
-                                    .updateBranch(branchId, {
-                                      'holidayOverrides': updated,
-                                    });
-                              },
-                            ),
-                        ],
-                      ),
-                    );
-                  }).toList(),
-                ),
-              );
-            },
           ),
         ],
       ),

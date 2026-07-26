@@ -16,6 +16,7 @@ class StaffModel {
     this.specialty,
     this.departmentIds = const [],
     this.schedule = const [],
+    this.breakMinutes = 0,
     this.blockedSlots = const [],
     this.averageRating = 0,
     this.reviewCount = 0,
@@ -35,6 +36,12 @@ class StaffModel {
   final String? specialty;
   final List<String> departmentIds;
   final List<DoctorScheduleEntry> schedule;
+
+  /// Minutes that must pass between the end of one appointment and the
+  /// start of the next for this doctor (2026-07-26, explicit user
+  /// instruction) — enforced by the backend's `getAvailableSlots`, not
+  /// computed client-side.
+  final int breakMinutes;
   final List<BlockedSlot> blockedSlots;
 
   /// Part 16 Task 2 — cached, server-recalculated on every review write;
@@ -68,6 +75,7 @@ class StaffModel {
               )
               .toList() ??
           const [],
+      breakMinutes: (json['breakMinutes'] as num?)?.toInt() ?? 0,
       blockedSlots:
           (json['blockedSlots'] as List<dynamic>?)
               ?.map((e) => BlockedSlot.fromJson(e as Map<String, dynamic>))

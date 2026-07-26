@@ -37,11 +37,27 @@ async function createStaffAccountWithPassword({
     throw err;
   }
 
-  const userRecord = await auth.createUser({
-    email,
-    password,
-    displayName: name,
-  });
+  let userRecord;
+  try {
+    userRecord = await auth.createUser({ email, password, displayName: name });
+  } catch (err) {
+    if (err.code === 'auth/email-already-exists') {
+      const e = new Error(`An account with email "${email}" already exists.`);
+      e.status = 409;
+      throw e;
+    }
+    if (err.code === 'auth/invalid-password') {
+      const e = new Error('Password must be at least 6 characters.');
+      e.status = 400;
+      throw e;
+    }
+    if (err.code === 'auth/invalid-email') {
+      const e = new Error(`"${email}" is not a valid email address.`);
+      e.status = 400;
+      throw e;
+    }
+    throw err;
+  }
 
   await auth.setCustomUserClaims(userRecord.uid, { role, clinicId, branchId: branchId || null });
 

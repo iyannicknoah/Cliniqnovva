@@ -13,6 +13,7 @@ import '../../../shared/widgets/cliniqnovva_button.dart';
 import '../../../shared/widgets/cliniqnovva_text_field.dart';
 import '../../../shared/widgets/loading_widget.dart';
 import '../../auth/providers/access_control_provider.dart';
+import '../../clinics/providers/branches_provider.dart' show showAllBranchesProvider;
 import '../../departments/providers/departments_provider.dart';
 import '../../departments/widgets/branch_selector.dart';
 import '../models/patient_model.dart';
@@ -143,6 +144,7 @@ class _MergeBodyState extends ConsumerState<_MergeBody> {
   @override
   Widget build(BuildContext context) {
     final effectiveBranchId = widget.branchId ?? ref.watch(activeBranchIdProvider);
+    final isAllBranches = widget.branchId == null && ref.watch(showAllBranchesProvider);
 
     return Padding(
       padding: const EdgeInsets.all(40),
@@ -176,7 +178,7 @@ class _MergeBodyState extends ConsumerState<_MergeBody> {
             ],
           ),
           const SizedBox(height: 28),
-          if (effectiveBranchId == null)
+          if (effectiveBranchId == null && !isAllBranches)
             Text(
               'empty_pick_branch'.tr(),
               style: TextStyle(color: context.appSubtext),
@@ -190,7 +192,7 @@ class _MergeBodyState extends ConsumerState<_MergeBody> {
                     Expanded(
                       child: _PatientSlot(
                         label: 'Record A',
-                        branchId: effectiveBranchId,
+                        branchId: isAllBranches ? null : effectiveBranchId,
                         selectedId: _patientAId,
                         excludeId: _patientBId,
                         onSelected: (id) => setState(() {
@@ -214,7 +216,7 @@ class _MergeBodyState extends ConsumerState<_MergeBody> {
                     Expanded(
                       child: _PatientSlot(
                         label: 'Record B',
-                        branchId: effectiveBranchId,
+                        branchId: isAllBranches ? null : effectiveBranchId,
                         selectedId: _patientBId,
                         excludeId: _patientAId,
                         onSelected: (id) => setState(() {
@@ -293,7 +295,7 @@ class _PatientSlot extends ConsumerStatefulWidget {
   });
 
   final String label;
-  final String branchId;
+  final String? branchId;
   final String? selectedId;
   final String? excludeId;
   final ValueChanged<String> onSelected;

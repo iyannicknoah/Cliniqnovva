@@ -63,12 +63,18 @@ class DepartmentsNotifier extends AsyncNotifier<void> {
 final departmentsNotifierProvider =
     AsyncNotifierProvider<DepartmentsNotifier, void>(DepartmentsNotifier.new);
 
-/// The branch the Departments/Services screens are currently showing, for
-/// an Clinic Admin choosing among several branches. Reuses
-/// [selectedBranchProvider] from Part 6 (set when a branch row is tapped on
-/// /branches) so navigating in from there arrives pre-filtered; screens
-/// fall back to the org's first branch when nothing is selected yet.
+/// The branch id every branch-filterable screen queries with, for a Clinic
+/// Admin choosing among several branches. Reuses [selectedBranchProvider]
+/// from Part 6 (set when a branch row is tapped on /branches) so navigating
+/// in from there arrives pre-filtered; screens fall back to the org's first
+/// branch when nothing is selected yet. Returns null when
+/// [showAllBranchesProvider] is explicitly set — screens that support a
+/// combined "All branches" view treat that null as "no filter" (every
+/// branch's data); screens that need one specific branch (booking, doctor
+/// schedule, dashboard) already treat any null the same way they always
+/// have: prompting for a branch pick.
 final activeBranchIdProvider = Provider.autoDispose<String?>((ref) {
+  if (ref.watch(showAllBranchesProvider)) return null;
   final selected = ref.watch(selectedBranchProvider);
   if (selected != null) return selected.id;
   final branches = ref.watch(branchesProvider).valueOrNull?.branches;

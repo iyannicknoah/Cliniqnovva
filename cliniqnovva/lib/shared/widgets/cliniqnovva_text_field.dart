@@ -19,6 +19,7 @@ class CliniqnovvaTextField extends StatelessWidget {
     this.onChanged,
     this.onFieldSubmitted,
     this.suffixIcon,
+    this.prefixIcon,
   });
 
   final String label;
@@ -30,6 +31,7 @@ class CliniqnovvaTextField extends StatelessWidget {
   final ValueChanged<String>? onChanged;
   final ValueChanged<String>? onFieldSubmitted;
   final Widget? suffixIcon;
+  final Widget? prefixIcon;
 
   OutlineInputBorder _border(Color color) => OutlineInputBorder(
     borderRadius: BorderRadius.circular(AppTheme.inputRadius),
@@ -62,6 +64,7 @@ class CliniqnovvaTextField extends StatelessWidget {
             hintText: hint,
             errorText: errorText,
             suffixIcon: suffixIcon,
+            prefixIcon: prefixIcon,
             filled: true,
             fillColor: context.appCard,
             contentPadding: const EdgeInsetsDirectional.fromSTEB(

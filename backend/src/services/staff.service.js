@@ -1,10 +1,16 @@
 // Service layer for staff (spec section 6.3 / 6.5 / 9 — Part 8).
 // Staff = doctor, nurse, receptionist, pharmacist, accountant (Task 1's
-// explicit role list — branch_admin/clinic_admin/super_admin
-// accounts are created elsewhere). Doctors additionally get a /doctors/{uid}
-// document (specialty, departmentIds, schedule, blockedSlots, ratings).
+// explicit role list — clinic_admin/super_admin accounts are created
+// elsewhere). Doctors additionally get a /doctors/{uid} document (specialty,
+// departmentIds, schedule, blockedSlots, ratings).
 // Accounts are created DIRECTLY via authService.createStaffAccountWithPassword
 // — the one account-creation path, no invite flow (see auth.service.js).
+//
+// branch_admin (2026-07-25): also created and listed through this same path
+// now — a branch's admin is created as the second step of "+ Add Branch"
+// (Clinic Admin only, see the actorRole check in create() below), so they
+// show up in that branch's own Staff list with the "Branch Admin" role
+// label, same as any other staff member.
 const { db } = require('../config/firebase-admin');
 const { auth } = require('../config/firebase-admin');
 const { ROLES } = require('../middleware/requireRole');
@@ -17,6 +23,14 @@ const STAFF_ROLES = [
   ROLES.PHARMACIST,
   ROLES.ACCOUNTANT,
 ];
+
+// What list() shows for a branch's Staff screen — the 5 STAFF_ROLES plus
+// that branch's own admin, if it has one.
+const LISTABLE_ROLES = [...STAFF_ROLES, ROLES.BRANCH_ADMIN];
+
+// What create() accepts — same as LISTABLE_ROLES, but branch_admin is
+// further gated to Clinic Admin/Super Admin callers only (see create()).
+const CREATABLE_ROLES = [...STAFF_ROLES, ROLES.BRANCH_ADMIN];
 
 // Appointment statuses that count as a doctor "being in use" — not
 // currently enforced as a deactivation block (Part 8 only requires that
@@ -59,6 +73,7 @@ async function attachDoctorFields(staffRows) {
       bio: d?.bio || null,
       departmentIds: d?.departmentIds || [],
       schedule: d?.schedule || [],
+      breakMinutes: d?.breakMinutes || 0,
       blockedSlots: d?.blockedSlots || [],
       averageRating: d?.averageRating || 0,
       reviewCount: d?.reviewCount || 0,
@@ -66,12 +81,12 @@ async function attachDoctorFields(staffRows) {
   });
 }
 
-/** Staff (the 5 STAFF_ROLES only) for one branch — Part 8 Task 1. */
+/** Staff (STAFF_ROLES plus that branch's own admin) for one branch — Part 8 Task 1. */
 async function list({ clinicId, branchId }) {
   let query = db
     .collection('users')
     .where('clinicId', '==', clinicId)
-    .where('role', 'in', STAFF_ROLES);
+    .where('role', 'in', LISTABLE_ROLES);
   if (branchId) query = query.where('branchId', '==', branchId);
 
   const snapshot = await query.get();
@@ -100,15 +115,35 @@ function assertAccess(staffMember, scope) {
  * Creates a staff account directly, active immediately (Part 8 Task 1/3 —
  * no invite, password shown once by the caller after this returns). Doctors
  * additionally get a /doctors/{uid} document.
+ *
+ * branch_admin (2026-07-25) is the one CREATABLE_ROLES entry with extra
+ * rules: only a Clinic Admin/Super Admin may create one (a Branch Admin
+ * can't create a peer for another branch), and a branch can only ever have
+ * one — this is step 2 of "+ Add Branch", not a general staff role.
  */
 async function create(
   { email, password, name, role, clinicId, branchId, phone, specialty, departmentIds },
   actor
 ) {
-  if (!STAFF_ROLES.includes(role)) {
-    throw httpError(400, `Role must be one of: ${STAFF_ROLES.join(', ')}`);
+  if (!CREATABLE_ROLES.includes(role)) {
+    throw httpError(400, `Role must be one of: ${CREATABLE_ROLES.join(', ')}`);
   }
   if (!branchId) throw httpError(400, 'branchId is required');
+
+  if (role === ROLES.BRANCH_ADMIN) {
+    if (actor.actorRole !== ROLES.CLINIC_ADMIN && actor.actorRole !== ROLES.SUPER_ADMIN) {
+      throw httpError(403, 'Only a Clinic Admin can assign a branch admin.');
+    }
+    const existing = await db
+      .collection('users')
+      .where('branchId', '==', branchId)
+      .where('role', '==', ROLES.BRANCH_ADMIN)
+      .limit(1)
+      .get();
+    if (!existing.empty) {
+      throw httpError(400, 'This branch already has an admin.');
+    }
+  }
 
   const { uid } = await authService.createStaffAccountWithPassword({
     email,
@@ -130,6 +165,7 @@ async function create(
         bio: null,
         departmentIds: Array.isArray(departmentIds) ? departmentIds : [],
         schedule: [],
+        breakMinutes: 0,
         blockedSlots: [],
         averageRating: 0,
         reviewCount: 0,
@@ -206,14 +242,25 @@ function toMinutes(hhmm) {
  * slots on the same day for the same doctor. Only Branch Admin/Receptionist/
  * Clinic Admin may write it (Doctor is view-own-only, enforced in the
  * controller/route role list).
+ *
+ * breakMinutes (2026-07-26, explicit user instruction) — a single per-doctor
+ * buffer the booking engine (`appointments.service.js`'s
+ * `getAvailableSlots`) enforces on both sides of every booked appointment
+ * AND every blocked slot, so two bookings for the same doctor are never
+ * offered back-to-back with no recovery time between them.
  */
-async function setSchedule(doctorId, entries, actor) {
+async function setSchedule(doctorId, entries, breakMinutes, actor) {
   const staffMember = await getById(doctorId);
   if (!staffMember) throw httpError(404, 'Doctor not found');
   if (staffMember.role !== ROLES.DOCTOR) throw httpError(400, 'This staff member is not a doctor');
   assertAccess(staffMember, actor.scope);
 
   if (!Array.isArray(entries)) throw httpError(400, 'schedule must be an array');
+
+  const normalizedBreakMinutes = breakMinutes ?? 0;
+  if (!Number.isInteger(normalizedBreakMinutes) || normalizedBreakMinutes < 0) {
+    throw httpError(400, 'breakMinutes must be a non-negative whole number');
+  }
 
   const byDay = {};
   for (const entry of entries) {
@@ -246,7 +293,7 @@ async function setSchedule(doctorId, entries, actor) {
     }
   }
 
-  await db.collection('doctors').doc(doctorId).update({ schedule: entries });
+  await db.collection('doctors').doc(doctorId).update({ schedule: entries, breakMinutes: normalizedBreakMinutes });
   return getById(doctorId);
 }
 

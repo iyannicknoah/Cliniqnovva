@@ -115,11 +115,16 @@ async function setStatus(req, res, next) {
 
 async function setSchedule(req, res, next) {
   try {
-    const staffMember = await staffService.setSchedule(req.params.doctorId, req.body.schedule, {
-      actorId: req.user?.uid,
-      actorRole: req.user?.role,
-      scope: req.scope,
-    });
+    const staffMember = await staffService.setSchedule(
+      req.params.doctorId,
+      req.body.schedule,
+      req.body.breakMinutes,
+      {
+        actorId: req.user?.uid,
+        actorRole: req.user?.role,
+        scope: req.scope,
+      }
+    );
     res.json({ staff: staffMember });
   } catch (err) {
     next(err);

@@ -8,8 +8,10 @@ import '../../../shared/widgets/cliniqnovva_button.dart';
 import '../../../shared/widgets/cliniqnovva_table.dart';
 import '../../../shared/widgets/empty_state.dart';
 import '../../../shared/widgets/loading_widget.dart';
+import '../../../shared/widgets/row_actions_menu.dart';
 import '../../../shared/widgets/status_badge.dart';
 import '../../auth/providers/access_control_provider.dart';
+import '../../clinics/providers/branches_provider.dart' show showAllBranchesProvider;
 import '../models/department_model.dart';
 import '../models/service_model.dart';
 import '../providers/departments_provider.dart';
@@ -105,6 +107,7 @@ class _ServicesBody extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final effectiveBranchId = branchId ?? ref.watch(activeBranchIdProvider);
+    final isAllBranches = branchId == null && ref.watch(showAllBranchesProvider);
 
     return Padding(
       padding: const EdgeInsets.all(40),
@@ -145,10 +148,10 @@ class _ServicesBody extends ConsumerWidget {
           ),
           const SizedBox(height: 28),
           Expanded(
-            child: effectiveBranchId == null
+            child: effectiveBranchId == null && !isAllBranches
                 ? const NoBranchSelectedState()
                 : _ServicesList(
-                    branchId: effectiveBranchId,
+                    branchId: isAllBranches ? null : effectiveBranchId,
                     canManage: canManage,
                     onDelete: (service) =>
                         _confirmDelete(context, ref, service),
@@ -167,7 +170,7 @@ class _ServicesList extends ConsumerWidget {
     required this.onDelete,
   });
 
-  final String branchId;
+  final String? branchId;
   final bool canManage;
   final ValueChanged<ServiceModel> onDelete;
 
@@ -241,23 +244,21 @@ class _ServicesList extends ConsumerWidget {
                                       : BadgeType.error,
                                 ),
                                 if (canManage)
-                                  Row(
-                                    children: [
-                                      CliniqnovvaButton.text(
+                                  RowActionsMenu(
+                                    actions: [
+                                      RowAction(
                                         label: 'Edit',
-                                        color: context.appText,
-                                        onPressed: () => showServicePanel(
+                                        onTap: () => showServicePanel(
                                           context,
-                                          branchId: branchId,
+                                          branchId: service.branchId,
                                           service: service,
                                         ),
                                       ),
-                                      CliniqnovvaButton.text(
+                                      RowAction(
                                         label: service.isActive
                                             ? 'Deactivate'
                                             : 'Activate',
-                                        color: context.appSubtext,
-                                        onPressed: () => ref
+                                        onTap: () => ref
                                             .read(
                                               servicesNotifierProvider
                                                   .notifier,
@@ -268,22 +269,10 @@ class _ServicesList extends ConsumerWidget {
                                             ),
                                       ),
                                       if (service.canDelete)
-                                        CliniqnovvaButton.text(
+                                        RowAction(
                                           label: 'Delete',
-                                          color: context.appSubtext,
-                                          onPressed: () => onDelete(service),
-                                        )
-                                      else
-                                        Tooltip(
-                                          message:
-                                              'Has appointment/invoice history — deactivate instead.',
-                                          child: Text(
-                                            'Has history',
-                                            style: TextStyle(
-                                              color: context.appSubtext,
-                                              fontSize: 12,
-                                            ),
-                                          ),
+                                          isDestructive: true,
+                                          onTap: () => onDelete(service),
                                         ),
                                     ],
                                   ),

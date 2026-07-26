@@ -10,6 +10,7 @@ import '../../../shared/widgets/empty_state.dart';
 import '../../../shared/widgets/loading_widget.dart';
 import '../../../shared/widgets/status_badge.dart';
 import '../../auth/providers/access_control_provider.dart';
+import '../../clinics/providers/branches_provider.dart' show showAllBranchesProvider;
 import '../../departments/providers/departments_provider.dart' show activeBranchIdProvider;
 import '../../departments/widgets/branch_selector.dart';
 import '../../patients/providers/patients_provider.dart';
@@ -86,6 +87,7 @@ class _BillingScreenState extends ConsumerState<BillingScreen> {
           final effectiveBranchId = isOrgAdmin
               ? ref.watch(activeBranchIdProvider)
               : ownBranchId;
+          final isAllBranches = isOrgAdmin && ref.watch(showAllBranchesProvider);
 
           return Padding(
             padding: const EdgeInsets.all(40),
@@ -176,10 +178,10 @@ class _BillingScreenState extends ConsumerState<BillingScreen> {
                 ),
                 const SizedBox(height: 24),
                 Expanded(
-                  child: effectiveBranchId == null
+                  child: effectiveBranchId == null && !isAllBranches
                       ? const NoBranchSelectedState()
                       : _InvoicesList(
-                          branchId: effectiveBranchId,
+                          branchId: isAllBranches ? null : effectiveBranchId,
                           status: _statusFilter,
                           dateFrom: _dateFrom != null ? _isoDate(_dateFrom!) : null,
                           dateTo: _dateTo != null ? _isoDate(_dateTo!) : null,
@@ -225,7 +227,7 @@ class _InvoicesList extends ConsumerWidget {
     required this.dateTo,
   });
 
-  final String branchId;
+  final String? branchId;
   final String? status;
   final String? dateFrom;
   final String? dateTo;

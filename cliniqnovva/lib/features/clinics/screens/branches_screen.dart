@@ -8,6 +8,7 @@ import '../../../shared/utils/async_feedback.dart';
 import '../../../shared/widgets/cliniqnovva_button.dart';
 import '../../../shared/widgets/cliniqnovva_table.dart';
 import '../../../shared/widgets/loading_widget.dart';
+import '../../../shared/widgets/row_actions_menu.dart';
 import '../../../shared/widgets/status_badge.dart';
 import '../../auth/providers/access_control_provider.dart';
 import '../models/branch_model.dart';
@@ -232,22 +233,20 @@ class _ClinicBranchesView extends ConsumerWidget {
                                         ? BadgeType.success
                                         : BadgeType.error,
                                   ),
-                                  Row(
-                                    children: [
-                                      CliniqnovvaButton.text(
+                                  RowActionsMenu(
+                                    actions: [
+                                      RowAction(
                                         label: 'Edit',
-                                        color: context.appText,
-                                        onPressed: () => showBranchPanel(
+                                        onTap: () => showBranchPanel(
                                           context,
                                           branch: branch,
                                         ),
                                       ),
-                                      CliniqnovvaButton.text(
+                                      RowAction(
                                         label: branch.isActive
                                             ? 'Deactivate'
                                             : 'Activate',
-                                        color: context.appSubtext,
-                                        onPressed: () => _confirmSetStatus(
+                                        onTap: () => _confirmSetStatus(
                                           context,
                                           ref,
                                           branch,

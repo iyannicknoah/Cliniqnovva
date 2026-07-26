@@ -52,7 +52,7 @@ class CliniqnovvaTableRow extends StatelessWidget {
       child: Column(
         children: [
           Padding(
-            padding: const EdgeInsetsDirectional.fromSTEB(0, 16, 0, 16),
+            padding: const EdgeInsetsDirectional.fromSTEB(0, 26, 0, 26),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [

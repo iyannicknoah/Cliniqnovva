@@ -11,6 +11,7 @@ import '../../../shared/widgets/cliniqnovva_text_field.dart';
 import '../../../shared/widgets/loading_widget.dart';
 import '../../auth/providers/access_control_provider.dart';
 import '../../departments/providers/departments_provider.dart';
+import '../../departments/widgets/branch_selector.dart';
 import '../models/patient_model.dart';
 import '../providers/patients_provider.dart';
 import '../widgets/patient_form_fields.dart';
@@ -46,6 +47,7 @@ class RegisterPatientScreen extends ConsumerWidget {
           final ownBranchId = data?['branchId'] as String?;
           return _RegisterForm(
             branchId: isOrgAdmin ? null : ownBranchId,
+            showBranchSelector: isOrgAdmin,
             returnTo: returnTo,
           );
         },
@@ -55,11 +57,21 @@ class RegisterPatientScreen extends ConsumerWidget {
 }
 
 class _RegisterForm extends ConsumerStatefulWidget {
-  const _RegisterForm({required this.branchId, this.returnTo});
+  const _RegisterForm({
+    required this.branchId,
+    required this.showBranchSelector,
+    this.returnTo,
+  });
 
   final String? returnTo;
 
   final String? branchId;
+
+  /// True for a Clinic Admin — shown so that if "All branches" is the
+  /// active filter, they can pick the one branch this patient registers
+  /// under instead of hitting the "No branch to register this patient
+  /// under" error with no way to fix it from this screen.
+  final bool showBranchSelector;
 
   @override
   ConsumerState<_RegisterForm> createState() => _RegisterFormState();
@@ -252,13 +264,21 @@ class _RegisterFormState extends ConsumerState<_RegisterForm> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'Register Patient',
-                style: TextStyle(
-                  color: context.appText,
-                  fontSize: 22,
-                  fontWeight: FontWeight.w600,
-                ),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Register Patient',
+                      style: TextStyle(
+                        color: context.appText,
+                        fontSize: 22,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  if (widget.showBranchSelector) const BranchSelector(),
+                ],
               ),
               const SizedBox(height: 4),
               Text(

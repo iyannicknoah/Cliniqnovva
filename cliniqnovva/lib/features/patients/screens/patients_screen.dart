@@ -11,6 +11,7 @@ import '../../../shared/widgets/cliniqnovva_text_field.dart';
 import '../../../shared/widgets/empty_state.dart';
 import '../../../shared/widgets/loading_widget.dart';
 import '../../auth/providers/access_control_provider.dart';
+import '../../clinics/providers/branches_provider.dart' show showAllBranchesProvider;
 import '../../departments/providers/departments_provider.dart';
 import '../../departments/widgets/branch_selector.dart';
 import '../providers/patients_provider.dart';
@@ -115,6 +116,7 @@ class _PatientsBody extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final effectiveBranchId = branchId ?? ref.watch(activeBranchIdProvider);
+    final isAllBranches = branchId == null && ref.watch(showAllBranchesProvider);
 
     return Padding(
       padding: const EdgeInsets.all(40),
@@ -168,9 +170,12 @@ class _PatientsBody extends ConsumerWidget {
           ),
           const SizedBox(height: 28),
           Expanded(
-            child: effectiveBranchId == null
+            child: effectiveBranchId == null && !isAllBranches
                 ? const NoBranchSelectedState()
-                : _PatientsList(branchId: effectiveBranchId, query: query),
+                : _PatientsList(
+                    branchId: isAllBranches ? null : effectiveBranchId,
+                    query: query,
+                  ),
           ),
         ],
       ),
@@ -181,7 +186,7 @@ class _PatientsBody extends ConsumerWidget {
 class _PatientsList extends ConsumerWidget {
   const _PatientsList({required this.branchId, required this.query});
 
-  final String branchId;
+  final String? branchId;
   final String query;
 
   @override

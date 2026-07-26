@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_theme.dart';
@@ -8,6 +9,7 @@ import '../../../core/theme/theme_ext.dart';
 import '../../../shared/utils/async_feedback.dart';
 import '../../../shared/widgets/app_icon.dart';
 import '../../../shared/widgets/cliniqnovva_button.dart';
+import '../../staff/widgets/add_edit_staff_panel.dart';
 import '../models/branch_model.dart';
 import '../providers/branches_provider.dart';
 import 'branch_form.dart';
@@ -81,16 +83,35 @@ class _BranchPanelState extends ConsumerState<_BranchPanel> {
 
     try {
       final notifier = ref.read(branchesNotifierProvider.notifier);
-      await runWithFeedback(
-        context,
-        () => _isEdit
-            ? notifier.updateBranch(widget.branch!.id, form.buildBody())
-            : notifier.createBranch(form.buildBody()),
-        loadingMessage: _isEdit ? 'Saving branch…' : 'Creating branch…',
-        successMessage: _isEdit ? 'Branch saved.' : 'Branch created.',
-      );
-      if (!mounted) return;
-      Navigator.of(context).pop();
+      if (_isEdit) {
+        await runWithFeedback(
+          context,
+          () => notifier.updateBranch(widget.branch!.id, form.buildBody()),
+          loadingMessage: 'Saving branch…',
+          successMessage: 'Branch saved.',
+        );
+        if (!mounted) return;
+        Navigator.of(context).pop();
+      } else {
+        final created = await runWithFeedback(
+          context,
+          () => notifier.createBranch(form.buildBody()),
+          loadingMessage: 'Creating branch…',
+          successMessage: 'Branch created.',
+        );
+        if (!mounted) return;
+        Navigator.of(context).pop();
+        // Step 2 (2026-07-25) — immediately prompt for this branch's admin,
+        // so a newly created branch is never left without one. Dismissible
+        // like any other panel — the branch itself is already saved either
+        // way, this just offers to do the admin right now instead of later
+        // from the Staff screen.
+        showStaffPanel(
+          context,
+          branchId: created.id,
+          lockedRole: AppConstants.roleBranchAdmin,
+        );
+      }
     } catch (e) {
       if (!mounted) return;
       setState(() {

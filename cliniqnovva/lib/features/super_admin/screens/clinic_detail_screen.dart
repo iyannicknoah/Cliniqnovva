@@ -3,8 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_constants.dart';
+import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/theme_ext.dart';
+import '../../../shared/widgets/app_icon.dart';
 import '../../../shared/utils/async_feedback.dart';
 import '../../../shared/widgets/cliniqnovva_button.dart';
 import '../../../shared/widgets/cliniqnovva_card.dart';
@@ -93,14 +96,19 @@ class _ClinicDetailScreenState
     }
   }
 
-  Future<void> _confirmDelete(Clinic org) async {
+  /// "Delete clinic" (2026-07-25) — archives, doesn't hard-delete. Works
+  /// regardless of what's linked to the clinic (branches, staff, patients,
+  /// etc.), unlike the old branch-count-gated hard delete.
+  Future<void> _confirmArchive(Clinic org) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('Delete clinic?'),
         content: Text(
-          'This permanently removes "${org.name}" and its admin account. '
-          'This cannot be undone.',
+          '"${org.name}" and everything linked to it (branches, staff, '
+          'patients, appointments, invoices) will be archived immediately '
+          'and permanently deleted in 14 days unless you restore it before '
+          'then.',
         ),
         actions: [
           TextButton(
@@ -119,14 +127,22 @@ class _ClinicDetailScreenState
     try {
       await runWithFeedback(
         context,
-        () => ref.read(clinicsNotifierProvider.notifier).remove(org.id),
-        loadingMessage: 'Deleting clinic…',
-        successMessage: 'Clinic deleted.',
+        () => ref.read(clinicsNotifierProvider.notifier).archive(org.id),
+        loadingMessage: 'Archiving clinic…',
+        successMessage: 'Clinic archived — permanently deleted in 14 days.',
       );
-      if (mounted) context.pop();
     } catch (_) {
-      // runWithFeedback already surfaced the server's reason (e.g. has branches).
+      // runWithFeedback already surfaced the server's reason.
     }
+  }
+
+  Future<void> _unarchive(Clinic org) async {
+    await runWithFeedback(
+      context,
+      () => ref.read(clinicsNotifierProvider.notifier).unarchive(org.id),
+      loadingMessage: 'Restoring clinic…',
+      successMessage: 'Clinic restored.',
+    );
   }
 
   Future<void> _toggleStatus(Clinic org) async {
@@ -241,6 +257,46 @@ class _ClinicDetailScreenState
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              if (org.isArchived) ...[
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.pillRedBg,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    children: [
+                      const AppIcon(
+                        AppIcons.warning,
+                        size: 18,
+                        color: AppColors.pillRedText,
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          'Archived — permanently deleted in '
+                          '${org.daysUntilPurge} day${org.daysUntilPurge == 1 ? '' : 's'} '
+                          'unless restored.',
+                          style: const TextStyle(
+                            color: AppColors.pillRedText,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      CliniqnovvaButton.text(
+                        label: 'Unarchive',
+                        color: AppColors.pillRedText,
+                        onPressed: () => _unarchive(org),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
+              ],
               Row(
                 children: [
                   Expanded(
@@ -257,39 +313,27 @@ class _ClinicDetailScreenState
                     text: org.isActive ? 'Active' : 'Suspended',
                     type: org.isActive ? BadgeType.success : BadgeType.error,
                   ),
-                  const SizedBox(width: 12),
-                  CliniqnovvaButton.text(
-                    label: 'View as Clinic Admin',
-                    onPressed: () => context.push(
-                      '/super-admin/clinics/${org.id}/support-view',
+                  if (!org.isArchived) ...[
+                    const SizedBox(width: 12),
+                    CliniqnovvaButton.text(
+                      label: 'View as Clinic Admin',
+                      onPressed: () => context.push(
+                        '/super-admin/clinics/${org.id}/support-view',
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 4),
-                  if (org.canDelete)
+                    const SizedBox(width: 4),
                     CliniqnovvaButton.text(
                       label: 'Delete clinic',
                       color: context.appSubtext,
-                      onPressed: () => _confirmDelete(org),
-                    )
-                  else
-                    Tooltip(
-                      message:
-                          'This clinic has branches — suspend it instead '
-                          'of deleting.',
-                      child: Text(
-                        'Has branches',
-                        style: TextStyle(
-                          color: context.appSubtext,
-                          fontSize: 12,
-                        ),
-                      ),
+                      onPressed: () => _confirmArchive(org),
                     ),
-                  const SizedBox(width: 4),
-                  CliniqnovvaButton(
-                    label: org.isActive ? 'Suspend' : 'Activate',
-                    isFullWidth: false,
-                    onPressed: () => _toggleStatus(org),
-                  ),
+                    const SizedBox(width: 4),
+                    CliniqnovvaButton(
+                      label: org.isActive ? 'Suspend' : 'Activate',
+                      isFullWidth: false,
+                      onPressed: () => _toggleStatus(org),
+                    ),
+                  ],
                 ],
               ),
               const SizedBox(height: 24),
@@ -410,13 +454,15 @@ class _ClinicDetailScreenState
                       controller: _ownerPhoneController,
                       keyboardType: TextInputType.phone,
                     ),
-                    const SizedBox(height: 20),
-                    CliniqnovvaButton(
-                      label: 'Save changes',
-                      isFullWidth: false,
-                      isLoading: _saving,
-                      onPressed: _save,
-                    ),
+                    if (!org.isArchived) ...[
+                      const SizedBox(height: 20),
+                      CliniqnovvaButton(
+                        label: 'Save changes',
+                        isFullWidth: false,
+                        isLoading: _saving,
+                        onPressed: _save,
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -439,7 +485,7 @@ class _ClinicDetailScreenState
                         ),
                         CliniqnovvaButton.text(
                           label: '+ Create branch on this clinic\'s behalf',
-                          onPressed: _atBranchLimit(org)
+                          onPressed: _atBranchLimit(org) || org.isArchived
                               ? null
                               : _createBranchOnBehalf,
                         ),

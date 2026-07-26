@@ -73,6 +73,8 @@ class Clinic {
     this.nextDueDate,
     this.paymentHistory = const [],
     required this.billingStatus,
+    this.isArchived = false,
+    this.archivedAt,
   });
 
   final String id;
@@ -85,6 +87,14 @@ class Clinic {
   final String? ownerContactName;
   final String? ownerContactPhone;
   final List<Branch> branches;
+
+  /// "Delete clinic" archives rather than hard-deletes (2026-07-25) —
+  /// [isArchived] clinics are hidden from the default Clinics list and
+  /// permanently, cascade-deleted [_purgeAfterDays] after [archivedAt] by
+  /// a daily backend cron job (clinics.service.js#permanentlyDeleteArchivedClinics)
+  /// unless unarchived first.
+  final bool isArchived;
+  final DateTime? archivedAt;
 
   /// Part 4: subscription/billing tracking (cash-only, no gateway).
   final String billingCycle; // 'monthly' | 'quarterly'
@@ -128,15 +138,28 @@ class Clinic {
               .toList() ??
           const [],
       billingStatus: json['billingStatus'] as String? ?? 'notPaid',
+      isArchived: json['isArchived'] as bool? ?? false,
+      archivedAt: json['archivedAt'] != null
+          ? DateTime.tryParse(json['archivedAt'] as String)
+          : null,
     );
   }
 
   String get branchLimitLabel =>
       branchLimit == null ? 'Unlimited' : '$branchCount / $branchLimit';
 
-  /// Mirrors the backend's rule (clinics.service.js#remove): a clinic can
-  /// only be hard-deleted while it has zero branches — otherwise suspend it.
-  bool get canDelete => branchCount == 0;
+  /// Must match clinics.service.js's PURGE_AFTER_DAYS.
+  static const _purgeAfterDays = 14;
+
+  /// Days left before this clinic is permanently deleted, or null if it
+  /// isn't archived. Never negative — clamped to 0 once the purge job is
+  /// due to run (it runs once daily, so there can be a brief window where
+  /// this reads 0 before the sweep actually happens).
+  int? get daysUntilPurge {
+    if (!isArchived || archivedAt == null) return null;
+    final elapsed = DateTime.now().difference(archivedAt!).inDays;
+    return (_purgeAfterDays - elapsed).clamp(0, _purgeAfterDays);
+  }
 
   /// Monthly-normalized revenue for this clinic (quarterly ÷ 3), used
   /// for the Billing screen's "Total monthly revenue" MetricCard.

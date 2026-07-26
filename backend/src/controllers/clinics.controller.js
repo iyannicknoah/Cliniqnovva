@@ -51,15 +51,23 @@ async function create(req, res, next) {
       subscriptionAmountRwf,
     });
 
-    const account = await authService.createStaffAccountWithPassword({
-      email: adminEmail,
-      password: adminPassword,
-      name: ownerContactName || name,
-      role: ROLES.CLINIC_ADMIN,
-      clinicId: clinic.id,
-      branchId: null,
-      createdBy: req.user?.uid,
-    });
+    let account;
+    try {
+      account = await authService.createStaffAccountWithPassword({
+        email: adminEmail,
+        password: adminPassword,
+        name: ownerContactName || name,
+        role: ROLES.CLINIC_ADMIN,
+        clinicId: clinic.id,
+        branchId: null,
+        createdBy: req.user?.uid,
+      });
+    } catch (err) {
+      // Admin account creation failed — undo the clinic doc so the failed
+      // attempt doesn't leave a clinic with no working admin login.
+      await clinicsService.deleteById(clinic.id).catch(() => {});
+      throw err;
+    }
 
     res.status(201).json({ clinic, account });
   } catch (err) {
@@ -89,11 +97,24 @@ async function setStatus(req, res, next) {
   }
 }
 
+// "Delete clinic" (2026-07-25) — archives, doesn't hard-delete. See
+// clinics.service.js#archive for what that means and how permanent
+// deletion eventually happens (the daily purge cron job, 14 days later).
 async function remove(req, res, next) {
   try {
-    const result = await clinicsService.remove(req.params.id);
-    if (!result) return res.status(404).json({ error: 'Clinic not found' });
-    res.status(204).send();
+    const clinic = await clinicsService.archive(req.params.id);
+    if (!clinic) return res.status(404).json({ error: 'Clinic not found' });
+    res.json({ clinic });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function unarchive(req, res, next) {
+  try {
+    const clinic = await clinicsService.unarchive(req.params.id);
+    if (!clinic) return res.status(404).json({ error: 'Clinic not found' });
+    res.json({ clinic });
   } catch (err) {
     next(err);
   }
@@ -145,6 +166,7 @@ module.exports = {
   setStatus,
   setBillingStatus,
   remove,
+  unarchive,
   recordPayment,
   getPaymentHistory,
 };

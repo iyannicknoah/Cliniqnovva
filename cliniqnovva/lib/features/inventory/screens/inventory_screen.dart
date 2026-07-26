@@ -9,9 +9,11 @@ import '../../../shared/widgets/cliniqnovva_button.dart';
 import '../../../shared/widgets/cliniqnovva_table.dart';
 import '../../../shared/widgets/empty_state.dart';
 import '../../../shared/widgets/loading_widget.dart';
+import '../../../shared/widgets/row_actions_menu.dart';
 import '../../../shared/widgets/segmented_tabs.dart';
 import '../../../shared/widgets/status_badge.dart';
 import '../../auth/providers/access_control_provider.dart';
+import '../../clinics/providers/branches_provider.dart' show showAllBranchesProvider;
 import '../../departments/providers/departments_provider.dart' show activeBranchIdProvider;
 import '../../departments/widgets/branch_selector.dart';
 import '../models/inventory_item_model.dart';
@@ -50,6 +52,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
           final effectiveBranchId = isOrgAdmin
               ? ref.watch(activeBranchIdProvider)
               : ownBranchId;
+          final isAllBranches = isOrgAdmin && ref.watch(showAllBranchesProvider);
 
           return Padding(
             padding: const EdgeInsets.all(40),
@@ -83,12 +86,18 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
                 ),
                 const SizedBox(height: 24),
                 Expanded(
-                  child: effectiveBranchId == null
+                  child: effectiveBranchId == null && !isAllBranches
                       ? const NoBranchSelectedState()
                       : switch (_tab) {
-                          0 => _StockTab(branchId: effectiveBranchId),
-                          1 => DispensePanel(branchId: effectiveBranchId),
-                          _ => _LogTab(branchId: effectiveBranchId),
+                          0 => _StockTab(
+                            branchId: isAllBranches ? null : effectiveBranchId,
+                          ),
+                          1 => effectiveBranchId == null
+                              ? const NoBranchSelectedState()
+                              : DispensePanel(branchId: effectiveBranchId),
+                          _ => _LogTab(
+                            branchId: isAllBranches ? null : effectiveBranchId,
+                          ),
                         },
                 ),
               ],
@@ -103,7 +112,10 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
 class _StockTab extends ConsumerWidget {
   const _StockTab({required this.branchId});
 
-  final String branchId;
+  /// Null means "All branches" — the list shows every branch's stock
+  /// combined, but adding a new item still needs one specific branch, so
+  /// "+ Add Item" is disabled until the admin picks one.
+  final String? branchId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -118,8 +130,9 @@ class _StockTab extends ConsumerWidget {
             width: 140,
             child: CliniqnovvaButton(
               label: '+ Add Item',
-              onPressed: () =>
-                  showInventoryItemPanel(context, branchId: branchId),
+              onPressed: branchId == null
+                  ? null
+                  : () => showInventoryItemPanel(context, branchId: branchId!),
             ),
           ),
         ),
@@ -200,26 +213,23 @@ class _ItemRow extends ConsumerWidget {
               const StatusBadge(text: 'Expired', type: BadgeType.error),
           ],
         ),
-        Row(
-          children: [
-            CliniqnovvaButton.text(
+        RowActionsMenu(
+          actions: [
+            RowAction(
               label: 'Edit',
-              color: context.appText,
-              onPressed: () => showInventoryItemPanel(
+              onTap: () => showInventoryItemPanel(
                 context,
                 branchId: item.branchId,
                 item: item,
               ),
             ),
-            CliniqnovvaButton.text(
+            RowAction(
               label: 'Adjust',
-              color: context.appText,
-              onPressed: () => showAdjustStockDialog(context, item: item),
+              onTap: () => showAdjustStockDialog(context, item: item),
             ),
-            CliniqnovvaButton.text(
+            RowAction(
               label: item.isActive ? 'Deactivate' : 'Activate',
-              color: context.appSubtext,
-              onPressed: () async {
+              onTap: () async {
                 try {
                   await runWithFeedback(
                     context,
@@ -248,7 +258,7 @@ class _ItemRow extends ConsumerWidget {
 class _LogTab extends ConsumerWidget {
   const _LogTab({required this.branchId});
 
-  final String branchId;
+  final String? branchId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
