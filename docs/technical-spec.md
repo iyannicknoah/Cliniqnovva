@@ -317,6 +317,18 @@ wrote to them beyond the now-removed toggle.
 - Invoice cannot be deleted once a payment is recorded — only voided with a logged reason
 - Partial payments update the running balance, not overwrite it
 - All amounts in RWF, whole numbers
+- **Fixed 2026-07-26 (real reported bug):** "Generate/print receipts" was
+  broken for Accountant specifically — printing a receipt needs the
+  patient's name/phone (`GET /patients/detail/:patientId`), but Accountant
+  was never added to that route's allowed roles, so every print attempt
+  403'd. This had been masked by a separate bug (now also fixed — see
+  `cliniqnovva/DESIGN_LANGUAGE.md`'s changelog) where the print button had
+  no error handling at all, so the 403 was silently swallowed instead of
+  shown. Fixed by adding Accountant to `patients.routes.js`'s `READ_ROLES`
+  and to the same clinical-data-free response shape Receptionist already
+  gets in `patients.service.js`'s `getById` (name/phone only — no
+  medicalRecords/documents, consistent with Receptionist never seeing
+  clinical notes). Covered by a new test in `backend/test/patients.test.js`.
 
 ### 6.9 Inventory / Pharmacy Management *(optional module)*
 **Purpose:** Track medicine/supply stock for clinics with an in-house pharmacy.

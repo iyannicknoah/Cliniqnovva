@@ -9,8 +9,9 @@ const controller = require('../controllers/staff.controller');
 router.use(verifyToken, attachScope);
 
 // Read: admins + a Doctor viewing their own record/schedule (spec 6.5:
-// "Doctor (view own)").
-const READ_ROLES = [ROLES.CLINIC_ADMIN, ROLES.BRANCH_ADMIN, ROLES.SUPER_ADMIN, ROLES.DOCTOR];
+// "Doctor (view own)"). Accountant added 2026-07-26 — Reports/receipts
+// need doctor names to resolve doctorId keys instead of showing raw ids.
+const READ_ROLES = [ROLES.CLINIC_ADMIN, ROLES.BRANCH_ADMIN, ROLES.SUPER_ADMIN, ROLES.DOCTOR, ROLES.ACCOUNTANT];
 router.get('/', requireRole(...READ_ROLES), controller.list);
 router.get('/:id', requireRole(...READ_ROLES), controller.getById);
 

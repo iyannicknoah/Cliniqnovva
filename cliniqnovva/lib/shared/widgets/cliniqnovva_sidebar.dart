@@ -437,11 +437,11 @@ class _ProfileMenuContentState extends ConsumerState<_ProfileMenuContent> {
       child: Material(
         color: Colors.transparent,
         child: Container(
-          width: 220,
-          padding: const EdgeInsets.all(8),
+          width: 250,
+          padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
             color: context.appCard,
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(14),
             border: Border.all(color: context.appBorder, width: 1),
           ),
           child: Column(
@@ -452,16 +452,16 @@ class _ProfileMenuContentState extends ConsumerState<_ProfileMenuContent> {
                 'menu_theme'.tr(),
                 style: TextStyle(
                   color: context.appText,
-                  fontSize: 11.5,
+                  fontSize: 12.5,
                   fontWeight: FontWeight.w600,
                 ),
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: 7),
               Container(
-                padding: const EdgeInsets.all(2),
+                padding: const EdgeInsets.all(3),
                 decoration: BoxDecoration(
                   color: context.appSecondaryBg,
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(9),
                 ),
                 child: Row(
                   children: [
@@ -486,29 +486,29 @@ class _ProfileMenuContentState extends ConsumerState<_ProfileMenuContent> {
                   ],
                 ),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 12),
               Divider(height: 1, color: context.appBorder),
-              const SizedBox(height: 10),
+              const SizedBox(height: 12),
               Text(
                 'menu_language'.tr(),
                 style: TextStyle(
                   color: context.appText,
-                  fontSize: 11.5,
+                  fontSize: 12.5,
                   fontWeight: FontWeight.w600,
                 ),
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: 7),
               InkWell(
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(9),
                 onTap: _toggleLanguageSubmenu,
                 child: Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 7,
+                    horizontal: 12,
+                    vertical: 9,
                   ),
                   decoration: BoxDecoration(
                     color: context.appSecondaryBg,
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(9),
                   ),
                   child: Row(
                     children: [
@@ -517,42 +517,42 @@ class _ProfileMenuContentState extends ConsumerState<_ProfileMenuContent> {
                           _localeName(context.locale.languageCode),
                           style: TextStyle(
                             color: context.appSubtext,
-                            fontSize: 12,
+                            fontSize: 13,
                           ),
                         ),
                       ),
                       AppIcon(
                         AppIcons.chevronRight,
-                        size: 13,
+                        size: 14,
                         color: context.appSubtext,
                       ),
                     ],
                   ),
                 ),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 12),
               Divider(height: 1, color: context.appBorder),
-              const SizedBox(height: 10),
+              const SizedBox(height: 12),
               SizedBox(
                 width: double.infinity,
                 child: InkWell(
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(9),
                   onTap: () {
                     widget.onClose();
                     ref.read(authNotifierProvider.notifier).signOut();
                   },
                   child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 9),
+                    padding: const EdgeInsets.symmetric(vertical: 10),
                     decoration: BoxDecoration(
                       color: context.appSecondaryBg,
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(9),
                     ),
                     child: Center(
                       child: Text(
                         'menu_logout'.tr(),
                         style: TextStyle(
                           color: context.appText,
-                          fontSize: 12,
+                          fontSize: 13,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -582,11 +582,11 @@ class _LanguageSubmenu extends StatelessWidget {
     return Material(
       color: Colors.transparent,
       child: Container(
-        width: 160,
-        padding: const EdgeInsets.all(8),
+        width: 180,
+        padding: const EdgeInsets.all(9),
         decoration: BoxDecoration(
           color: context.appCard,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(13),
           border: Border.all(color: context.appBorder, width: 1),
         ),
         child: Column(
@@ -595,17 +595,17 @@ class _LanguageSubmenu extends StatelessWidget {
           children: [
             for (final code in AppConstants.supportedLanguages)
               InkWell(
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(9),
                 onTap: () => onPick(code),
                 child: Container(
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 7,
+                    horizontal: 11,
+                    vertical: 8,
                   ),
                   child: Text(
                     _localeName(code),
-                    style: TextStyle(color: context.appText, fontSize: 12),
+                    style: TextStyle(color: context.appText, fontSize: 13),
                   ),
                 ),
               ),
@@ -630,21 +630,21 @@ class _ThemeOption extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: BorderRadius.circular(9),
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
-        padding: const EdgeInsets.symmetric(vertical: 6),
+        padding: const EdgeInsets.symmetric(vertical: 7),
         decoration: BoxDecoration(
           color: selected ? context.appCard : Colors.transparent,
-          borderRadius: BorderRadius.circular(6),
+          borderRadius: BorderRadius.circular(7),
         ),
         child: Center(
           child: Text(
             label,
             style: TextStyle(
               color: context.appText,
-              fontSize: 11.5,
+              fontSize: 12.5,
               fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
             ),
           ),

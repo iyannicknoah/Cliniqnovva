@@ -35,6 +35,17 @@ test('patients: receptionist cannot retrieve clinical notes (medicalRecords/docu
   assert.equal('documents' in seenByReceptionist, false, 'documents key must be absent, not just empty');
 });
 
+test('patients: accountant gets the same clinical-data-free shape as receptionist (2026-07-26, needed to print an invoice receipt)', async () => {
+  seedPatientWithClinicalHistory();
+  const accountant = actor({ role: 'accountant', clinicId: 'org1', branchId: 'branch1' });
+
+  const seenByAccountant = await patientsService.getById('patientA', accountant);
+
+  assert.equal(seenByAccountant.name, 'Alice Uwase');
+  assert.equal('medicalRecords' in seenByAccountant, false, 'medicalRecords key must be absent, not just empty');
+  assert.equal('documents' in seenByAccountant, false, 'documents key must be absent, not just empty');
+});
+
 test('patients: a doctor DOES see full clinical notes for the same patient (control case)', async () => {
   seedPatientWithClinicalHistory();
   const doctor = actor({ role: 'doctor', clinicId: 'org1', branchId: 'branch1' });

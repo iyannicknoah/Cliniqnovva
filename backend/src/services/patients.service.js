@@ -219,7 +219,9 @@ async function getById(id, actor) {
   assertAccess(patient, actor.scope);
 
   const { role } = actor;
-  if (role === ROLES.RECEPTIONIST || role === ROLES.PATIENT) {
+  // Accountant (2026-07-26) — needs a patient's name/phone to print an
+  // invoice receipt, same clinical-data-free shape as Receptionist.
+  if (role === ROLES.RECEPTIONIST || role === ROLES.PATIENT || role === ROLES.ACCOUNTANT) {
     const { nameLower, phoneDigits, ...safe } = patient;
     return safe;
   }

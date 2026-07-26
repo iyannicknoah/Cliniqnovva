@@ -348,6 +348,55 @@ growth/trend chart rather than introducing a new chart style or color.
 
 ## Change log
 
+- **2026-07-26 (Profile "more" menu sized back up a little)** — Explicit
+  user instruction, follow-up to the earlier shrink of `_ProfileMenuContent`
+  (`cliniqnovva_sidebar.dart`): that shrink went too far, so it's bumped
+  back up modestly — 220→250px wide, padding/radius/font sizes and spacing
+  all nudged up a bit — deliberately well short of the original 300px, per
+  "not too much, like how it was, increase a little." Same modest bump
+  applied to `_ThemeOption` and the `_LanguageSubmenu` it opens, so the
+  whole menu stays visually consistent at the new size.
+- **2026-07-26 (New Accountant Overview page + Reports shows real names,
+  not raw ids)** — Explicit user instruction, two related fixes.
+  (1) New `AccountantOverviewScreen`
+  (`features/billing/screens/accountant_overview_screen.dart`), structured
+  like Super Admin's `/super-admin/overview`: a 3-tile KPI row (Total
+  Revenue Today, Pending Invoices, Paid Invoices), a "Revenue growth" line
+  chart (same sky-blue-line-plus-transparent-fill style as
+  `overview_screen.dart`'s `_RevenueChart`, adapted for a daily
+  `Map<String, int>` trend instead of the platform's monthly
+  `RevenueTrendPoint` list), and a "Recent invoices" table (5 most recent,
+  tappable to `/billing/:id`). Scoped to the Accountant's own branch only —
+  Accountant is always branch-scoped, never org-level, so there's no
+  branch selector here. New route `/accountant-overview`, added as the
+  first nav item for this role (same "role-specific home page at the top
+  of the nav" pattern as doctor-today/nurse-today) and now
+  `homeRouteForRole`'s Accountant landing page, replacing the earlier
+  straight-to-`/billing` default. (2) Reports' "By branch" breakdown
+  (`reports_screen.dart`'s `_RevenueTab`/`_VolumeTab`) had a real bug
+  independent of any permissions issue: it always passed a hardcoded empty
+  names map (`const <String, String>{}`) instead of building one from
+  `branchesProvider` the way `_NoShowTab` already correctly does elsewhere
+  in the same file — fixed to match. This surfaced (and was compounded by)
+  a second, permissions-level issue: Accountant lacked read access to
+  staff/services/branches entirely, so even "By doctor"/"By service" (whose
+  code was already correct) silently showed raw ids because the name-lookup
+  requests 403'd and `.valueOrNull ?? []` swallowed the failure. Fixed by
+  adding Accountant to the `READ_ROLES` list on `staff.routes.js`,
+  `services.routes.js`, and `branches.routes.js`. All 37 backend tests
+  pass; `flutter analyze` clean on every touched file.
+- **2026-07-26 (Accountant can now actually print a receipt)** — Follow-up
+  to the print-button fix directly below: once the button started
+  surfacing real errors instead of failing silently, the user immediately
+  hit "Failed: Insufficient role permissions" as Accountant — the print
+  flow fetches the patient's name/phone via `GET /patients/detail/:id`,
+  and Accountant had never been added to that route's allowed roles (a
+  pre-existing gap the silent-failure bug had been masking). Fixed:
+  Accountant added to `patients.routes.js`'s `READ_ROLES`, and given the
+  same clinical-data-free response shape `patients.service.js`'s `getById`
+  already gives Receptionist (name/phone only, no medicalRecords/
+  documents). See `docs/technical-spec.md` section 6.8 for the spec note;
+  covered by a new test in `backend/test/patients.test.js`.
 - **2026-07-26 (Invoice receipt: real print feedback + the clinic's own
   name)** — Explicit user instruction, two fixes to
   `invoice_detail_screen.dart`. (1) "Print / Download Receipt" previously

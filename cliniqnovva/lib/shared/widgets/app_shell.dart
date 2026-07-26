@@ -9,7 +9,8 @@ import '../../features/appointments/providers/appointments_provider.dart';
 import '../../features/auth/providers/access_control_provider.dart';
 import '../../features/auth/providers/auth_provider.dart';
 import '../../features/chat/widgets/chat_bell.dart';
-import '../../features/departments/providers/departments_provider.dart' show activeBranchIdProvider;
+import '../../features/departments/providers/departments_provider.dart'
+    show activeBranchIdProvider;
 import '../../features/reviews/providers/reviews_provider.dart';
 import '../../features/notifications/widgets/notification_bell.dart';
 import 'cliniqnovva_sidebar.dart';
@@ -38,6 +39,15 @@ final appNavItems = <SidebarNavItem>[
       AppConstants.roleBranchAdmin,
       AppConstants.roleReceptionist,
     ],
+  ),
+  // Accountant's own landing page (2026-07-26, explicit user instruction) —
+  // same "role-specific home page at the top of the nav" pattern as
+  // doctor-today/nurse-today below.
+  const SidebarNavItem(
+    label: 'nav_overview',
+    icon: AppIcons.overview,
+    route: '/accountant-overview',
+    allowedRoles: [AppConstants.roleAccountant],
   ),
   const SidebarNavItem(
     label: 'nav_today',
@@ -197,14 +207,18 @@ class AppShell extends ConsumerWidget {
         final role = claims?['role'] as String? ?? '';
         final isOrgAdmin = role == AppConstants.roleClinicAdmin;
         final ownBranchId = claims?['branchId'] as String?;
-        final branchId = isOrgAdmin ? ref.watch(activeBranchIdProvider) : ownBranchId;
+        final branchId = isOrgAdmin
+            ? ref.watch(activeBranchIdProvider)
+            : ownBranchId;
 
         final user = ref.watch(authNotifierProvider).valueOrNull;
         final userName = user?.displayName ?? user?.email ?? roleLabel(role);
 
         final items = branchId == null
             ? appNavItems
-            : appNavItems.map((item) => _withBadge(item, ref, branchId)).toList();
+            : appNavItems
+                  .map((item) => _withBadge(item, ref, branchId))
+                  .toList();
 
         return Scaffold(
           backgroundColor: context.appBg,
@@ -248,14 +262,27 @@ class AppShell extends ConsumerWidget {
     );
   }
 
-  SidebarNavItem _withBadge(SidebarNavItem item, WidgetRef ref, String branchId) {
+  SidebarNavItem _withBadge(
+    SidebarNavItem item,
+    WidgetRef ref,
+    String branchId,
+  ) {
     final count = switch (item.route) {
-      '/appointments' => ref
-          .watch(appointmentsListProvider((branchId: branchId, doctorId: null, patientId: null, tab: 'today')))
-          .valueOrNull
-          ?.where((a) => a.status != 'completed' && a.status != 'cancelled')
-          .length,
-      '/reviews' => ref.watch(reviewsNeedingReplyCountProvider(branchId)).valueOrNull,
+      '/appointments' =>
+        ref
+            .watch(
+              appointmentsListProvider((
+                branchId: branchId,
+                doctorId: null,
+                patientId: null,
+                tab: 'today',
+              )),
+            )
+            .valueOrNull
+            ?.where((a) => a.status != 'completed' && a.status != 'cancelled')
+            .length,
+      '/reviews' =>
+        ref.watch(reviewsNeedingReplyCountProvider(branchId)).valueOrNull,
       _ => null,
     };
     if (count == null) return item;

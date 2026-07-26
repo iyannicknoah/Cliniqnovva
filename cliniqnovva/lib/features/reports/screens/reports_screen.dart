@@ -13,7 +13,8 @@ import '../../../shared/widgets/loading_widget.dart';
 import '../../../shared/widgets/metric_card.dart';
 import '../../../shared/widgets/segmented_tabs.dart';
 import '../../auth/providers/access_control_provider.dart';
-import '../../departments/providers/departments_provider.dart' show activeBranchIdProvider;
+import '../../departments/providers/departments_provider.dart'
+    show activeBranchIdProvider;
 import '../../departments/providers/services_provider.dart';
 import '../../departments/widgets/branch_selector.dart';
 import '../../clinics/providers/branches_provider.dart';
@@ -126,31 +127,51 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                   runSpacing: 12,
                   crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
-                    _DateFilterButton(label: _isoDate(_dateFrom), onTap: () => _pickDate(isFrom: true)),
+                    _DateFilterButton(
+                      label: _isoDate(_dateFrom),
+                      onTap: () => _pickDate(isFrom: true),
+                    ),
                     Text('to', style: TextStyle(color: context.appSubtext)),
-                    _DateFilterButton(label: _isoDate(_dateTo), onTap: () => _pickDate(isFrom: false)),
+                    _DateFilterButton(
+                      label: _isoDate(_dateTo),
+                      onTap: () => _pickDate(isFrom: false),
+                    ),
                     if (_tab != 2)
                       SizedBox(
                         width: 140,
                         child: DropdownButtonFormField<String>(
                           initialValue: _groupBy,
                           isExpanded: true,
-                          style: TextStyle(color: context.appText, fontSize: 14),
+                          style: TextStyle(
+                            color: context.appText,
+                            fontSize: 14,
+                          ),
                           dropdownColor: context.appCard,
                           decoration: InputDecoration(
                             isDense: true,
                             filled: true,
                             fillColor: context.appCard,
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 12,
+                            ),
                             border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(AppTheme.inputRadius),
+                              borderRadius: BorderRadius.circular(
+                                AppTheme.inputRadius,
+                              ),
                               borderSide: BorderSide(color: context.appBorder),
                             ),
                           ),
                           items: _groupByLabels.entries
-                              .map((e) => DropdownMenuItem(value: e.key, child: Text(e.value)))
+                              .map(
+                                (e) => DropdownMenuItem(
+                                  value: e.key,
+                                  child: Text(e.value),
+                                ),
+                              )
                               .toList(),
-                          onChanged: (v) => setState(() => _groupBy = v ?? 'day'),
+                          onChanged: (v) =>
+                              setState(() => _groupBy = v ?? 'day'),
                         ),
                       ),
                   ],
@@ -203,7 +224,10 @@ class _DateFilterButton extends StatelessWidget {
           border: Border.all(color: context.appBorder),
           borderRadius: BorderRadius.circular(AppTheme.inputRadius),
         ),
-        child: Text(label, style: TextStyle(color: context.appText, fontSize: 14)),
+        child: Text(
+          label,
+          style: TextStyle(color: context.appText, fontSize: 14),
+        ),
       ),
     );
   }
@@ -212,17 +236,21 @@ class _DateFilterButton extends StatelessWidget {
 /// Export buttons shared by every tab — [rows] is (label, value) pairs
 /// already formatted as display strings, ready for both CSV and a PDF table.
 class _ExportRow extends StatelessWidget {
-  const _ExportRow({required this.title, required this.summary, required this.trendRows});
+  const _ExportRow({
+    required this.title,
+    required this.summary,
+    required this.trendRows,
+  });
 
   final String title;
   final List<(String, String)> summary;
   final List<(String, String)> trendRows;
 
   Future<void> _exportCsv() async {
-    final csv = buildCsv(
-      ['Metric', 'Value'],
-      [...summary, ...trendRows].map((r) => [r.$1, r.$2]).toList(),
-    );
+    final csv = buildCsv([
+      'Metric',
+      'Value',
+    ], [...summary, ...trendRows].map((r) => [r.$1, r.$2]).toList());
     await downloadCsv(csv);
   }
 
@@ -233,11 +261,17 @@ class _ExportRow extends StatelessWidget {
         build: (context) => pw.Column(
           crossAxisAlignment: pw.CrossAxisAlignment.start,
           children: [
-            pw.Text(title, style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
+            pw.Text(
+              title,
+              style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold),
+            ),
             pw.SizedBox(height: 12),
             pw.Table(
               border: pw.TableBorder(bottom: const pw.BorderSide(width: 0.5)),
-              columnWidths: const {0: pw.FlexColumnWidth(3), 1: pw.FlexColumnWidth(1)},
+              columnWidths: const {
+                0: pw.FlexColumnWidth(3),
+                1: pw.FlexColumnWidth(1),
+              },
               children: [
                 for (final row in [...summary, ...trendRows])
                   pw.TableRow(
@@ -267,11 +301,17 @@ class _ExportRow extends StatelessWidget {
       children: [
         SizedBox(
           width: 130,
-          child: CliniqnovvaButton.text(label: 'Export CSV', onPressed: _exportCsv),
+          child: CliniqnovvaButton.text(
+            label: 'Export CSV',
+            onPressed: _exportCsv,
+          ),
         ),
         SizedBox(
           width: 130,
-          child: CliniqnovvaButton.text(label: 'Export PDF', onPressed: _exportPdf),
+          child: CliniqnovvaButton.text(
+            label: 'Export PDF',
+            onPressed: _exportPdf,
+          ),
         ),
       ],
     );
@@ -287,10 +327,16 @@ class _TrendBars extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (trend.isEmpty) {
-      return Text('No data in this range.', style: TextStyle(color: context.appSubtext));
+      return Text(
+        'No data in this range.',
+        style: TextStyle(color: context.appSubtext),
+      );
     }
-    final entries = trend.entries.toList()..sort((a, b) => a.key.compareTo(b.key));
-    final maxValue = entries.map((e) => e.value).reduce((a, b) => a > b ? a : b);
+    final entries = trend.entries.toList()
+      ..sort((a, b) => a.key.compareTo(b.key));
+    final maxValue = entries
+        .map((e) => e.value)
+        .reduce((a, b) => a > b ? a : b);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -302,7 +348,13 @@ class _TrendBars extends StatelessWidget {
                 children: [
                   SizedBox(
                     width: 90,
-                    child: Text(e.key, style: TextStyle(color: context.appSubtext, fontSize: 12.5)),
+                    child: Text(
+                      e.key,
+                      style: TextStyle(
+                        color: context.appSubtext,
+                        fontSize: 12.5,
+                      ),
+                    ),
                   ),
                   Expanded(
                     child: FractionallySizedBox(
@@ -336,7 +388,11 @@ class _TrendBars extends StatelessWidget {
 }
 
 class _BreakdownTable extends StatelessWidget {
-  const _BreakdownTable({required this.title, required this.entries, required this.names});
+  const _BreakdownTable({
+    required this.title,
+    required this.entries,
+    required this.names,
+  });
 
   final String title;
   final Map<String, int> entries;
@@ -345,7 +401,8 @@ class _BreakdownTable extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (entries.isEmpty) return const SizedBox.shrink();
-    final sorted = entries.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
+    final sorted = entries.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
 
     return CliniqnovvaCard(
       title: title,
@@ -360,12 +417,18 @@ class _BreakdownTable extends StatelessWidget {
                   children: [
                     Expanded(
                       child: Text(
-                        names[e.key] ?? (e.key == 'manual' || e.key == 'unknown' ? 'Other / Manual' : e.key),
+                        names[e.key] ??
+                            (e.key == 'manual' || e.key == 'unknown'
+                                ? 'Other / Manual'
+                                : e.key),
                         style: TextStyle(color: context.appText),
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                    Text('${e.value}', style: TextStyle(color: context.appSubtext)),
+                    Text(
+                      '${e.value}',
+                      style: TextStyle(color: context.appSubtext),
+                    ),
                   ],
                 ),
               ),
@@ -392,20 +455,34 @@ class _RevenueTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final reportAsync = ref.watch(
-      revenueReportProvider((branchId: branchId, dateFrom: dateFrom, dateTo: dateTo, groupBy: groupBy)),
+      revenueReportProvider((
+        branchId: branchId,
+        dateFrom: dateFrom,
+        dateTo: dateTo,
+        groupBy: groupBy,
+      )),
     );
     final doctorsAsync = ref.watch(staffListProvider(branchId));
     final servicesAsync = ref.watch(servicesProvider(branchId));
+    final branchesAsync = ref.watch(branchesProvider);
 
     return reportAsync.when(
       loading: () => const LoadingWidget(),
-      error: (e, _) => Center(child: Text('$e', style: TextStyle(color: context.appSubtext))),
+      error: (e, _) => Center(
+        child: Text('$e', style: TextStyle(color: context.appSubtext)),
+      ),
       data: (report) {
         final doctorNames = {
-          for (final StaffModel d in doctorsAsync.valueOrNull ?? []) d.id: d.name,
+          for (final StaffModel d in doctorsAsync.valueOrNull ?? [])
+            d.id: d.name,
         };
         final serviceNames = {
-          for (final ServiceModel s in servicesAsync.valueOrNull ?? []) s.id: s.name,
+          for (final ServiceModel s in servicesAsync.valueOrNull ?? [])
+            s.id: s.name,
+        };
+        final branchNames = {
+          for (final BranchModel b in branchesAsync.valueOrNull?.branches ?? [])
+            b.id: b.name,
         };
 
         return SingleChildScrollView(
@@ -414,11 +491,26 @@ class _RevenueTab extends ConsumerWidget {
             children: [
               Row(
                 children: [
-                  Expanded(child: MetricCard(label: 'Total Collected (RWF)', value: '${report.totalCollectedRwf}')),
+                  Expanded(
+                    child: MetricCard(
+                      label: 'Total Collected (RWF)',
+                      value: '${report.totalCollectedRwf}',
+                    ),
+                  ),
                   const SizedBox(width: 16),
-                  Expanded(child: MetricCard(label: 'Total Billed (RWF)', value: '${report.totalBilledRwf}')),
+                  Expanded(
+                    child: MetricCard(
+                      label: 'Total Billed (RWF)',
+                      value: '${report.totalBilledRwf}',
+                    ),
+                  ),
                   const SizedBox(width: 16),
-                  Expanded(child: MetricCard(label: 'Invoices', value: '${report.invoiceCount}')),
+                  Expanded(
+                    child: MetricCard(
+                      label: 'Invoices',
+                      value: '${report.invoiceCount}',
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: 16),
@@ -429,9 +521,11 @@ class _RevenueTab extends ConsumerWidget {
                   ('Total Billed (RWF)', '${report.totalBilledRwf}'),
                   ('Invoices', '${report.invoiceCount}'),
                 ],
-                trendRows: (report.trend.entries.toList()..sort((a, b) => a.key.compareTo(b.key)))
-                    .map((e) => (e.key, '${e.value}'))
-                    .toList(),
+                trendRows:
+                    (report.trend.entries.toList()
+                          ..sort((a, b) => a.key.compareTo(b.key)))
+                        .map((e) => (e.key, '${e.value}'))
+                        .toList(),
               ),
               const SizedBox(height: 20),
               CliniqnovvaCard(
@@ -439,11 +533,23 @@ class _RevenueTab extends ConsumerWidget {
                 child: _TrendBars(trend: report.trend, valueSuffix: ''),
               ),
               const SizedBox(height: 16),
-              _BreakdownTable(title: 'By branch (RWF)', entries: report.byBranch, names: const <String, String>{}),
+              _BreakdownTable(
+                title: 'By branch (RWF)',
+                entries: report.byBranch,
+                names: branchNames,
+              ),
               const SizedBox(height: 16),
-              _BreakdownTable(title: 'By doctor (RWF)', entries: report.byDoctor, names: doctorNames),
+              _BreakdownTable(
+                title: 'By doctor (RWF)',
+                entries: report.byDoctor,
+                names: doctorNames,
+              ),
               const SizedBox(height: 16),
-              _BreakdownTable(title: 'By service (RWF)', entries: report.byService, names: serviceNames),
+              _BreakdownTable(
+                title: 'By service (RWF)',
+                entries: report.byService,
+                names: serviceNames,
+              ),
             ],
           ),
         );
@@ -468,16 +574,29 @@ class _VolumeTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final reportAsync = ref.watch(
-      patientVolumeReportProvider((branchId: branchId, dateFrom: dateFrom, dateTo: dateTo, groupBy: groupBy)),
+      patientVolumeReportProvider((
+        branchId: branchId,
+        dateFrom: dateFrom,
+        dateTo: dateTo,
+        groupBy: groupBy,
+      )),
     );
     final doctorsAsync = ref.watch(staffListProvider(branchId));
+    final branchesAsync = ref.watch(branchesProvider);
 
     return reportAsync.when(
       loading: () => const LoadingWidget(),
-      error: (e, _) => Center(child: Text('$e', style: TextStyle(color: context.appSubtext))),
+      error: (e, _) => Center(
+        child: Text('$e', style: TextStyle(color: context.appSubtext)),
+      ),
       data: (report) {
         final doctorNames = {
-          for (final StaffModel d in doctorsAsync.valueOrNull ?? []) d.id: d.name,
+          for (final StaffModel d in doctorsAsync.valueOrNull ?? [])
+            d.id: d.name,
+        };
+        final branchNames = {
+          for (final BranchModel b in branchesAsync.valueOrNull?.branches ?? [])
+            b.id: b.name,
         };
 
         return SingleChildScrollView(
@@ -486,9 +605,19 @@ class _VolumeTab extends ConsumerWidget {
             children: [
               Row(
                 children: [
-                  Expanded(child: MetricCard(label: 'Total Visits', value: '${report.totalVisits}')),
+                  Expanded(
+                    child: MetricCard(
+                      label: 'Total Visits',
+                      value: '${report.totalVisits}',
+                    ),
+                  ),
                   const SizedBox(width: 16),
-                  Expanded(child: MetricCard(label: 'Unique Patients', value: '${report.uniquePatients}')),
+                  Expanded(
+                    child: MetricCard(
+                      label: 'Unique Patients',
+                      value: '${report.uniquePatients}',
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: 16),
@@ -498,9 +627,11 @@ class _VolumeTab extends ConsumerWidget {
                   ('Total Visits', '${report.totalVisits}'),
                   ('Unique Patients', '${report.uniquePatients}'),
                 ],
-                trendRows: (report.trend.entries.toList()..sort((a, b) => a.key.compareTo(b.key)))
-                    .map((e) => (e.key, '${e.value}'))
-                    .toList(),
+                trendRows:
+                    (report.trend.entries.toList()
+                          ..sort((a, b) => a.key.compareTo(b.key)))
+                        .map((e) => (e.key, '${e.value}'))
+                        .toList(),
               ),
               const SizedBox(height: 20),
               CliniqnovvaCard(
@@ -508,9 +639,17 @@ class _VolumeTab extends ConsumerWidget {
                 child: _TrendBars(trend: report.trend, valueSuffix: ''),
               ),
               const SizedBox(height: 16),
-              _BreakdownTable(title: 'By branch', entries: report.byBranch, names: const <String, String>{}),
+              _BreakdownTable(
+                title: 'By branch',
+                entries: report.byBranch,
+                names: branchNames,
+              ),
               const SizedBox(height: 16),
-              _BreakdownTable(title: 'By doctor', entries: report.byDoctor, names: doctorNames),
+              _BreakdownTable(
+                title: 'By doctor',
+                entries: report.byDoctor,
+                names: doctorNames,
+              ),
             ],
           ),
         );
@@ -520,7 +659,11 @@ class _VolumeTab extends ConsumerWidget {
 }
 
 class _NoShowTab extends ConsumerWidget {
-  const _NoShowTab({required this.branchId, required this.dateFrom, required this.dateTo});
+  const _NoShowTab({
+    required this.branchId,
+    required this.dateFrom,
+    required this.dateTo,
+  });
 
   final String? branchId;
   final String dateFrom;
@@ -529,16 +672,23 @@ class _NoShowTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final reportAsync = ref.watch(
-      noShowReportProvider((branchId: branchId, dateFrom: dateFrom, dateTo: dateTo)),
+      noShowReportProvider((
+        branchId: branchId,
+        dateFrom: dateFrom,
+        dateTo: dateTo,
+      )),
     );
     final branchesAsync = ref.watch(branchesProvider);
 
     return reportAsync.when(
       loading: () => const LoadingWidget(),
-      error: (e, _) => Center(child: Text('$e', style: TextStyle(color: context.appSubtext))),
+      error: (e, _) => Center(
+        child: Text('$e', style: TextStyle(color: context.appSubtext)),
+      ),
       data: (report) {
         final branchNames = {
-          for (final BranchModel b in branchesAsync.valueOrNull?.branches ?? []) b.id: b.name,
+          for (final BranchModel b in branchesAsync.valueOrNull?.branches ?? [])
+            b.id: b.name,
         };
         final ratePct = '${(report.noShowRate * 100).toStringAsFixed(1)}%';
 
@@ -548,11 +698,23 @@ class _NoShowTab extends ConsumerWidget {
             children: [
               Row(
                 children: [
-                  Expanded(child: MetricCard(label: 'No-Show Rate', value: ratePct)),
+                  Expanded(
+                    child: MetricCard(label: 'No-Show Rate', value: ratePct),
+                  ),
                   const SizedBox(width: 16),
-                  Expanded(child: MetricCard(label: 'Completed', value: '${report.completedCount}')),
+                  Expanded(
+                    child: MetricCard(
+                      label: 'Completed',
+                      value: '${report.completedCount}',
+                    ),
+                  ),
                   const SizedBox(width: 16),
-                  Expanded(child: MetricCard(label: 'No-Shows', value: '${report.noShowCount}')),
+                  Expanded(
+                    child: MetricCard(
+                      label: 'No-Shows',
+                      value: '${report.noShowCount}',
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: 16),

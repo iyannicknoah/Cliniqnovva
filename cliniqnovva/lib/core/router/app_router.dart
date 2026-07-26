@@ -9,6 +9,7 @@ import '../../features/auth/providers/access_control_provider.dart';
 import '../../features/auth/providers/auth_provider.dart';
 import '../../features/auth/screens/login_screen.dart';
 import '../../features/auth/screens/suspended_screen.dart';
+import '../../features/billing/screens/accountant_overview_screen.dart';
 import '../../features/billing/screens/billing_screen.dart';
 import '../../features/billing/screens/invoice_detail_screen.dart';
 import '../../features/chat/screens/chat_inbox_screen.dart';
@@ -54,7 +55,6 @@ const _orgScopedRolesForSuspension = [
   AppConstants.roleDoctor,
   AppConstants.roleNurse,
 ];
-
 
 /// Converts Riverpod's auth providers into a Listenable so GoRouter
 /// re-evaluates `redirect` whenever sign-in state changes.
@@ -119,9 +119,7 @@ Future<String?> _redirect(Ref ref, GoRouterState state) async {
   }
 
   if (_orgScopedRolesForSuspension.contains(role) && clinicId != null) {
-    final isActive = await ref.read(
-      clinicStatusProvider(clinicId).future,
-    );
+    final isActive = await ref.read(clinicStatusProvider(clinicId).future);
     if (!isActive) {
       return state.matchedLocation == '/suspended' ? null : '/suspended';
     }
@@ -133,9 +131,7 @@ Future<String?> _redirect(Ref ref, GoRouterState state) async {
   }
 
   if (role == AppConstants.roleClinicAdmin && clinicId != null) {
-    final hasBranches = await ref.read(
-      hasBranchesProvider(clinicId).future,
-    );
+    final hasBranches = await ref.read(hasBranchesProvider(clinicId).future);
     if (!hasBranches) {
       return state.matchedLocation == '/onboarding' ? null : '/onboarding';
     }
@@ -184,9 +180,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/super-admin/clinics/:id',
-        builder: (context, state) => ClinicDetailScreen(
-          clinicId: state.pathParameters['id']!,
-        ),
+        builder: (context, state) =>
+            ClinicDetailScreen(clinicId: state.pathParameters['id']!),
       ),
       GoRoute(
         path: '/super-admin/clinics/:id/support-view',
@@ -249,7 +244,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             builder: (context, state) => const ServicesScreen(),
           ),
 
-          GoRoute(path: '/staff', builder: (context, state) => const StaffScreen()),
+          GoRoute(
+            path: '/staff',
+            builder: (context, state) => const StaffScreen(),
+          ),
           GoRoute(
             path: '/doctor-schedule',
             builder: (context, state) => const DoctorScheduleScreen(),
@@ -282,6 +280,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             builder: (context, state) => const BookingScreen(),
           ),
 
+          GoRoute(
+            path: '/accountant-overview',
+            builder: (context, state) => const AccountantOverviewScreen(),
+          ),
           GoRoute(
             path: '/billing',
             builder: (context, state) => const BillingScreen(),

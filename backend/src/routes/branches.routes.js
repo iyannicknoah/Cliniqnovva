@@ -8,7 +8,9 @@ const controller = require('../controllers/branches.controller');
 // Every route below is scoped by req.scope (branch/org isolation, spec section 10/11).
 router.use(verifyToken, attachScope);
 
-const READ_ROLES = [ROLES.CLINIC_ADMIN, ROLES.BRANCH_ADMIN, ROLES.RECEPTIONIST, ROLES.SUPER_ADMIN];
+// Accountant added 2026-07-26 — Reports needs branch names to resolve
+// branchId keys instead of showing raw ids.
+const READ_ROLES = [ROLES.CLINIC_ADMIN, ROLES.BRANCH_ADMIN, ROLES.RECEPTIONIST, ROLES.SUPER_ADMIN, ROLES.ACCOUNTANT];
 
 router.get('/', requireRole(...READ_ROLES), controller.list);
 // NOTE: '/detail/:branchId' must stay registered BEFORE '/:clinicId',

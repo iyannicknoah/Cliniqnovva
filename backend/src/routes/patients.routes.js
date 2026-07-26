@@ -14,6 +14,9 @@ router.use(verifyToken, attachScope);
 // Part 13 Task 2 — Pharmacist added so the dispense flow can search/look up
 // a patient to select their prescriptions; getById() shapes the response
 // down to prescriptions-only for this role (see patients.service.js).
+// Accountant added 2026-07-26 — printing an invoice receipt needs the
+// patient's name/phone, same as Receptionist; getById() gives Accountant
+// the exact same clinical-data-free shape Receptionist already gets.
 const READ_ROLES = [
   ROLES.RECEPTIONIST,
   ROLES.BRANCH_ADMIN,
@@ -21,6 +24,7 @@ const READ_ROLES = [
   ROLES.DOCTOR,
   ROLES.NURSE,
   ROLES.PHARMACIST,
+  ROLES.ACCOUNTANT,
   ROLES.SUPER_ADMIN,
 ];
 const WRITE_ROLES = [ROLES.RECEPTIONIST, ROLES.BRANCH_ADMIN, ROLES.CLINIC_ADMIN, ROLES.SUPER_ADMIN];
