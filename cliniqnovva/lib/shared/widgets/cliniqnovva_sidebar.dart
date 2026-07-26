@@ -92,7 +92,7 @@ class CliniqnovvaSidebar extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Row(
               children: [
-                const CliniqnovvaLogo(size: 20, radius: 6),
+                const CliniqnovvaLogo(size: 28, radius: 8),
                 const SizedBox(width: 4),
                 Flexible(
                   child: Text(
@@ -100,9 +100,9 @@ class CliniqnovvaSidebar extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      color: context.appText,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
+                      color: AppColors.skyBlue,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
                 ),
@@ -149,7 +149,8 @@ class _SidebarNavTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final activeColor = context.appText;
     final inactiveColor = context.appSubtext;
-    final hoverColor = (context.isDark ? Colors.white : Colors.black).withValues(alpha: 0.04);
+    final hoverColor = (context.isDark ? Colors.white : Colors.black)
+        .withValues(alpha: 0.04);
     final badgeCount = item.badgeCount ?? 0;
 
     return Padding(
@@ -193,7 +194,10 @@ class _SidebarNavTile extends StatelessWidget {
                 if (badgeCount > 0) ...[
                   const SizedBox(width: 6),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 1,
+                    ),
                     constraints: const BoxConstraints(minWidth: 18),
                     decoration: BoxDecoration(
                       color: AppColors.brightRed,
@@ -433,11 +437,11 @@ class _ProfileMenuContentState extends ConsumerState<_ProfileMenuContent> {
       child: Material(
         color: Colors.transparent,
         child: Container(
-          width: 300,
-          padding: const EdgeInsets.all(10),
+          width: 220,
+          padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
             color: context.appCard,
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(12),
             border: Border.all(color: context.appBorder, width: 1),
           ),
           child: Column(
@@ -448,16 +452,16 @@ class _ProfileMenuContentState extends ConsumerState<_ProfileMenuContent> {
                 'menu_theme'.tr(),
                 style: TextStyle(
                   color: context.appText,
-                  fontSize: 13,
+                  fontSize: 11.5,
                   fontWeight: FontWeight.w600,
                 ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 6),
               Container(
-                padding: const EdgeInsets.all(3),
+                padding: const EdgeInsets.all(2),
                 decoration: BoxDecoration(
                   color: context.appSecondaryBg,
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(8),
                 ),
                 child: Row(
                   children: [
@@ -482,69 +486,73 @@ class _ProfileMenuContentState extends ConsumerState<_ProfileMenuContent> {
                   ],
                 ),
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: 10),
               Divider(height: 1, color: context.appBorder),
-              const SizedBox(height: 14),
+              const SizedBox(height: 10),
               Text(
                 'menu_language'.tr(),
                 style: TextStyle(
                   color: context.appText,
-                  fontSize: 13,
+                  fontSize: 11.5,
                   fontWeight: FontWeight.w600,
                 ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 6),
               InkWell(
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(8),
                 onTap: _toggleLanguageSubmenu,
                 child: Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 10,
+                    horizontal: 10,
+                    vertical: 7,
                   ),
                   decoration: BoxDecoration(
                     color: context.appSecondaryBg,
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(8),
                   ),
                   child: Row(
                     children: [
                       Expanded(
                         child: Text(
                           _localeName(context.locale.languageCode),
-                          style: TextStyle(color: context.appSubtext),
+                          style: TextStyle(
+                            color: context.appSubtext,
+                            fontSize: 12,
+                          ),
                         ),
                       ),
                       AppIcon(
                         AppIcons.chevronRight,
-                        size: 16,
+                        size: 13,
                         color: context.appSubtext,
                       ),
                     ],
                   ),
                 ),
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: 10),
               Divider(height: 1, color: context.appBorder),
-              const SizedBox(height: 14),
+              const SizedBox(height: 10),
               SizedBox(
                 width: double.infinity,
                 child: InkWell(
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(8),
                   onTap: () {
                     widget.onClose();
                     ref.read(authNotifierProvider.notifier).signOut();
                   },
                   child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    padding: const EdgeInsets.symmetric(vertical: 9),
                     decoration: BoxDecoration(
                       color: context.appSecondaryBg,
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(8),
                     ),
                     child: Center(
                       child: Text(
                         'menu_logout'.tr(),
                         style: TextStyle(
                           color: context.appText,
+                          fontSize: 12,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -574,11 +582,11 @@ class _LanguageSubmenu extends StatelessWidget {
     return Material(
       color: Colors.transparent,
       child: Container(
-        width: 220,
-        padding: const EdgeInsets.all(10),
+        width: 160,
+        padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
           color: context.appCard,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(12),
           border: Border.all(color: context.appBorder, width: 1),
         ),
         child: Column(
@@ -587,17 +595,17 @@ class _LanguageSubmenu extends StatelessWidget {
           children: [
             for (final code in AppConstants.supportedLanguages)
               InkWell(
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(8),
                 onTap: () => onPick(code),
                 child: Container(
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 10,
+                    horizontal: 10,
+                    vertical: 7,
                   ),
                   child: Text(
                     _localeName(code),
-                    style: TextStyle(color: context.appText, fontSize: 13),
+                    style: TextStyle(color: context.appText, fontSize: 12),
                   ),
                 ),
               ),
@@ -626,17 +634,17 @@ class _ThemeOption extends StatelessWidget {
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
-        padding: const EdgeInsets.symmetric(vertical: 8),
+        padding: const EdgeInsets.symmetric(vertical: 6),
         decoration: BoxDecoration(
           color: selected ? context.appCard : Colors.transparent,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(6),
         ),
         child: Center(
           child: Text(
             label,
             style: TextStyle(
               color: context.appText,
-              fontSize: 13,
+              fontSize: 11.5,
               fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
             ),
           ),

@@ -129,13 +129,14 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                   const Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      CliniqnovvaLogo(size: 24, radius: 8),
+                      CliniqnovvaLogo(size: 32, radius: 10),
                       SizedBox(width: 6),
                       Text(
                         'Cliniqnovva',
                         style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
+                          color: AppColors.skyBlue,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
                     ],
@@ -404,7 +405,10 @@ class _SummaryStep extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _SummaryRow(label: 'Branch', value: branchBody['name'] as String? ?? ''),
+          _SummaryRow(
+            label: 'Branch',
+            value: branchBody['name'] as String? ?? '',
+          ),
           _SummaryRow(
             label: 'Location',
             value: locationLine.isEmpty ? '—' : locationLine,

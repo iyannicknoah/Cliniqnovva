@@ -258,14 +258,22 @@ floating, 12px radius, no color accent.
   IN-APP logo source; **`AppIcon.png`** (blue square, same mark in blue) is
   the APP-ICON source (favicon, PWA, Android/iOS). They supersede the
   `Light Logo.png`/`Dark Logo.png` pair.
-- **In-app logo is one single mark** (rule updated 2026-07-23):
-  `assets/images/logo.png` (256×256, downscaled from the black `Logo.png`)
-  is shown in BOTH light and dark mode. `logo_dark.png`/`logo_light.png` stay in the
-  asset bundle but are unreferenced. Always use the shared `CliniqnovvaLogo`
-  widget (`size`, `radius` params) — never `Image.asset` a logo file
-  directly. Placements (sizes reduced 2026-07-23): login screen (24px,
-  radius 8) and sidebar (20px, radius 6), each next to the bold wordmark.
-- Favicon, PWA icons, and mobile app icons all derive from **`AppIcon.png`**.
+- **In-app logo is one single mark** (rule updated 2026-07-23, asset swapped
+  2026-07-26): `assets/images/logo.png` (256×256, from the repo-root
+  transparent-background `Cliniqnovva No BG.png`) is shown in BOTH light and
+  dark mode — transparent so it reads correctly on both a pure white and a
+  pure black page with no visible edge, which is why this specific asset
+  (not the white-background one) was chosen for on-screen use.
+  `logo_dark.png`/`logo_light.png` stay in the asset bundle but are
+  unreferenced. Always use the shared `CliniqnovvaLogo` widget (`size`,
+  `radius` params) — never `Image.asset` a logo file directly. Placements
+  (sizes reduced 2026-07-23): login screen (24px, radius 8) and sidebar
+  (20px, radius 6), each next to the bold wordmark.
+- Favicon, PWA icons, and mobile app icons all derive from **`AppIcon.png`**
+  (repo root — swapped 2026-07-26 to the white-background `Cliniqnovva
+  Logo.png`, deliberately the opposite choice from the on-screen logo: a
+  favicon/app icon needs an opaque background of its own since it's never
+  shown against the app's own page background).
 - Mobile icon source (`assets/icon/app_icon_source.png`) must stay a raw,
   un-rounded square — the OS applies its own mask. Web favicon/PWA icons are
   pre-rounded (browsers don't mask); maskable PWA variants stay full-bleed.
@@ -340,6 +348,45 @@ growth/trend chart rather than introducing a new chart style or color.
 
 ## Change log
 
+- **2026-07-26 (Profile "more" menu shrunk)** — Explicit user instruction:
+  the sidebar profile chip's Theme/Language/Logout popup
+  (`_ProfileMenuContent`, `cliniqnovva_sidebar.dart`) was too big. Shrunk
+  the container (300→220px wide, padding 10→8, radius 16→12) and scaled
+  everything inside it down to match: section labels 13→11.5px, the
+  light/dark segmented toggle (`_ThemeOption`) padding 8→6px and text
+  13→11.5px, the language row and Logout button padding tightened with
+  explicit 12px text (was unset/default), and all the internal spacing
+  (14px gaps around dividers → 10px). The language submenu it opens
+  (`_LanguageSubmenu`) shrunk to match (220→160px, same padding/font
+  reductions) since it's the same interaction flow.
+- **2026-07-26 (Bigger logo, lighter sky-blue wordmark)** — Explicit user
+  instruction, applied everywhere the logo mark and "Cliniqnovva" wordmark
+  appear together (sidebar, login screen, onboarding wizard — the 3
+  `CliniqnovvaLogo` call sites): logo size increased (sidebar 20→28px,
+  login/onboarding 24→32px, `radius` scaled with it), and the wordmark text
+  went from bold/`w700`, 18px, `context.appText` to `w500`, 16px,
+  `AppColors.skyBlue` — the system's second-primary accent (same token as
+  `AvatarWidget`'s ring and the Reviews star color), replacing the
+  theme-neutral text color with a deliberate brand-color accent for the
+  wordmark specifically.
+- **2026-07-26 (New logo mark: opaque for icons, transparent on-screen)** —
+  Explicit user instruction, two new repo-root sources: `Cliniqnovva
+  Logo.png` (white background, 1254×1254) → favicon/PWA/mobile app icon
+  everywhere, and `Cliniqnovva No BG.png` (transparent, 500×500) →
+  `assets/images/logo.png`, the single on-screen mark `CliniqnovvaLogo`
+  renders in both light and dark mode — chosen specifically because it has
+  no background, so it never shows a mismatched edge against either theme.
+  Regenerated: `assets/images/logo.png` (256×256), `assets/icon/
+  app_icon_source.png` (1024×1024, raw un-rounded square for
+  `flutter_launcher_icons`, then reran it for Android/iOS), `web/
+  favicon.png` (32×32) and `web/icons/Icon-192/512.png` (pre-rounded, 22%
+  corner radius — measured from the previous icons to match exactly),
+  `web/icons/Icon-maskable-192/512.png` (full-bleed, un-rounded), and the
+  repo-root `AppIcon.png` canonical source copy. No Dart code changed for
+  the on-screen logo — `CliniqnovvaLogo` already only reads `assets/images/
+  logo.png` by path, so swapping the file was enough; `ClipRRect`/`radius`
+  stayed (a no-op on the now-transparent corners, kept so a future
+  opaque-background swap doesn't need a second code change).
 - **2026-07-26 (SearchableDropdown clears on focus, like a normal
   dropdown)** — Explicit user instruction: clicking `SearchableDropdown`
   (`shared/widgets/searchable_dropdown.dart`) was behaving like a plain

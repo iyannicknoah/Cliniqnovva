@@ -134,9 +134,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 ),
                                 Text(
                                   'Sign in to your account',
-                                  style: TextStyle(
-                                    color: context.appSubtext,
-                                  ),
+                                  style: TextStyle(color: context.appSubtext),
                                 ),
                               ].withGap(5),
                             ),
@@ -210,14 +208,14 @@ class _LogoMark extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        const CliniqnovvaLogo(size: 24, radius: 8),
+        const CliniqnovvaLogo(size: 32, radius: 10),
         const SizedBox(width: 5),
         Text(
           AppConstants.appName,
           style: TextStyle(
-            color: context.appText,
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
+            color: AppColors.skyBlue,
+            fontSize: 16,
+            fontWeight: FontWeight.w500,
           ),
         ),
       ],
