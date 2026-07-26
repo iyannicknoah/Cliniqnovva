@@ -5,6 +5,16 @@ const appointmentsService = require('../src/services/appointments.service');
 
 beforeEach(() => reset());
 
+const DAY_NAMES = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+function todayKigali() {
+  const now = new Date(Date.now() + 2 * 60 * 60 * 1000);
+  return {
+    date: now.toISOString().slice(0, 10),
+    dayName: DAY_NAMES[now.getUTCDay()],
+    nowMinutes: now.getUTCHours() * 60 + now.getUTCMinutes(),
+  };
+}
+
 function seedBaseline() {
   db.seed('doctors/doc1', {
     schedule: [{ day: 'monday', startTime: '08:00', endTime: '12:00', slotDurationMins: 15 }],
@@ -142,4 +152,73 @@ test('appointments: breakMinutes also applies around a manually blocked slot', a
 
   assert.ok(!slots.some((s) => s.startTime === '10:30'), '10:30 should still be inside the buffer after the blocked slot');
   assert.ok(slots.some((s) => s.startTime === '10:40'), '10:40 should be available again');
+});
+
+test("appointments: getAvailableSlots excludes today's already-elapsed times (2026-07-26)", async () => {
+  const { date, dayName, nowMinutes } = todayKigali();
+  // A doctor open the whole day so every slot before "now" would otherwise
+  // show up as bookable — this is exactly the bug: an 08:00 slot was still
+  // offered at 16:30 the same day.
+  db.seed('doctors/doc1', {
+    schedule: [{ day: dayName, startTime: '00:00', endTime: '23:30', slotDurationMins: 30 }],
+    blockedSlots: [],
+  });
+  db.seed('branches/branch1', { clinicId: 'org1', umugandaSaturdayHours: null });
+  db.seed('services/svc1', { defaultDurationMins: 15, defaultPriceRwf: 5000, name: 'Consultation' });
+
+  const slots = await appointmentsService.getAvailableSlots({
+    doctorId: 'doc1',
+    branchId: 'branch1',
+    serviceId: 'svc1',
+    date,
+  });
+
+  const toMinutes = (hhmm) => {
+    const [h, m] = hhmm.split(':').map(Number);
+    return h * 60 + m;
+  };
+  const anyPast = slots.some((s) => toMinutes(s.startTime) < nowMinutes);
+  assert.ok(!anyPast, `no returned slot should start before now (${nowMinutes} min); got ${JSON.stringify(slots)}`);
+});
+
+test('appointments: book() rejects a startTime earlier today, even if requested directly (2026-07-26)', async () => {
+  const { date, dayName, nowMinutes } = todayKigali();
+  if (nowMinutes < 30) return; // can't construct an earlier-today time right after midnight
+  db.seed('doctors/doc1', {
+    schedule: [{ day: dayName, startTime: '00:00', endTime: '23:30', slotDurationMins: 30 }],
+    blockedSlots: [],
+  });
+  db.seed('branches/branch1', { clinicId: 'org1', umugandaSaturdayHours: null });
+  db.seed('services/svc1', { defaultDurationMins: 15, defaultPriceRwf: 5000, name: 'Consultation' });
+  const staff = actor({ role: 'receptionist', clinicId: 'org1', branchId: 'branch1' });
+
+  const twoHoursAgoMin = Math.max(0, nowMinutes - 120);
+  const past = `${Math.floor(twoHoursAgoMin / 60)
+    .toString()
+    .padStart(2, '0')}:${(twoHoursAgoMin % 60).toString().padStart(2, '0')}`;
+  const pastEndMin = twoHoursAgoMin + 15;
+  const pastEnd = `${Math.floor(pastEndMin / 60)
+    .toString()
+    .padStart(2, '0')}:${(pastEndMin % 60).toString().padStart(2, '0')}`;
+
+  await assert.rejects(
+    () =>
+      appointmentsService.book(
+        {
+          clinicId: 'org1',
+          branchId: 'branch1',
+          patientId: 'patientA',
+          doctorId: 'doc1',
+          serviceId: 'svc1',
+          date,
+          startTime: past,
+          endTime: pastEnd,
+        },
+        staff
+      ),
+    (err) => {
+      assert.equal(err.status, 400);
+      return true;
+    }
+  );
 });

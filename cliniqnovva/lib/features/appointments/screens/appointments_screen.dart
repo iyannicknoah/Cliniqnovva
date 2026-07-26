@@ -16,7 +16,8 @@ import '../../../shared/widgets/row_actions_menu.dart';
 import '../../../shared/widgets/segmented_tabs.dart';
 import '../../../shared/widgets/status_badge.dart';
 import '../../auth/providers/access_control_provider.dart';
-import '../../clinics/providers/branches_provider.dart' show showAllBranchesProvider;
+import '../../clinics/providers/branches_provider.dart'
+    show showAllBranchesProvider;
 import '../../departments/providers/departments_provider.dart';
 import '../../departments/widgets/branch_selector.dart';
 import '../../patients/providers/patients_provider.dart';
@@ -54,8 +55,7 @@ class AppointmentsScreen extends ConsumerStatefulWidget {
   const AppointmentsScreen({super.key});
 
   @override
-  ConsumerState<AppointmentsScreen> createState() =>
-      _AppointmentsScreenState();
+  ConsumerState<AppointmentsScreen> createState() => _AppointmentsScreenState();
 }
 
 class _AppointmentsScreenState extends ConsumerState<AppointmentsScreen> {
@@ -117,7 +117,8 @@ class _AppointmentsBody extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final effectiveBranchId = branchId ?? ref.watch(activeBranchIdProvider);
-    final isAllBranches = branchId == null && ref.watch(showAllBranchesProvider);
+    final isAllBranches =
+        branchId == null && ref.watch(showAllBranchesProvider);
 
     return Padding(
       padding: const EdgeInsets.all(40),
@@ -142,12 +143,10 @@ class _AppointmentsBody extends ConsumerWidget {
                 const SizedBox(width: 12),
               ],
               if (canManage)
-                SizedBox(
-                  width: 170,
-                  child: CliniqnovvaButton(
-                    label: '+ Book Appointment',
-                    onPressed: () => context.go('/appointments/book'),
-                  ),
+                CliniqnovvaButton(
+                  label: '+ Book Appointment',
+                  isFullWidth: false,
+                  onPressed: () => context.go('/appointments/book'),
                 ),
             ],
           ),
@@ -207,7 +206,9 @@ class _QueueBanner extends ConsumerWidget {
             ),
             const SizedBox(width: 10),
             Text(
-              queue.nowServingNumber != null ? '#${queue.nowServingNumber}' : '—',
+              queue.nowServingNumber != null
+                  ? '#${queue.nowServingNumber}'
+                  : '—',
               style: TextStyle(
                 color: context.appText,
                 fontSize: 22,
@@ -352,10 +353,11 @@ class AppointmentsList extends ConsumerWidget {
         child: Text('$e', style: TextStyle(color: context.appSubtext)),
       ),
       data: (appts) {
-        final sorted = [...appts]..sort((a, b) {
-          final byDate = a.date.compareTo(b.date);
-          return byDate != 0 ? byDate : a.startTime.compareTo(b.startTime);
-        });
+        final sorted = [...appts]
+          ..sort((a, b) {
+            final byDate = a.date.compareTo(b.date);
+            return byDate != 0 ? byDate : a.startTime.compareTo(b.startTime);
+          });
 
         final rows = sorted
             .map(
@@ -417,7 +419,13 @@ class AppointmentsList extends ConsumerWidget {
           mainAxisSize: embedded ? MainAxisSize.min : MainAxisSize.max,
           children: [
             const CliniqnovvaTableHeader(
-              columns: ['Patient', 'Doctor', 'Date & time', 'Status', 'Actions'],
+              columns: [
+                'Patient',
+                'Doctor',
+                'Date & time',
+                'Status',
+                'Actions',
+              ],
             ),
             if (embedded)
               sorted.isEmpty
@@ -518,18 +526,24 @@ class _ActionsCell extends StatelessWidget {
         if (canManage) {
           actions.add(RowAction(label: 'Confirm', onTap: onConfirm));
           actions.add(RowAction(label: 'Reschedule', onTap: onReschedule));
-          actions.add(RowAction(label: 'Cancel', isDestructive: true, onTap: onCancel));
+          actions.add(
+            RowAction(label: 'Cancel', isDestructive: true, onTap: onCancel),
+          );
         }
       case 'confirmed':
         if (canManage) {
           actions.add(RowAction(label: 'Check-In', onTap: onCheckIn));
           actions.add(RowAction(label: 'Reschedule', onTap: onReschedule));
-          actions.add(RowAction(label: 'Cancel', isDestructive: true, onTap: onCancel));
+          actions.add(
+            RowAction(label: 'Cancel', isDestructive: true, onTap: onCancel),
+          );
         }
       case 'checkedIn':
         actions.add(RowAction(label: 'Mark Complete', onTap: onComplete));
         if (canManage) {
-          actions.add(RowAction(label: 'Cancel', isDestructive: true, onTap: onCancel));
+          actions.add(
+            RowAction(label: 'Cancel', isDestructive: true, onTap: onCancel),
+          );
         }
       default:
         break;
@@ -583,20 +597,25 @@ class _RescheduleDialogState extends ConsumerState<_RescheduleDialog> {
       _error = null;
     });
     try {
-      await ref.read(appointmentsNotifierProvider.notifier).reschedule(
-        widget.appointment.id,
-        date: _isoDate(_date!),
-        startTime: slot.startTime,
-        endTime: slot.endTime,
+      await runWithFeedback(
+        context,
+        () => ref
+            .read(appointmentsNotifierProvider.notifier)
+            .reschedule(
+              widget.appointment.id,
+              date: _isoDate(_date!),
+              startTime: slot.startTime,
+              endTime: slot.endTime,
+            ),
+        loadingMessage: 'Rescheduling…',
+        successMessage: 'Appointment rescheduled.',
       );
       if (!mounted) return;
       Navigator.pop(context);
-    } catch (e) {
+    } catch (_) {
+      // runWithFeedback already surfaced the server's reason in the error SnackBar.
       if (!mounted) return;
-      setState(() {
-        _saving = false;
-        _error = '$e';
-      });
+      setState(() => _saving = false);
     }
   }
 
@@ -645,10 +664,8 @@ class _RescheduleDialogState extends ConsumerState<_RescheduleDialog> {
                   );
                   return slotsAsync.when(
                     loading: () => const LoadingWidget(),
-                    error: (e, _) => Text(
-                      '$e',
-                      style: TextStyle(color: context.appSubtext),
-                    ),
+                    error: (e, _) =>
+                        Text('$e', style: TextStyle(color: context.appSubtext)),
                     data: (slots) => slots.isEmpty
                         ? Text(
                             'No slots that day.',

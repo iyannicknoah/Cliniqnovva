@@ -36,7 +36,11 @@ async function getById(req, res, next) {
   try {
     const invoice = await invoicesService.getById(req.params.id, actorFrom(req));
     if (!invoice) return res.status(404).json({ error: 'Invoice not found' });
-    res.json({ invoice });
+    // clinicName (2026-07-26) — the receipt should show the clinic's own
+    // name, not "Cliniqnovva" (the platform, not the business issuing the
+    // invoice). Comes from req.scope (attachScope already fetched the
+    // clinic doc for the suspension check), not a new query.
+    res.json({ invoice: { ...invoice, clinicName: req.scope.clinicName || null } });
   } catch (err) {
     next(err);
   }

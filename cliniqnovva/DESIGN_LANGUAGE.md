@@ -348,6 +348,45 @@ growth/trend chart rather than introducing a new chart style or color.
 
 ## Change log
 
+- **2026-07-26 (Invoice receipt: real print feedback + the clinic's own
+  name)** — Explicit user instruction, two fixes to
+  `invoice_detail_screen.dart`. (1) "Print / Download Receipt" previously
+  had zero loading state or error handling — any failure (a patient lookup
+  error, or the `printing` package's pdf.js failing to load on web) was
+  silently swallowed, which is exactly why the button could look "broken."
+  Wired to `runWithFeedback` like every other write action: "Preparing
+  receipt…" loading SnackBar, "Receipt ready." on success, a visible error
+  SnackBar on failure. (2) The receipt PDF header hardcoded
+  `AppConstants.appName` ("Cliniqnovva," the platform) instead of the
+  issuing clinic's own name. New `InvoiceModel.clinicName`, populated by
+  `GET /invoices/:id` from `req.scope.clinicName` — `attachScope`
+  (`branchScope.middleware.js`) already fetches the clinic doc on every
+  org-scoped request for the suspension check, so stashing the name there
+  is a free read, not a new query or a new role-gated endpoint (`GET
+  /clinics/:id` is Clinic Admin/Super Admin only, since it also returns
+  billing/subscription fields no other billing-capable role should see).
+  Falls back to the app name only if a clinic somehow has no name on
+  record. `clinic-suspension.test.js` updated for the new `req.scope`
+  shape; all 36 backend tests pass.
+- **2026-07-26 (Reschedule dialog gets loading/success feedback)** —
+  Explicit user instruction: `_RescheduleDialog`'s Confirm button
+  (`appointments_screen.dart`) previously awaited the reschedule call with
+  no feedback beyond an inline error box on failure — no indication
+  anything was happening while it saved. Wired to the app's existing
+  `runWithFeedback` helper (`shared/utils/async_feedback.dart`, the same
+  one Cancel-appointment and Save-staff already use): a "Rescheduling…"
+  SnackBar with a spinner while the request is in flight, replaced by
+  "Appointment rescheduled." on success. The dialog stays open and
+  re-enables its buttons on failure (via the existing `_saving` flag) so
+  the user can pick a different slot without re-entering the date, instead
+  of closing prematurely.
+- **2026-07-26 (/appointments' "+ Book Appointment" button no longer wraps)**
+  — The button was pinned to a fixed 170px `SizedBox`, too narrow for "+
+  Book Appointment" at 14px/w600, so it wrapped onto two lines. Fixed in
+  `appointments_screen.dart` by removing the `SizedBox` and passing
+  `isFullWidth: false` instead, so the button sizes to its own content
+  (same fix shape as any button that needs to size to its label rather
+  than a guessed fixed width).
 - **2026-07-26 (Profile "more" menu shrunk)** — Explicit user instruction:
   the sidebar profile chip's Theme/Language/Logout popup
   (`_ProfileMenuContent`, `cliniqnovva_sidebar.dart`) was too big. Shrunk

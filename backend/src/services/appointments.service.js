@@ -73,6 +73,23 @@ function kigaliDateString(date = new Date()) {
 }
 
 /**
+ * True if `date`+`startTime` (Africa/Kigali) has already passed. Used to
+ * keep today's already-elapsed slots out of `getAvailableSlots`, and to
+ * reject `book()`/`reschedule()` calls that slip a past time through
+ * anyway (2026-07-26, explicit user instruction — an 08:00 slot was still
+ * showing as bookable at 16:30 the same day; nothing anywhere checked the
+ * current time against the requested one).
+ */
+function isPastInKigali(date, startTime) {
+  const nowKigali = new Date(Date.now() + 2 * 60 * 60 * 1000);
+  const todayKigali = nowKigali.toISOString().slice(0, 10);
+  if (date < todayKigali) return true;
+  if (date > todayKigali) return false;
+  const nowMinutes = nowKigali.getUTCHours() * 60 + nowKigali.getUTCMinutes();
+  return toMinutes(startTime) < nowMinutes;
+}
+
+/**
  * The doctor's working window(s) for one date, after applying
  * Umuganda-Saturday clipping (Part 8 Task 2's rule, actually enforced
  * against real bookable slots):
@@ -151,6 +168,7 @@ async function getAvailableSlots({ doctorId, branchId, serviceId, date }) {
     for (let cursor = toMinutes(w.startTime); cursor + durationMins <= windowEndMin; cursor += w.slotDurationMins) {
       const startTime = fromMinutes(cursor);
       const endTime = fromMinutes(cursor + durationMins);
+      if (isPastInKigali(date, startTime)) continue;
       const taken =
         booked.some((b) => overlapsWithBuffer(startTime, endTime, b.startTime, b.endTime, bufferMins)) ||
         blocked.some((b) => overlapsWithBuffer(startTime, endTime, b.startTime, b.endTime, bufferMins));
@@ -189,9 +207,15 @@ function assertAccess(appt, scope) {
  * Re-applies the doctor's `breakMinutes` buffer here too (not just in
  * `getAvailableSlots`), for the same never-trust-a-client-fetched-list
  * reason: two near-simultaneous bookings could each look buffer-valid
- * against the slot list they fetched moments earlier.
+ * against the slot list they fetched moments earlier. Same reasoning for
+ * the past-time check (2026-07-26) — reject here too, not just filter it
+ * out of the slot list.
  */
 async function book({ clinicId, branchId, patientId, doctorId, serviceId, date, startTime, endTime }, actor) {
+  if (isPastInKigali(date, startTime)) {
+    throw httpError(400, 'That time has already passed — please pick another.');
+  }
+
   const apptRef = db.collection('appointments').doc();
   const doctorDoc = await db.collection('doctors').doc(doctorId).get();
   const bufferMins = doctorDoc.data()?.breakMinutes || 0;
@@ -313,6 +337,9 @@ async function reschedule(id, { date, startTime, endTime }, actor) {
   assertAccess(appt, actor.scope);
   if (['completed', 'cancelled'].includes(appt.status)) {
     throw httpError(400, `Cannot reschedule a ${appt.status} appointment`);
+  }
+  if (isPastInKigali(date, startTime)) {
+    throw httpError(400, 'That time has already passed — please pick another.');
   }
 
   const doctorDoc = await db.collection('doctors').doc(appt.doctorId).get();

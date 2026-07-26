@@ -38,7 +38,16 @@ test('clinic suspension: an active clinic lets a branch-scoped user through', as
 
   assert.equal(nextCalled, true);
   assert.equal(res.statusCode, null);
-  assert.deepEqual(req.scope, { level: 'branch', clinicId: 'org1', branchId: 'branch1' });
+  // clinicName (2026-07-26) — stashed onto req.scope from the same
+  // Firestore read the suspension check above already does, so an
+  // org-scoped receipt/PDF can show the clinic's own name instead of
+  // "Cliniqnovva" without a second query or a new role-gated endpoint.
+  assert.deepEqual(req.scope, {
+    level: 'branch',
+    clinicId: 'org1',
+    branchId: 'branch1',
+    clinicName: 'Kigali Health',
+  });
 });
 
 test('clinic suspension: blocks EVERY org-scoped role immediately once isActive is false', async () => {

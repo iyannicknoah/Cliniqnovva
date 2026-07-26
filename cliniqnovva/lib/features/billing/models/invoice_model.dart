@@ -24,6 +24,7 @@ class InvoiceModel {
   const InvoiceModel({
     required this.id,
     required this.clinicId,
+    this.clinicName,
     required this.branchId,
     required this.patientId,
     this.appointmentId,
@@ -40,6 +41,11 @@ class InvoiceModel {
 
   final String id;
   final String clinicId;
+
+  /// The issuing clinic's own name (2026-07-26) — only present when fetched
+  /// via `GET /invoices/:id` (the receipt should show this, not the
+  /// platform's own "Cliniqnovva" brand name). Null on the list endpoint.
+  final String? clinicName;
   final String branchId;
   final String patientId;
   final String? appointmentId;
@@ -64,6 +70,7 @@ class InvoiceModel {
     return InvoiceModel(
       id: json['id'] as String,
       clinicId: json['clinicId'] as String? ?? '',
+      clinicName: json['clinicName'] as String?,
       branchId: json['branchId'] as String? ?? '',
       patientId: json['patientId'] as String? ?? '',
       appointmentId: json['appointmentId'] as String?,

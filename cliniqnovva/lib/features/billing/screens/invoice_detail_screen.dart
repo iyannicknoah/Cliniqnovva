@@ -60,7 +60,10 @@ class InvoiceDetailScreen extends ConsumerWidget {
       return Scaffold(
         backgroundColor: context.appBg,
         body: Center(
-          child: Text('No invoice id.', style: TextStyle(color: context.appSubtext)),
+          child: Text(
+            'No invoice id.',
+            style: TextStyle(color: context.appSubtext),
+          ),
         ),
       );
     }
@@ -123,7 +126,10 @@ class _InvoiceBody extends ConsumerWidget {
                     error: (e, _) => const SizedBox.shrink(),
                     data: (patient) => Text(
                       '${patient.name} · ${patient.phone}',
-                      style: TextStyle(color: context.appSubtext, fontSize: 13.5),
+                      style: TextStyle(
+                        color: context.appSubtext,
+                        fontSize: 13.5,
+                      ),
                     ),
                   ),
                   Text(
@@ -165,7 +171,10 @@ class _InvoiceBody extends ConsumerWidget {
             ),
             child: Text(
               'Voided: ${invoice.voidReason}',
-              style: const TextStyle(color: AppColors.pillRedText, fontSize: 13.5),
+              style: const TextStyle(
+                color: AppColors.pillRedText,
+                fontSize: 13.5,
+              ),
             ),
           ),
         ],
@@ -176,7 +185,7 @@ class _InvoiceBody extends ConsumerWidget {
               width: 220,
               child: CliniqnovvaButton(
                 label: 'Print / Download Receipt',
-                onPressed: () => _printReceipt(ref, invoice),
+                onPressed: () => _printReceipt(context, ref, invoice),
               ),
             ),
             const SizedBox(width: 12),
@@ -213,7 +222,10 @@ class _InvoiceBody extends ConsumerWidget {
                 'This invoice is never deleted — it stays on record as voided, with the reason below.',
               ),
               const SizedBox(height: 12),
-              CliniqnovvaTextField(label: 'Reason', controller: reasonController),
+              CliniqnovvaTextField(
+                label: 'Reason',
+                controller: reasonController,
+              ),
             ],
           ),
         ),
@@ -223,7 +235,8 @@ class _InvoiceBody extends ConsumerWidget {
             child: const Text('Cancel'),
           ),
           TextButton(
-            onPressed: () => Navigator.pop(dialogContext, reasonController.text.trim()),
+            onPressed: () =>
+                Navigator.pop(dialogContext, reasonController.text.trim()),
             child: const Text('Void'),
           ),
         ],
@@ -234,7 +247,9 @@ class _InvoiceBody extends ConsumerWidget {
     try {
       await runWithFeedback(
         context,
-        () => ref.read(invoicesNotifierProvider.notifier).voidInvoice(invoice.id, reason),
+        () => ref
+            .read(invoicesNotifierProvider.notifier)
+            .voidInvoice(invoice.id, reason),
         loadingMessage: 'Voiding…',
         successMessage: 'Invoice voided.',
       );
@@ -243,13 +258,38 @@ class _InvoiceBody extends ConsumerWidget {
     }
   }
 
-  Future<void> _printReceipt(WidgetRef ref, InvoiceModel invoice) async {
-    final patient = await ref.read(patientDetailProvider(invoice.patientId).future);
-    await _generateReceiptPdf(invoice, patient);
+  /// Previously fired-and-forgot — no loading state, and any failure (a
+  /// patient lookup error, or the `printing` package's pdf.js failing to
+  /// load on web) was silently swallowed, which is exactly why the button
+  /// could look "broken" with zero feedback (2026-07-26, explicit user
+  /// instruction to fix this and surface a loading indicator).
+  Future<void> _printReceipt(
+    BuildContext context,
+    WidgetRef ref,
+    InvoiceModel invoice,
+  ) async {
+    try {
+      await runWithFeedback(
+        context,
+        () async {
+          final patient = await ref.read(
+            patientDetailProvider(invoice.patientId).future,
+          );
+          await _generateReceiptPdf(invoice, patient);
+        },
+        loadingMessage: 'Preparing receipt…',
+        successMessage: 'Receipt ready.',
+      );
+    } catch (_) {
+      // runWithFeedback already surfaced the error in the SnackBar.
+    }
   }
 }
 
-Future<void> _generateReceiptPdf(InvoiceModel invoice, PatientModel patient) async {
+Future<void> _generateReceiptPdf(
+  InvoiceModel invoice,
+  PatientModel patient,
+) async {
   final doc = pw.Document();
   doc.addPage(
     pw.Page(
@@ -258,7 +298,13 @@ Future<void> _generateReceiptPdf(InvoiceModel invoice, PatientModel patient) asy
         crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
           pw.Text(
-            AppConstants.appName,
+            // The receipt is issued BY the clinic, not by Cliniqnovva (the
+            // software) — fall back to the app name only if a clinic
+            // somehow has no name on record (2026-07-26, explicit user
+            // instruction).
+            invoice.clinicName?.isNotEmpty == true
+                ? invoice.clinicName!
+                : AppConstants.appName,
             style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold),
           ),
           pw.Text('Receipt', style: const pw.TextStyle(fontSize: 12)),
@@ -269,13 +315,19 @@ Future<void> _generateReceiptPdf(InvoiceModel invoice, PatientModel patient) asy
           pw.SizedBox(height: 16),
           pw.Table(
             border: pw.TableBorder(bottom: const pw.BorderSide(width: 0.5)),
-            columnWidths: const {0: pw.FlexColumnWidth(3), 1: pw.FlexColumnWidth(1)},
+            columnWidths: const {
+              0: pw.FlexColumnWidth(3),
+              1: pw.FlexColumnWidth(1),
+            },
             children: [
               pw.TableRow(
                 children: [
                   pw.Padding(
                     padding: const pw.EdgeInsets.only(bottom: 6),
-                    child: pw.Text('Description', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                    child: pw.Text(
+                      'Description',
+                      style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                    ),
                   ),
                   pw.Padding(
                     padding: const pw.EdgeInsets.only(bottom: 6),
@@ -296,7 +348,10 @@ Future<void> _generateReceiptPdf(InvoiceModel invoice, PatientModel patient) asy
                     ),
                     pw.Padding(
                       padding: const pw.EdgeInsets.symmetric(vertical: 4),
-                      child: pw.Text('${item.amountRwf}', textAlign: pw.TextAlign.right),
+                      child: pw.Text(
+                        '${item.amountRwf}',
+                        textAlign: pw.TextAlign.right,
+                      ),
                     ),
                   ],
                 ),
@@ -311,7 +366,11 @@ Future<void> _generateReceiptPdf(InvoiceModel invoice, PatientModel patient) asy
               '${invoice.insuranceCoveredAmountRwf} RWF',
             ),
           pw.Divider(),
-          _receiptRow('Balance due', '${invoice.balanceDueRwf} RWF', bold: true),
+          _receiptRow(
+            'Balance due',
+            '${invoice.balanceDueRwf} RWF',
+            bold: true,
+          ),
         ],
       ),
     ),
@@ -325,7 +384,10 @@ pw.Widget _receiptRow(String label, String value, {bool bold = false}) {
     padding: const pw.EdgeInsets.symmetric(vertical: 2),
     child: pw.Row(
       mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-      children: [pw.Text(label, style: style), pw.Text(value, style: style)],
+      children: [
+        pw.Text(label, style: style),
+        pw.Text(value, style: style),
+      ],
     ),
   );
 }
@@ -394,7 +456,8 @@ class _LineItemsCardState extends ConsumerState<_LineItemsCard> {
                 CliniqnovvaButton.text(
                   label: '+ Add line',
                   color: context.appText,
-                  onPressed: () => setState(() => rows.add(_EditableLineItem())),
+                  onPressed: () =>
+                      setState(() => rows.add(_EditableLineItem())),
                 ),
             ],
           ),
@@ -424,7 +487,9 @@ class _LineItemsCardState extends ConsumerState<_LineItemsCard> {
                             vertical: 12,
                           ),
                           border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(AppTheme.inputRadius),
+                            borderRadius: BorderRadius.circular(
+                              AppTheme.inputRadius,
+                            ),
                             borderSide: BorderSide(color: context.appBorder),
                           ),
                         ),
@@ -451,7 +516,9 @@ class _LineItemsCardState extends ConsumerState<_LineItemsCard> {
                             vertical: 12,
                           ),
                           border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(AppTheme.inputRadius),
+                            borderRadius: BorderRadius.circular(
+                              AppTheme.inputRadius,
+                            ),
                             borderSide: BorderSide(color: context.appBorder),
                           ),
                         ),
@@ -461,7 +528,11 @@ class _LineItemsCardState extends ConsumerState<_LineItemsCard> {
                   if (widget.editable && rows.length > 1) ...[
                     const SizedBox(width: 4),
                     IconButton(
-                      icon: AppIcon(AppIcons.trash, size: 15, color: context.appSubtext),
+                      icon: AppIcon(
+                        AppIcons.trash,
+                        size: 15,
+                        color: context.appSubtext,
+                      ),
                       onPressed: () => setState(() => rows.removeAt(i)),
                     ),
                   ],
@@ -497,7 +568,10 @@ class _LineItemsCardState extends ConsumerState<_LineItemsCard> {
                 ),
                 child: Text(
                   _error!,
-                  style: const TextStyle(color: AppColors.pillRedText, fontSize: 13),
+                  style: const TextStyle(
+                    color: AppColors.pillRedText,
+                    fontSize: 13,
+                  ),
                 ),
               ),
             ],
@@ -523,7 +597,8 @@ class _LineItemsCardState extends ConsumerState<_LineItemsCard> {
       final amount = int.tryParse(row.amountController.text.trim());
       if (description.isEmpty || amount == null || amount < 0) {
         setState(
-          () => _error = 'Every line needs a description and a whole-number RWF amount.',
+          () => _error =
+              'Every line needs a description and a whole-number RWF amount.',
         );
         return;
       }
@@ -568,14 +643,22 @@ class _SummaryCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _SummaryRow(label: 'Total', value: invoice.totalAmountRwf, bold: true),
+          _SummaryRow(
+            label: 'Total',
+            value: invoice.totalAmountRwf,
+            bold: true,
+          ),
           _SummaryRow(label: 'Cash paid', value: invoice.cashPaidAmountRwf),
           _SummaryRow(
             label: 'Insurance covered (${invoice.insuranceScheme})',
             value: invoice.insuranceCoveredAmountRwf,
           ),
           Divider(height: 20, color: context.appBorder),
-          _SummaryRow(label: 'Balance due', value: invoice.balanceDueRwf, bold: true),
+          _SummaryRow(
+            label: 'Balance due',
+            value: invoice.balanceDueRwf,
+            bold: true,
+          ),
         ],
       ),
     );
@@ -583,7 +666,11 @@ class _SummaryCard extends StatelessWidget {
 }
 
 class _SummaryRow extends StatelessWidget {
-  const _SummaryRow({required this.label, required this.value, this.bold = false});
+  const _SummaryRow({
+    required this.label,
+    required this.value,
+    this.bold = false,
+  });
 
   final String label;
   final int value;
@@ -698,7 +785,10 @@ class _RecordCashCardState extends ConsumerState<_RecordCashCard> {
             const SizedBox(height: 10),
             Text(
               _error!,
-              style: const TextStyle(color: AppColors.pillRedText, fontSize: 12.5),
+              style: const TextStyle(
+                color: AppColors.pillRedText,
+                fontSize: 12.5,
+              ),
             ),
           ],
           const SizedBox(height: 12),
@@ -722,7 +812,8 @@ class _RecordInsuranceCard extends ConsumerStatefulWidget {
   final String invoiceId;
 
   @override
-  ConsumerState<_RecordInsuranceCard> createState() => _RecordInsuranceCardState();
+  ConsumerState<_RecordInsuranceCard> createState() =>
+      _RecordInsuranceCardState();
 }
 
 class _RecordInsuranceCardState extends ConsumerState<_RecordInsuranceCard> {
@@ -752,7 +843,11 @@ class _RecordInsuranceCardState extends ConsumerState<_RecordInsuranceCard> {
         context,
         () => ref
             .read(invoicesNotifierProvider.notifier)
-            .recordInsurance(widget.invoiceId, amountRwf: amount, scheme: _scheme),
+            .recordInsurance(
+              widget.invoiceId,
+              amountRwf: amount,
+              scheme: _scheme,
+            ),
         loadingMessage: 'Recording coverage…',
         successMessage: 'Insurance coverage recorded.',
       );
@@ -806,14 +901,19 @@ class _RecordInsuranceCardState extends ConsumerState<_RecordInsuranceCard> {
               isDense: true,
               filled: true,
               fillColor: context.appCard,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 12,
+              ),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(AppTheme.inputRadius),
                 borderSide: BorderSide(color: context.appBorder),
               ),
             ),
             items: _insuranceSchemeLabels.entries
-                .map((e) => DropdownMenuItem(value: e.key, child: Text(e.value)))
+                .map(
+                  (e) => DropdownMenuItem(value: e.key, child: Text(e.value)),
+                )
                 .toList(),
             onChanged: (v) => setState(() => _scheme = v ?? _scheme),
           ),
@@ -827,7 +927,10 @@ class _RecordInsuranceCardState extends ConsumerState<_RecordInsuranceCard> {
             const SizedBox(height: 10),
             Text(
               _error!,
-              style: const TextStyle(color: AppColors.pillRedText, fontSize: 12.5),
+              style: const TextStyle(
+                color: AppColors.pillRedText,
+                fontSize: 12.5,
+              ),
             ),
           ],
           const SizedBox(height: 12),

@@ -49,6 +49,13 @@ async function attachScope(req, res, next) {
     if (!isActive) {
       return res.status(403).json({ error: 'This clinic has been suspended' });
     }
+    // Already fetched for the suspension check above, so stashing the name
+    // here is free — lets any org-scoped controller (e.g. the invoice
+    // receipt, 2026-07-26) show the clinic's own name without a second
+    // Firestore read or a new role-gated endpoint (GET /clinics/:id is
+    // Clinic Admin/Super Admin only, since it also returns billing/
+    // subscription fields no other role should see).
+    req.scope.clinicName = orgDoc.exists ? orgDoc.data().name || null : null;
   }
 
   next();

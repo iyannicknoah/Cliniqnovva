@@ -291,6 +291,14 @@ wrote to them beyond the now-removed toggle.
 - Appointment cannot be marked completed until check-in has occurred
 - Rescheduling re-validates against current doctor availability
 - Every status change logged with timestamp
+- **Past-time rejection (added 2026-07-26, fixing a real reported bug):**
+  a slot on today's date that has already elapsed (Africa/Kigali wall
+  clock) is never offered by `getAvailableSlots`, and both `book()` and
+  `reschedule()` independently reject it too (`isPastInKigali`,
+  `backend/src/services/appointments.service.js`) — a doctor's 08:00 slot
+  was previously still bookable at 16:30 the same day because nothing
+  anywhere compared the requested time against the current time. Covered
+  by `backend/test/appointments.test.js`.
 
 ### 6.8 Billing & Invoicing
 **Purpose:** Generate and track charges for consultations, tests, and services. **Payment method is cash only** — the system records payment, it does not process any online transaction.
