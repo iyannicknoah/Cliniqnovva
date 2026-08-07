@@ -5,6 +5,8 @@
 const { randomUUID } = require('crypto');
 const { db } = require('../config/firebase-admin');
 const { ORG_SCOPED_ROLES_FOR_SUSPENSION } = require('../middleware/branchScope.middleware');
+const { ROLES } = require('../middleware/requireRole');
+const auditLogService = require('./auditLog.service');
 
 /**
  * Part 5 Task 2 — platform-wide metrics, for Cliniqnovva's own business
@@ -55,16 +57,38 @@ async function startSupportView(clinicId, actorId) {
 
   const sessionId = randomUUID();
 
+  // platform.routes.js gates this entire router to Super Admin only, so
+  // actorRole is always ROLES.SUPER_ADMIN here — no need to thread it
+  // through the controller as a separate param.
+  await auditLogService.write({
+    actorId,
+    actorRole: ROLES.SUPER_ADMIN,
+    clinicId,
+    action: 'support_view.started',
+    targetCollection: 'clinics',
+    targetId: clinicId,
+  });
+
   return { sessionId, clinic: { id: orgDoc.id, ...orgDoc.data() } };
 }
 
 /**
- * Support View end — a no-op today (it used to also write an audit-log
- * entry; that feature was removed 2026-07-24). Kept as a real endpoint
- * since the Flutter side calls it to know the support session is over and
- * dismiss its banner (see support_view_screen.dart).
+ * Support View end — restored 2026-07-29 (this used to be a no-op after the
+ * general audit-log feature was removed 2026-07-24; see auditLog.service.js
+ * for the restoration). Also still a real endpoint the Flutter side calls
+ * to know the support session is over and dismiss its banner (see
+ * support_view_screen.dart) independent of the audit write.
  */
-async function endSupportView(clinicId, sessionId, actorId) {}
+async function endSupportView(clinicId, sessionId, actorId) {
+  await auditLogService.write({
+    actorId,
+    actorRole: ROLES.SUPER_ADMIN,
+    clinicId,
+    action: 'support_view.ended',
+    targetCollection: 'clinics',
+    targetId: clinicId,
+  });
+}
 
 /**
  * Super Admin Overview page — real monthly revenue growth, aggregated from

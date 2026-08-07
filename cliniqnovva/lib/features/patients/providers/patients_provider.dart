@@ -4,7 +4,9 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http_parser/http_parser.dart';
 
+import '../../../core/offline/offline_queue.dart';
 import '../../../core/services/api_service.dart';
+import '../../../shared/providers/connectivity_provider.dart';
 import '../models/medical_record_model.dart';
 import '../models/patient_document_model.dart';
 import '../models/patient_model.dart';
@@ -93,6 +95,28 @@ class PatientsNotifier extends AsyncNotifier<void> {
     PatientLocation? location,
     bool confirmedDuplicate = false,
   }) async {
+    // Offline-first (2026-07-30) — patient registration is a pure create,
+    // so there's no conflict to check for here; the duplicate-check itself
+    // needs the network too, so it's skipped rather than blocking the
+    // whole registration on a call that would just fail. Any real
+    // duplicate this creates is caught the normal way once synced, via the
+    // existing checkDuplicate/mergePatients tooling.
+    if (ref.read(isOfflineProvider).valueOrNull ?? false) {
+      await ref
+          .read(offlineQueueProvider.notifier)
+          .enqueue(OfflineMutationKind.registerPatient, {
+            'branchId': branchId,
+            'name': name,
+            'phone': phone,
+            'dateOfBirth': dateOfBirth?.toIso8601String(),
+            'gender': gender,
+            'nationalId': nationalId,
+            'emergencyContact': emergencyContact?.toMap(),
+            'location': location?.toMap(),
+          });
+      return const PatientQueuedOffline();
+    }
+
     try {
       final response = await ApiService.instance.client.post<Map<String, dynamic>>(
         '/api/v1/patients',
@@ -139,6 +163,14 @@ class PatientsNotifier extends AsyncNotifier<void> {
     ref.invalidate(patientsSearchProvider);
   }
 
+  /// Offline-first (2026-07-30) — vitals/visit recording is a pure append
+  /// (a new medical-record entry, never an edit of an existing one), so
+  /// there's nothing to conflict with once synced. Callers that want to
+  /// show a different message for the queued-offline case should check
+  /// `isOfflineProvider` themselves before calling, same pattern
+  /// `_AddRecordFormState._save()` in patient_profile_screen.dart uses —
+  /// this method's return type stays `void` either way since the caller
+  /// already knows going in whether it's about to queue or send.
   Future<void> addMedicalRecord(
     String patientId, {
     String? appointmentId,
@@ -147,15 +179,27 @@ class PatientsNotifier extends AsyncNotifier<void> {
     String? notes,
     Map<String, String>? vitals,
   }) async {
+    final data = {
+      'appointmentId': appointmentId,
+      'diagnosis': diagnosis,
+      'prescriptions': prescriptions?.map((p) => p.toJson()).toList(),
+      'notes': notes,
+      'vitals': vitals,
+    };
+
+    if (ref.read(isOfflineProvider).valueOrNull ?? false) {
+      await ref
+          .read(offlineQueueProvider.notifier)
+          .enqueue(OfflineMutationKind.recordVitals, {
+            'patientId': patientId,
+            ...data,
+          });
+      return;
+    }
+
     await ApiService.instance.post<Map<String, dynamic>>(
       '/api/v1/patients/$patientId/medical-records',
-      data: {
-        'appointmentId': appointmentId,
-        'diagnosis': diagnosis,
-        'prescriptions': prescriptions?.map((p) => p.toJson()).toList(),
-        'notes': notes,
-        'vitals': vitals,
-      },
+      data: data,
     );
     ref.invalidate(patientDetailProvider(patientId));
   }

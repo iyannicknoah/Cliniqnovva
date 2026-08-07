@@ -16,6 +16,7 @@ abstract final class AppConstants {
   static const String rolePharmacist = 'pharmacist';
   static const String roleDoctor = 'doctor';
   static const String roleNurse = 'nurse';
+  static const String roleLaboratorian = 'laboratorian';
   static const String rolePatient = 'patient';
 
   static const List<String> allRoles = [
@@ -27,15 +28,20 @@ abstract final class AppConstants {
     rolePharmacist,
     roleDoctor,
     roleNurse,
+    roleLaboratorian,
     rolePatient,
   ];
 
   /// Roles manageable from the Staff screen (Part 8 Task 1) — excludes
   /// branch_admin/clinic_admin/super_admin, whose accounts are
   /// created elsewhere.
+  ///
+  /// laboratorian (2026-07-29) — performs/records lab test results, same as
+  /// Nurse can; available on every subscription plan, no tier gating.
   static const List<String> staffRoles = [
     roleDoctor,
     roleNurse,
+    roleLaboratorian,
     roleReceptionist,
     rolePharmacist,
     roleAccountant,
@@ -126,8 +132,15 @@ String homeRouteForRole(String role) {
       // replacing the earlier straight-to-Billing default.
       return '/accountant-overview';
     case AppConstants.rolePharmacist:
-      // Same reasoning — Pharmacist's only nav item is /inventory.
-      return '/inventory';
+      // 2026-07-26 (explicit user instruction) — same reasoning as
+      // Accountant above: a real stock-KPI overview page now exists
+      // (PharmacistOverviewScreen), replacing the earlier straight-to-
+      // Inventory default.
+      return '/pharmacist-overview';
+    case AppConstants.roleLaboratorian:
+      // 2026-07-29 — same KPI-overview-landing-page pattern as
+      // Accountant/Pharmacist above (LaboratorianOverviewScreen).
+      return '/laboratorian-overview';
     default:
       return '/dashboard';
   }
@@ -146,6 +159,7 @@ String roleLabel(String role) => switch (role) {
   AppConstants.rolePharmacist => 'Pharmacist',
   AppConstants.roleDoctor => 'Doctor',
   AppConstants.roleNurse => 'Nurse',
+  AppConstants.roleLaboratorian => 'Laboratorian',
   AppConstants.rolePatient => 'Patient',
   _ => role,
 };

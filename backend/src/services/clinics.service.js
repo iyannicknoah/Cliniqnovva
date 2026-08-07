@@ -2,6 +2,7 @@
 // Part 4 subscription/billing tracking). Cash-only record-keeping — there is
 // NO payment gateway, this module only records that a payment happened.
 const { db, auth } = require('../config/firebase-admin');
+const auditLogService = require('./auditLog.service');
 
 // basic=1 branch, pro=5, enterprise=unlimited (null).
 const PLAN_BRANCH_LIMITS = { basic: 1, pro: 5, enterprise: null };
@@ -116,9 +117,17 @@ async function getById(id) {
  * pending, and paid — recording an actual payment (below) is only allowed
  * once a clinic is marked 'paid'.
  */
-async function setBillingStatus(id, billingStatus, actorId) {
+async function setBillingStatus(id, billingStatus, actor) {
   validateBillingStatus(billingStatus);
   await db.collection('clinics').doc(id).update({ billingStatus });
+  await auditLogService.write({
+    actorId: actor?.actorId,
+    actorRole: actor?.actorRole,
+    clinicId: id,
+    action: 'clinic.billing_status_changed',
+    targetCollection: 'clinics',
+    targetId: id,
+  });
   return getById(id);
 }
 
@@ -154,8 +163,16 @@ async function update(id, fields) {
  * every user under it (enforced at the API layer by
  * branchScope.middleware.js's ORG_SCOPED_ROLES_FOR_SUSPENSION check).
  */
-async function setStatus(id, isActive, actorId) {
+async function setStatus(id, isActive, actor) {
   await db.collection('clinics').doc(id).update({ isActive });
+  await auditLogService.write({
+    actorId: actor?.actorId,
+    actorRole: actor?.actorRole,
+    clinicId: id,
+    action: isActive ? 'clinic.activated' : 'clinic.suspended',
+    targetCollection: 'clinics',
+    targetId: id,
+  });
   return getById(id);
 }
 
@@ -165,7 +182,7 @@ async function setStatus(id, isActive, actorId) {
  * under the clinic's current billingCycle. Only allowed once the
  * clinic's billingStatus has been manually marked 'paid'.
  */
-async function recordPayment(id, { amountRwf, date, note }, actorId) {
+async function recordPayment(id, { amountRwf, date, note }, actor) {
   const doc = await db.collection('clinics').doc(id).get();
   if (!doc.exists) return null;
   const data = doc.data();
@@ -180,7 +197,7 @@ async function recordPayment(id, { amountRwf, date, note }, actorId) {
     date: date || new Date().toISOString(),
     amountRwf,
     note: note || null,
-    recordedBy: actorId || null,
+    recordedBy: actor?.actorId || null,
   };
   const paymentHistory = [...(data.subscriptionPaymentHistory || []), payment];
   const nextDueDate = computeNextDueDate(new Date(payment.date), data.billingCycle || 'monthly');
@@ -188,6 +205,15 @@ async function recordPayment(id, { amountRwf, date, note }, actorId) {
   await db.collection('clinics').doc(id).update({
     subscriptionPaymentHistory: paymentHistory,
     nextDueDate,
+  });
+
+  await auditLogService.write({
+    actorId: actor?.actorId,
+    actorRole: actor?.actorRole,
+    clinicId: id,
+    action: 'clinic.payment_recorded',
+    targetCollection: 'clinics',
+    targetId: id,
   });
 
   return getById(id);
@@ -213,7 +239,7 @@ const PURGE_AFTER_DAYS = 14;
  * Unlike the old branch-count-gated hard delete this replaces, it works
  * regardless of how much is linked to the clinic — that's the whole point.
  */
-async function archive(id) {
+async function archive(id, actor) {
   const doc = await db.collection('clinics').doc(id).get();
   if (!doc.exists) return null;
 
@@ -226,11 +252,20 @@ async function archive(id) {
   const branchesSnap = await db.collection('branches').where('clinicId', '==', id).get();
   await Promise.all(branchesSnap.docs.map((b) => b.ref.update({ isActive: false })));
 
+  await auditLogService.write({
+    actorId: actor?.actorId,
+    actorRole: actor?.actorRole,
+    clinicId: id,
+    action: 'clinic.archived',
+    targetCollection: 'clinics',
+    targetId: id,
+  });
+
   return getById(id);
 }
 
 /** Undoes archive() — clinic and every branch under it become active again. */
-async function unarchive(id) {
+async function unarchive(id, actor) {
   const doc = await db.collection('clinics').doc(id).get();
   if (!doc.exists) return null;
 
@@ -242,6 +277,15 @@ async function unarchive(id) {
 
   const branchesSnap = await db.collection('branches').where('clinicId', '==', id).get();
   await Promise.all(branchesSnap.docs.map((b) => b.ref.update({ isActive: true })));
+
+  await auditLogService.write({
+    actorId: actor?.actorId,
+    actorRole: actor?.actorRole,
+    clinicId: id,
+    action: 'clinic.unarchived',
+    targetCollection: 'clinics',
+    targetId: id,
+  });
 
   return getById(id);
 }

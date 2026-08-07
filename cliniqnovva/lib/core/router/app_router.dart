@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../features/appointments/screens/appointments_screen.dart';
 import '../../features/appointments/screens/booking_screen.dart';
+import '../../features/audit_log/screens/audit_log_screen.dart' show AuditLogScreen;
 import '../../features/auth/providers/access_control_provider.dart';
 import '../../features/auth/providers/auth_provider.dart';
 import '../../features/auth/screens/login_screen.dart';
@@ -20,6 +21,9 @@ import '../../features/departments/screens/services_screen.dart';
 import '../../features/doctor/screens/doctor_reviews_screen.dart';
 import '../../features/doctor/screens/doctor_today_screen.dart';
 import '../../features/inventory/screens/inventory_screen.dart';
+import '../../features/inventory/screens/pharmacist_overview_screen.dart';
+import '../../features/lab_orders/screens/lab_orders_screen.dart';
+import '../../features/lab_orders/screens/laboratorian_overview_screen.dart';
 import '../../features/mobile_patient/screens/patient_home_screen.dart';
 import '../../features/mobile_staff/screens/staff_home_screen.dart';
 import '../../features/nurse/screens/nurse_today_screen.dart';
@@ -32,6 +36,7 @@ import '../../features/patients/screens/register_patient_screen.dart';
 import '../../features/reports/screens/reports_screen.dart';
 import '../../features/reviews/screens/popular_clinics_screen.dart';
 import '../../features/reviews/screens/reviews_screen.dart';
+import '../../features/super_admin/screens/audit_log_screen.dart' show SuperAdminAuditLogScreen;
 import '../../features/staff/screens/doctor_schedule_screen.dart';
 import '../../features/staff/screens/staff_screen.dart';
 import '../../features/super_admin/screens/billing_screen.dart';
@@ -54,6 +59,7 @@ const _orgScopedRolesForSuspension = [
   AppConstants.rolePharmacist,
   AppConstants.roleDoctor,
   AppConstants.roleNurse,
+  AppConstants.roleLaboratorian,
 ];
 
 /// Converts Riverpod's auth providers into a Listenable so GoRouter
@@ -192,6 +198,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: '/super-admin/billing',
         builder: (context, state) => const SuperAdminBillingScreen(),
       ),
+      GoRoute(
+        path: '/super-admin/audit-log',
+        builder: (context, state) => const SuperAdminAuditLogScreen(),
+      ),
 
       GoRoute(
         path: '/staff-home',
@@ -299,10 +309,26 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             path: '/inventory',
             builder: (context, state) => const InventoryScreen(),
           ),
+          GoRoute(
+            path: '/pharmacist-overview',
+            builder: (context, state) => const PharmacistOverviewScreen(),
+          ),
+          GoRoute(
+            path: '/laboratorian-overview',
+            builder: (context, state) => const LaboratorianOverviewScreen(),
+          ),
+          GoRoute(
+            path: '/lab-orders',
+            builder: (context, state) => const LabOrdersScreen(),
+          ),
 
           GoRoute(
             path: '/reports',
             builder: (context, state) => const ReportsScreen(),
+          ),
+          GoRoute(
+            path: '/audit-log',
+            builder: (context, state) => const AuditLogScreen(),
           ),
 
           GoRoute(

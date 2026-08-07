@@ -17,6 +17,11 @@ router.use(verifyToken, attachScope);
 // Accountant added 2026-07-26 — printing an invoice receipt needs the
 // patient's name/phone, same as Receptionist; getById() gives Accountant
 // the exact same clinical-data-free shape Receptionist already gets.
+// Laboratorian added 2026-07-29 — needs to look up the right patient for a
+// pending lab order; getById() shapes the response down to lab-orders-only
+// for this role (see patients.service.js). Deliberately NOT added to
+// CLINICAL_ROLES below — that gates full diagnosis/prescription/document
+// visibility, which a Laboratorian must never see.
 const READ_ROLES = [
   ROLES.RECEPTIONIST,
   ROLES.BRANCH_ADMIN,
@@ -25,6 +30,7 @@ const READ_ROLES = [
   ROLES.NURSE,
   ROLES.PHARMACIST,
   ROLES.ACCOUNTANT,
+  ROLES.LABORATORIAN,
   ROLES.SUPER_ADMIN,
 ];
 const WRITE_ROLES = [ROLES.RECEPTIONIST, ROLES.BRANCH_ADMIN, ROLES.CLINIC_ADMIN, ROLES.SUPER_ADMIN];

@@ -32,6 +32,14 @@ const superAdminNavItems = [
     route: '/super-admin/billing',
     allowedRoles: [AppConstants.roleSuperAdmin],
   ),
+  // Restored 2026-07-29 — see auditLog.service.js for the removal/
+  // restoration history.
+  SidebarNavItem(
+    label: 'nav_audit_log',
+    icon: AppIcons.auditLog,
+    route: '/super-admin/audit-log',
+    allowedRoles: [AppConstants.roleSuperAdmin],
+  ),
 ];
 
 /// Dark sidebar + top bar ("Super Admin" badge, sign out) shell for every

@@ -15,10 +15,12 @@
   "nav_appointments": "Rendez-vous",
   "nav_billing": "Facturation",
   "nav_inventory": "Inventaire",
+  "nav_lab_orders": "Analyses de Laboratoire",
   "nav_reports": "Rapports",
   "nav_chat": "Messagerie",
   "nav_reviews": "Avis",
   "nav_popular_clinics": "Cliniques Populaires",
+  "nav_audit_log": "Journal d'Audit",
   "nav_overview": "Aperçu",
   "nav_clinics": "Cliniques",
 
@@ -49,6 +51,6 @@
   "empty_pick_branch": "Choisissez une succursale ci-dessus pour commencer.",
   "empty_no_branch": "Aucune succursale assignée — demandez à un administrateur de vous en attribuer une.",
 
-  "offline_message": "Vous êtes hors ligne. Les modifications ne seront pas enregistrées avant le retour de la connexion.",
+  "offline_message": "Vous êtes hors ligne. Enregistrer un patient, noter les signes vitaux et enregistrer une arrivée fonctionnent toujours — la synchronisation se fera automatiquement au retour de la connexion.",
   "offline_retry": "Réessayer"
 }

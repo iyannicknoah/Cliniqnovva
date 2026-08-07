@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/theme_ext.dart';
-import '../../../shared/widgets/avatar_widget.dart';
 import '../../../shared/widgets/cliniqnovva_button.dart';
 import '../../../shared/widgets/cliniqnovva_table.dart';
 import '../../../shared/widgets/cliniqnovva_text_field.dart';
@@ -223,24 +222,13 @@ class _PatientsList extends ConsumerWidget {
                             onTap: () =>
                                 context.go('/patients/${patient.id}'),
                             cells: [
-                              Row(
-                                children: [
-                                  AvatarWidget(
-                                    firstName: patient.name,
-                                    size: 32,
-                                  ),
-                                  const SizedBox(width: 10),
-                                  Expanded(
-                                    child: Text(
-                                      patient.name,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: TextStyle(
-                                        color: context.appText,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                  ),
-                                ],
+                              Text(
+                                patient.name,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  color: context.appText,
+                                  fontWeight: FontWeight.w500,
+                                ),
                               ),
                               Text(
                                 patient.phone,

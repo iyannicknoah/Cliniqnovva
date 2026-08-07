@@ -47,6 +47,31 @@ class AppointmentModel {
   /// the appointment document itself, so it's absent everywhere else.
   final String? invoiceId;
 
+  /// Offline-first (2026-07-30) — used to synthesize an optimistic
+  /// "checked in" copy of an already-loaded appointment when the real
+  /// status write is queued instead of sent (see
+  /// `AppointmentsNotifier.checkInOrQueue`). Only [status] is ever
+  /// overridden this way; every other field (including [queueNumber],
+  /// which is really assigned server-side) stays exactly what the server
+  /// last sent.
+  AppointmentModel copyWith({String? status}) => AppointmentModel(
+    id: id,
+    clinicId: clinicId,
+    branchId: branchId,
+    patientId: patientId,
+    doctorId: doctorId,
+    serviceId: serviceId,
+    date: date,
+    startTime: startTime,
+    endTime: endTime,
+    status: status ?? this.status,
+    queueNumber: queueNumber,
+    createdBy: createdBy,
+    createdAt: createdAt,
+    updatedAt: updatedAt,
+    invoiceId: invoiceId,
+  );
+
   factory AppointmentModel.fromJson(Map<String, dynamic> json) {
     return AppointmentModel(
       id: json['id'] as String,

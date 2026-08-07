@@ -28,7 +28,11 @@ import 'loading_widget.dart';
 /// item that always fails is worse than omitting it, so those three are
 /// narrowed to the roles that can actually open them — every other item
 /// follows Task 4 literally. (A fourth item, Audit Log, was removed
-/// entirely 2026-07-24 along with the rest of that feature.)
+/// entirely 2026-07-24 along with the rest of that feature, then restored
+/// 2026-07-29 — see `auditLog.routes.js`'s `requireRole` for why it's
+/// Clinic Admin only here, not Branch Admin: the backend only ever
+/// permitted Super Admin/Clinic Admin, matching the same
+/// don't-show-a-403-only-item principle as the three narrowed items above.)
 final appNavItems = <SidebarNavItem>[
   const SidebarNavItem(
     label: 'nav_dashboard',
@@ -48,6 +52,23 @@ final appNavItems = <SidebarNavItem>[
     icon: AppIcons.overview,
     route: '/accountant-overview',
     allowedRoles: [AppConstants.roleAccountant],
+  ),
+  // Pharmacist's own landing page (2026-07-26, explicit user instruction) —
+  // same pattern as the Accountant one above, stock-focused instead of
+  // billing-focused.
+  const SidebarNavItem(
+    label: 'nav_overview',
+    icon: AppIcons.overview,
+    route: '/pharmacist-overview',
+    allowedRoles: [AppConstants.rolePharmacist],
+  ),
+  // Laboratorian's own landing page (2026-07-29) — same pattern as the
+  // Pharmacist/Accountant overview items above.
+  const SidebarNavItem(
+    label: 'nav_overview',
+    icon: AppIcons.overview,
+    route: '/laboratorian-overview',
+    allowedRoles: [AppConstants.roleLaboratorian],
   ),
   const SidebarNavItem(
     label: 'nav_today',
@@ -142,6 +163,20 @@ final appNavItems = <SidebarNavItem>[
       AppConstants.rolePharmacist,
     ],
   ),
+  // Lab orders worklist (2026-07-29) — Nurse/Laboratorian's queue of tests
+  // needing collection/results, plus admin parity for oversight, same
+  // pattern as every other module's nav item.
+  const SidebarNavItem(
+    label: 'nav_lab_orders',
+    icon: AppIcons.labOrders,
+    route: '/lab-orders',
+    allowedRoles: [
+      AppConstants.roleClinicAdmin,
+      AppConstants.roleBranchAdmin,
+      AppConstants.roleNurse,
+      AppConstants.roleLaboratorian,
+    ],
+  ),
   const SidebarNavItem(
     label: 'nav_reports',
     icon: AppIcons.reports,
@@ -169,6 +204,12 @@ final appNavItems = <SidebarNavItem>[
     icon: AppIcons.trophy,
     route: '/popular-clinics',
     allowedRoles: [AppConstants.roleClinicAdmin, AppConstants.roleBranchAdmin],
+  ),
+  const SidebarNavItem(
+    label: 'nav_audit_log',
+    icon: AppIcons.auditLog,
+    route: '/audit-log',
+    allowedRoles: [AppConstants.roleClinicAdmin],
   ),
 ];
 

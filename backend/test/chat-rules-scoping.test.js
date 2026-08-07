@@ -58,8 +58,11 @@ test('chat rules: messages subcollection re-derives scope from the PARENT chat d
   assert.match(messagesBlock, /senderId == request\.auth\.uid/, 'a message create must assert the sender is who they claim to be');
 });
 
-test('security rules: auditLogs collection is gone (feature removed 2026-07-24), patientMergeLogs stays write-denied (append-only via backend Admin SDK only)', () => {
-  assert.equal(rules.includes('/auditLogs/'), false, 'the auditLogs collection was removed — this rule block should not come back');
+test('security rules: auditLogs (removed 2026-07-24, restored 2026-07-29) and patientMergeLogs are both read-scoped-write-denied (append-only via backend Admin SDK only)', () => {
+  const auditLogSection = rules.slice(rules.indexOf('match /auditLogs/'), rules.indexOf('match /patientMergeLogs/'));
+  assert.match(auditLogSection, /allow read: if isSuperAdmin\(\) \|\| isClinicAdmin\(\);/);
+  assert.match(auditLogSection, /allow write: if false;/);
+
   const mergeLogSection = rules.slice(rules.indexOf('match /patientMergeLogs/'), rules.indexOf('match /chats/'));
   assert.match(mergeLogSection, /allow write: if false;/);
 });

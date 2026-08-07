@@ -15,7 +15,9 @@ import '../../../shared/widgets/cliniqnovva_button.dart';
 import '../../../shared/widgets/cliniqnovva_text_field.dart';
 import '../../../shared/widgets/loading_widget.dart';
 import '../../../shared/widgets/segmented_tabs.dart';
+import '../../../shared/providers/connectivity_provider.dart';
 import '../../auth/providers/access_control_provider.dart';
+import '../../lab_orders/widgets/patient_lab_orders_section.dart';
 import '../models/medical_record_model.dart';
 import '../models/patient_document_model.dart';
 import '../models/patient_model.dart';
@@ -83,6 +85,21 @@ class _PatientProfileScreenState extends ConsumerState<PatientProfileScreen> {
         ),
         data: (claimsData) {
           final role = claimsData?['role'] as String? ?? '';
+          // Lab Orders tab (2026-07-29) — Doctor/Nurse/Laboratorian only,
+          // same role set that has any interaction with a lab order at all
+          // (order/perform/review). Laboratorian never reaches this screen
+          // via nav today (see app_shell.dart), but the tab still works if
+          // reached directly, and Doctor/Nurse do reach it via /patients.
+          final canSeeLabOrders =
+              role == AppConstants.roleDoctor ||
+              role == AppConstants.roleNurse ||
+              role == AppConstants.roleLaboratorian;
+          final tabLabels = [
+            'Profile',
+            'Medical Records',
+            'Documents',
+            if (canSeeLabOrders) 'Lab Orders',
+          ];
           return patientAsync.when(
             loading: () => const LoadingWidget(),
             error: (e, _) => Center(
@@ -100,11 +117,7 @@ class _PatientProfileScreenState extends ConsumerState<PatientProfileScreen> {
                       _ProfileHeader(patient: patient),
                       const SizedBox(height: 28),
                       SegmentedTabs(
-                        labels: const [
-                          'Profile',
-                          'Medical Records',
-                          'Documents',
-                        ],
+                        labels: tabLabels,
                         index: _tab,
                         onChanged: (i) => setState(() => _tab = i),
                       ),
@@ -112,7 +125,12 @@ class _PatientProfileScreenState extends ConsumerState<PatientProfileScreen> {
                       switch (_tab) {
                         0 => _ProfileTab(patient: patient),
                         1 => _MedicalRecordsTab(patient: patient, role: role),
-                        _ => _DocumentsTab(patient: patient, role: role),
+                        2 => _DocumentsTab(patient: patient, role: role),
+                        _ => PatientLabOrdersSection(
+                          patientId: patient.id,
+                          branchId: patient.branchId,
+                          role: role,
+                        ),
                       },
                     ],
                   ),
@@ -645,6 +663,12 @@ class _AddRecordFormState extends ConsumerState<_AddRecordForm> {
       _error = null;
     });
 
+    // Offline-first (2026-07-30) — checked before calling so the loading/
+    // success messages can reflect what's actually about to happen; the
+    // notifier itself branches the same way internally to decide whether
+    // to enqueue or send.
+    final isOffline = ref.read(isOfflineProvider).valueOrNull ?? false;
+
     try {
       await runWithFeedback(
         context,
@@ -655,8 +679,10 @@ class _AddRecordFormState extends ConsumerState<_AddRecordForm> {
           notes: _isDoctor && notes.isNotEmpty ? notes : null,
           vitals: vitals.isEmpty ? null : vitals,
         ),
-        loadingMessage: 'Saving visit…',
-        successMessage: 'Visit recorded.',
+        loadingMessage: isOffline ? 'Saving locally…' : 'Saving visit…',
+        successMessage: isOffline
+            ? 'Saved locally — will sync once you\'re back online.'
+            : 'Visit recorded.',
       );
       if (!mounted) return;
       setState(() {

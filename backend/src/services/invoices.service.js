@@ -6,6 +6,7 @@
 // from lineItems — never trusted from client input.
 const { db } = require('../config/firebase-admin');
 const notificationsService = require('./notifications.service');
+const auditLogService = require('./auditLog.service');
 
 const INSURANCE_SCHEMES = ['mutuelle', 'rssb', 'private', 'none'];
 
@@ -211,6 +212,14 @@ async function recordCashPayment(id, amountRwf, actor) {
   } catch (err) {
     console.warn(`[invoices] notifyPaymentRecorded failed for ${id}: ${err.message}`);
   }
+  await auditLogService.write({
+    actorId: actor.actorId,
+    actorRole: actor.actorRole,
+    clinicId: invoice.clinicId,
+    action: 'invoice.cash_payment_recorded',
+    targetCollection: 'invoices',
+    targetId: id,
+  });
 
   return updated;
 }
@@ -250,8 +259,68 @@ async function recordInsurance(id, { amountRwf, scheme }, actor) {
   } catch (err) {
     console.warn(`[invoices] notifyPaymentRecorded failed for ${id}: ${err.message}`);
   }
+  await auditLogService.write({
+    actorId: actor.actorId,
+    actorRole: actor.actorRole,
+    clinicId: invoice.clinicId,
+    action: 'invoice.insurance_recorded',
+    targetCollection: 'invoices',
+    targetId: id,
+  });
 
   return updated;
+}
+
+/**
+ * Appends one line item to a patient's own open invoice at a branch,
+ * creating a new unpaid invoice if none exists yet (2026-07-29, built for
+ * labOrders.service.js#recordResult — the first caller that needs to
+ * APPEND to an existing invoice from another module rather than creating a
+ * whole new one the way createFromAppointment() does). Preference order for
+ * which invoice to append to: (1) the invoice already linked to this
+ * appointmentId, if any — same invoice a completed-appointment consultation
+ * charge would already be sitting on; (2) failing that, this patient's
+ * most recently created still-open (unpaid/partial) invoice at the same
+ * branch; (3) failing that, a brand-new invoice. A voided invoice is never
+ * appended to (same "immutable once voided" rule updateLineItems()
+ * enforces) — case (3) applies instead.
+ */
+async function addLineItem({ clinicId, branchId, patientId, appointmentId }, item, actor) {
+  assertValidLineItems([item]);
+
+  let invoice = null;
+  if (appointmentId) {
+    const linkedSnap = await db.collection('invoices').where('appointmentId', '==', appointmentId).limit(1).get();
+    if (!linkedSnap.empty) invoice = { id: linkedSnap.docs[0].id, ...linkedSnap.docs[0].data() };
+  }
+  if (!invoice) {
+    const openSnap = await db
+      .collection('invoices')
+      .where('patientId', '==', patientId)
+      .where('branchId', '==', branchId)
+      .where('status', 'in', ['unpaid', 'partial'])
+      .get();
+    if (!openSnap.empty) {
+      const open = openSnap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+      invoice = open.sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))[0];
+    }
+  }
+
+  if (!invoice || invoice.status === 'voided') {
+    const data = baseInvoiceDoc({ clinicId, branchId, patientId, appointmentId, lineItems: [item], actorId: actor.actorId });
+    const ref = await db.collection('invoices').add(data);
+    return { id: ref.id, ...data };
+  }
+
+  const newLineItems = [...invoice.lineItems, item];
+  const newTotal = recalculateTotal(newLineItems);
+  const updates = {
+    lineItems: newLineItems,
+    totalAmountRwf: newTotal,
+    status: computeStatus({ ...invoice, totalAmountRwf: newTotal }),
+  };
+  await db.collection('invoices').doc(invoice.id).update(updates);
+  return getRawById(invoice.id);
 }
 
 /**
@@ -273,6 +342,14 @@ async function voidInvoice(id, reason, actor) {
     voidedBy: actor.actorId || null,
     voidedAt: new Date().toISOString(),
   });
+  await auditLogService.write({
+    actorId: actor.actorId,
+    actorRole: actor.actorRole,
+    clinicId: invoice.clinicId,
+    action: 'invoice.voided',
+    targetCollection: 'invoices',
+    targetId: id,
+  });
   return getRawById(id);
 }
 
@@ -282,6 +359,7 @@ module.exports = {
   list,
   getById,
   updateLineItems,
+  addLineItem,
   recordCashPayment,
   recordInsurance,
   voidInvoice,

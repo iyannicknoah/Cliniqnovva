@@ -115,8 +115,9 @@ class _DashboardBody extends ConsumerWidget {
       children: [
         _MetricsRow(branchId: branchId, today: today),
         const SizedBox(height: 20),
-        _TodayAppointmentsCard(branchId: branchId, canManage: canManage),
-        const SizedBox(height: 16),
+        // 2026-07-30, explicit user instruction — Revenue by Department /
+        // Quick Actions row now comes BEFORE Today's Appointments (was
+        // after).
         LayoutBuilder(
           builder: (context, constraints) {
             final isWide = constraints.maxWidth > 900;
@@ -136,6 +137,8 @@ class _DashboardBody extends ConsumerWidget {
                 : Column(children: [left, const SizedBox(height: 16), right]);
           },
         ),
+        const SizedBox(height: 16),
+        _TodayAppointmentsCard(branchId: branchId, canManage: canManage),
       ],
     );
   }
@@ -219,7 +222,9 @@ class _TodayAppointmentsCard extends StatelessWidget {
 
 /// Pairs with Quick Actions (2026-07-25, briefly full width for one
 /// revision, now back to sharing a row — Reviews Needing Reply is the one
-/// that's full width now) — revenue by department, bar chart.
+/// that's full width now) — revenue by department. Line chart (2026-07-30,
+/// explicit user instruction — was a bar chart), same sky-blue curved-line
+/// style as the Pharmacist/Accountant overview trend charts.
 class _RevenueByDepartmentCard extends ConsumerWidget {
   const _RevenueByDepartmentCard({required this.branchId, required this.today});
 
@@ -254,22 +259,41 @@ class _RevenueByDepartmentCard extends ConsumerWidget {
               byDepartment[key] = (byDepartment[key] ?? 0) + amount;
             });
 
-            if (byDepartment.isEmpty) {
-              return Center(
-                child: Text('No revenue recorded yet today.', style: TextStyle(color: context.appSubtext)),
-              );
-            }
+            // 2026-07-30, explicit user instruction — never show a "no
+            // data" placeholder text instead of the chart. With nothing
+            // recorded yet, render a flat zero line across a handful of
+            // empty x points (0 on both axes) so the chart itself is
+            // always what's on screen; the moment there's real revenue,
+            // the real per-department values replace it.
+            final hasData = byDepartment.isNotEmpty;
+            final entries = hasData
+                ? (byDepartment.entries.toList()..sort((a, b) => b.value.compareTo(a.value)))
+                : const <MapEntry<String, int>>[];
+            final top = hasData ? entries.take(6).toList() : const <MapEntry<String, int>>[];
+            const emptyPointCount = 5;
+            final maxY = hasData
+                ? (top.map((e) => e.value).reduce((a, b) => a > b ? a : b) * 1.2)
+                      .clamp(10, double.infinity)
+                      .toDouble()
+                : 10.0;
+            final lineColor = AppColors.skyBlue;
+            final spots = hasData
+                ? [for (var i = 0; i < top.length; i++) FlSpot(i.toDouble(), top[i].value.toDouble())]
+                : [for (var i = 0; i < emptyPointCount; i++) FlSpot(i.toDouble(), 0.0)];
 
-            final entries = byDepartment.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
-            final top = entries.take(6).toList();
-            final maxY = (top.map((e) => e.value).reduce((a, b) => a > b ? a : b) * 1.2).clamp(10, double.infinity);
-
-            return BarChart(
-              BarChartData(
-                maxY: maxY.toDouble(),
+            // 2026-07-30, explicit user instruction — same curved/no-dots/
+            // filled-area sky-blue line style as the Pharmacist/Accountant
+            // overview trend charts (see pharmacist_overview_screen.dart's
+            // _DispenseTrendChart), applied here in place of the bar chart.
+            return LineChart(
+              LineChartData(
+                minY: 0,
+                maxY: maxY,
+                clipData: const FlClipData.all(),
                 gridData: FlGridData(
                   show: true,
                   drawVerticalLine: false,
+                  horizontalInterval: maxY / 4,
                   getDrawingHorizontalLine: (value) => FlLine(color: context.appBorder, strokeWidth: 1),
                 ),
                 borderData: FlBorderData(show: false),
@@ -281,7 +305,9 @@ class _RevenueByDepartmentCard extends ConsumerWidget {
                     sideTitles: SideTitles(
                       showTitles: true,
                       reservedSize: 32,
+                      interval: 1,
                       getTitlesWidget: (value, meta) {
+                        if (!hasData) return const SizedBox.shrink();
                         final index = value.toInt();
                         if (index < 0 || index >= top.length) return const SizedBox.shrink();
                         final key = top[index].key;
@@ -298,28 +324,30 @@ class _RevenueByDepartmentCard extends ConsumerWidget {
                     ),
                   ),
                 ),
-                barTouchData: BarTouchData(
-                  touchTooltipData: BarTouchTooltipData(
-                    getTooltipColor: (group) => context.appCard,
-                    getTooltipItem: (group, groupIndex, rod, rodIndex) => BarTooltipItem(
-                      formatRwf(rod.toY),
-                      TextStyle(color: context.appText, fontWeight: FontWeight.w600, fontSize: 12),
-                    ),
+                lineTouchData: LineTouchData(
+                  touchTooltipData: LineTouchTooltipData(
+                    getTooltipColor: (touchedSpot) => context.appCard,
+                    getTooltipItems: (touchedSpots) => touchedSpots.map((spot) {
+                      return LineTooltipItem(
+                        formatRwf(spot.y),
+                        TextStyle(color: context.appText, fontWeight: FontWeight.w600, fontSize: 12),
+                      );
+                    }).toList(),
                   ),
                 ),
-                barGroups: [
-                  for (var i = 0; i < top.length; i++)
-                    BarChartGroupData(
-                      x: i,
-                      barRods: [
-                        BarChartRodData(
-                          toY: top[i].value.toDouble(),
-                          color: AppColors.skyBlue,
-                          width: 22,
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                      ],
+                lineBarsData: [
+                  LineChartBarData(
+                    spots: spots,
+                    isCurved: true,
+                    preventCurveOverShooting: true,
+                    color: lineColor,
+                    barWidth: 2,
+                    dotData: const FlDotData(show: false),
+                    belowBarData: BarAreaData(
+                      show: true,
+                      color: lineColor.withValues(alpha: 0.15),
                     ),
+                  ),
                 ],
               ),
             );
@@ -340,32 +368,41 @@ class _QuickActionsCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return CliniqnovvaCard(
       title: 'dashboard_quick_actions'.tr(),
-      child: Column(
-        children: [
-          SizedBox(
-            width: double.infinity,
-            child: CliniqnovvaButton(
-              label: 'dashboard_register_patient'.tr(),
-              onPressed: () => context.go('/patients/register'),
-            ),
-          ),
-          const SizedBox(height: 10),
-          SizedBox(
-            width: double.infinity,
-            child: CliniqnovvaButton(
-              label: 'dashboard_book_appointment'.tr(),
-              onPressed: () => context.go('/appointments/book'),
-            ),
-          ),
-          const SizedBox(height: 10),
-          SizedBox(
-            width: double.infinity,
-            child: CliniqnovvaButton.text(
-              label: 'dashboard_run_reports'.tr(),
-              onPressed: () => context.go('/reports'),
-            ),
-          ),
-        ],
+      child: LayoutBuilder(
+        // 2026-07-30, explicit user instruction (revises the same-day
+        // side-by-side layout back to a column) — all three actions now
+        // stack, each sized to ~45% of the card's width rather than full
+        // width, centered by the Column's default crossAxisAlignment.
+        builder: (context, constraints) {
+          final buttonWidth = constraints.maxWidth * 0.45;
+          return Column(
+            children: [
+              SizedBox(
+                width: buttonWidth,
+                child: CliniqnovvaButton(
+                  label: 'dashboard_register_patient'.tr(),
+                  onPressed: () => context.go('/patients/register'),
+                ),
+              ),
+              const SizedBox(height: 10),
+              SizedBox(
+                width: buttonWidth,
+                child: CliniqnovvaButton(
+                  label: 'dashboard_book_appointment'.tr(),
+                  onPressed: () => context.go('/appointments/book'),
+                ),
+              ),
+              const SizedBox(height: 10),
+              SizedBox(
+                width: buttonWidth,
+                child: CliniqnovvaButton.text(
+                  label: 'dashboard_run_reports'.tr(),
+                  onPressed: () => context.go('/reports'),
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }

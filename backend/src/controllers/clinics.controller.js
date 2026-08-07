@@ -90,7 +90,10 @@ async function setStatus(req, res, next) {
     if (typeof isActive !== 'boolean') {
       return res.status(400).json({ error: 'isActive (boolean) is required' });
     }
-    const clinic = await clinicsService.setStatus(req.params.id, isActive, req.user?.uid);
+    const clinic = await clinicsService.setStatus(req.params.id, isActive, {
+      actorId: req.user?.uid,
+      actorRole: req.user?.role,
+    });
     res.json({ clinic });
   } catch (err) {
     next(err);
@@ -102,7 +105,10 @@ async function setStatus(req, res, next) {
 // deletion eventually happens (the daily purge cron job, 14 days later).
 async function remove(req, res, next) {
   try {
-    const clinic = await clinicsService.archive(req.params.id);
+    const clinic = await clinicsService.archive(req.params.id, {
+      actorId: req.user?.uid,
+      actorRole: req.user?.role,
+    });
     if (!clinic) return res.status(404).json({ error: 'Clinic not found' });
     res.json({ clinic });
   } catch (err) {
@@ -112,7 +118,10 @@ async function remove(req, res, next) {
 
 async function unarchive(req, res, next) {
   try {
-    const clinic = await clinicsService.unarchive(req.params.id);
+    const clinic = await clinicsService.unarchive(req.params.id, {
+      actorId: req.user?.uid,
+      actorRole: req.user?.role,
+    });
     if (!clinic) return res.status(404).json({ error: 'Clinic not found' });
     res.json({ clinic });
   } catch (err) {
@@ -126,7 +135,10 @@ async function setBillingStatus(req, res, next) {
     if (!billingStatus) {
       return res.status(400).json({ error: 'billingStatus is required' });
     }
-    const clinic = await clinicsService.setBillingStatus(req.params.id, billingStatus, req.user?.uid);
+    const clinic = await clinicsService.setBillingStatus(req.params.id, billingStatus, {
+      actorId: req.user?.uid,
+      actorRole: req.user?.role,
+    });
     res.json({ clinic });
   } catch (err) {
     next(err);
@@ -140,7 +152,10 @@ async function recordPayment(req, res, next) {
     if (typeof amountRwf !== 'number' || amountRwf <= 0) {
       return res.status(400).json({ error: 'amountRwf (positive number) is required' });
     }
-    const clinic = await clinicsService.recordPayment(req.params.id, { amountRwf, date, note }, req.user?.uid);
+    const clinic = await clinicsService.recordPayment(req.params.id, { amountRwf, date, note }, {
+      actorId: req.user?.uid,
+      actorRole: req.user?.role,
+    });
     if (!clinic) return res.status(404).json({ error: 'Clinic not found' });
     res.status(201).json({ clinic });
   } catch (err) {

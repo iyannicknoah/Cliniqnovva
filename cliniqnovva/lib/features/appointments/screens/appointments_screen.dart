@@ -7,6 +7,7 @@ import '../../../core/services/firebase_service.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/theme_ext.dart';
+import '../../../shared/providers/connectivity_provider.dart';
 import '../../../shared/utils/async_feedback.dart';
 import '../../../shared/widgets/cliniqnovva_button.dart';
 import '../../../shared/widgets/cliniqnovva_table.dart';
@@ -305,14 +306,27 @@ class AppointmentsList extends ConsumerWidget {
     String loadingMessage,
     String successMessage,
   ) async {
+    // Offline-first (2026-07-30) — check-in is the one transition that can
+    // be queued instead of failing outright; every other status change
+    // still goes through setStatus() unchanged and stays online-only.
+    final isCheckInOffline =
+        status == 'checkedIn' &&
+        (ref.read(isOfflineProvider).valueOrNull ?? false);
+
     try {
       final updated = await runWithFeedback(
         context,
-        () => ref
-            .read(appointmentsNotifierProvider.notifier)
-            .setStatus(appt.id, status),
-        loadingMessage: loadingMessage,
-        successMessage: successMessage,
+        () => status == 'checkedIn'
+            ? ref
+                  .read(appointmentsNotifierProvider.notifier)
+                  .checkInOrQueue(appt)
+            : ref
+                  .read(appointmentsNotifierProvider.notifier)
+                  .setStatus(appt.id, status),
+        loadingMessage: isCheckInOffline ? 'Saving locally…' : loadingMessage,
+        successMessage: isCheckInOffline
+            ? 'Saved locally — will sync once you\'re back online.'
+            : successMessage,
       );
       // Part 12 Task 1 — marking complete auto-generates an invoice
       // server-side; surface it here so staff can jump straight to billing

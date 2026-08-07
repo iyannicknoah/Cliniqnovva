@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/offline/offline_queue.dart';
 import '../../../core/services/api_service.dart';
+import '../../../shared/providers/connectivity_provider.dart';
 import '../models/appointment_model.dart';
 
 /// Params for [availableSlotsProvider] — a Dart record so identical
@@ -135,6 +137,28 @@ class AppointmentsNotifier extends AsyncNotifier<void> {
     return AppointmentModel.fromJson(
       response.data!['appointment'] as Map<String, dynamic>,
     );
+  }
+
+  /// Offline-first (2026-07-30) — check-in is the one status transition
+  /// worth queuing (see offline_queue.dart's doc for why just this one:
+  /// confirm/cancel/complete carry more state-machine/billing risk and are
+  /// less likely to be the actual in-the-moment offline action anyway).
+  /// Deliberately a separate method from [setStatus] rather than a branch
+  /// inside it — [setStatus] stays untouched for confirm/cancel/complete,
+  /// so nothing about their behavior changes here. When offline, returns a
+  /// locally-synthesized "checked in" copy of [appointment] (see
+  /// `AppointmentModel.copyWith`) so the caller's UI can update optimistically
+  /// even though nothing was actually sent yet.
+  Future<AppointmentModel> checkInOrQueue(AppointmentModel appointment) async {
+    if (ref.read(isOfflineProvider).valueOrNull ?? false) {
+      await ref
+          .read(offlineQueueProvider.notifier)
+          .enqueue(OfflineMutationKind.checkInAppointment, {
+            'appointmentId': appointment.id,
+          });
+      return appointment.copyWith(status: 'checkedIn');
+    }
+    return setStatus(appointment.id, 'checkedIn');
   }
 
   /// Re-validates current availability server-side; a 409 means the new

@@ -46,6 +46,33 @@ test('patients: accountant gets the same clinical-data-free shape as receptionis
   assert.equal('documents' in seenByAccountant, false, 'documents key must be absent, not just empty');
 });
 
+test('patients: laboratorian sees labOrders (test name/status/result only) but never medicalRecords or documents (2026-07-29)', async () => {
+  seedPatientWithClinicalHistory();
+  db.seed('labOrders/order1', {
+    patientId: 'patientA',
+    testName: 'Malaria RDT',
+    status: 'resulted',
+    resultValue: 'Negative',
+    resultUnit: null,
+    orderedBy: 'doc1',
+    collectedAt: '2027-01-01T09:10:00.000Z',
+    resultedAt: '2027-01-01T09:30:00.000Z',
+    createdAt: '2027-01-01T09:00:00.000Z',
+  });
+  const laboratorian = actor({ role: 'laboratorian', clinicId: 'org1', branchId: 'branch1' });
+
+  const seenByLaboratorian = await patientsService.getById('patientA', laboratorian);
+
+  assert.equal(seenByLaboratorian.name, 'Alice Uwase');
+  assert.equal('medicalRecords' in seenByLaboratorian, false, 'medicalRecords key must be absent, not just empty');
+  assert.equal('documents' in seenByLaboratorian, false, 'documents key must be absent, not just empty');
+  assert.ok(Array.isArray(seenByLaboratorian.labOrders));
+  assert.equal(seenByLaboratorian.labOrders.length, 1);
+  assert.equal(seenByLaboratorian.labOrders[0].testName, 'Malaria RDT');
+  assert.equal(seenByLaboratorian.labOrders[0].resultValue, 'Negative');
+  assert.equal(seenByLaboratorian.labOrders[0].status, 'resulted');
+});
+
 test('patients: a doctor DOES see full clinical notes for the same patient (control case)', async () => {
   seedPatientWithClinicalHistory();
   const doctor = actor({ role: 'doctor', clinicId: 'org1', branchId: 'branch1' });

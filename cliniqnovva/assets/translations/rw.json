@@ -15,10 +15,12 @@
   "nav_appointments": "Gahunda zo Kwivuza",
   "nav_billing": "Kwishyura",
   "nav_inventory": "Ububiko",
+  "nav_lab_orders": "Ibizamini bya Laboratwari",
   "nav_reports": "Raporo",
   "nav_chat": "Ubutumwa",
   "nav_reviews": "Ibitekerezo",
   "nav_popular_clinics": "Amavuriro Azwi",
+  "nav_audit_log": "Raporo y'Ibikorwa",
   "nav_overview": "Incamake",
   "nav_clinics": "Amavuriro",
 
@@ -49,6 +51,6 @@
   "empty_pick_branch": "Hitamo ishami hejuru kugira ngo utangire.",
   "empty_no_branch": "Nta shami warahabwa — saba umuyobozi akushyireho.",
 
-  "offline_message": "Ntumuriro wa interineti. Impinduka ntizizabikwa kugeza wongeye kuboneka.",
+  "offline_message": "Ntumuriro wa interineti. Kwandikisha umurwayi, kwandika ibipimo, no kwakira umurwayi biracyakora — bizahita byinjizwa mu buryo bwikora igihe interineti izagaruka.",
   "offline_retry": "Ongera ugerageze"
 }

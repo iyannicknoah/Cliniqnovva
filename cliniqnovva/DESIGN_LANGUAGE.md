@@ -348,6 +348,120 @@ growth/trend chart rather than introducing a new chart style or color.
 
 ## Change log
 
+- **2026-07-30 (Dashboard: Quick Actions back to a column at 45% width,
+  revenue chart always renders, section reorder)** — Explicit user
+  instruction, same day as the two changes below it.
+  `_TodayAppointmentsCard`, `_RevenueByDepartmentCard`, and
+  `_QuickActionsCard` (`features/dashboard/screens/dashboard_screen.dart`)
+  briefly went borderless (`showBorder: false`) and back to bordered again
+  within the same round of edits — no net change there, all three keep
+  their border. Quick Actions reverts today's earlier side-by-side layout
+  back to a column — all three buttons (including Run Reports, previously
+  full-width) now sized to ~45% of the card's width via `LayoutBuilder`.
+  The revenue chart no longer shows a "no revenue yet" placeholder text —
+  with nothing recorded, it renders a flat zero-value line across 5 empty
+  x points instead, so the chart itself is always what's on screen; real
+  per-department data replaces it the moment there's revenue to show.
+  `_DashboardBody`'s section order also changed: the Revenue by
+  Department / Quick Actions row now comes before Today's Appointments
+  (was after).
+- **2026-07-30 (Fix: "Audit Log" title showed twice on the Super Admin
+  route)** — `AuditLogBody` gained a `showTitle` param (default true,
+  `false` on the Super Admin route only) — `SuperAdminScaffold` already
+  renders the title via its own `title` param, so `AuditLogBody`'s own
+  heading was redundant there. The Clinic Admin route (no scaffold-level
+  title) keeps the heading.
+- **2026-07-30 (Dashboard: narrower Quick Action buttons, Revenue by
+  Department switches to a line chart)** — Explicit user instruction.
+  `_QuickActionsCard` (`features/dashboard/screens/dashboard_screen.dart`):
+  Register Patient / Book Appointment now sit side by side at ~45% of the
+  card's width each (`LayoutBuilder` + explicit `SizedBox` width) instead
+  of stacking full-width; Run Reports is unchanged (full-width text link,
+  the lower-emphasis third action). `_RevenueByDepartmentCard`'s chart
+  changed from a `BarChart` to a `LineChart` — curved, no dots, sky-blue
+  line with a 15%-opacity fill beneath, no new color introduced (reuses
+  `AppColors.skyBlue`, the same one already used for the bar fill, and the
+  exact same curve/dot/fill settings as the Pharmacist/Accountant overview
+  trend charts, see `pharmacist_overview_screen.dart`'s
+  `_DispenseTrendChart`) — same department-name x-axis labels and
+  RWF-formatted tooltip as before, just a different mark for the data.
+- **2026-07-30 (Patients table drops its avatar circle)** — Explicit user
+  instruction, scoped to "tables" specifically: checked every
+  `AvatarWidget` usage in the app (14 files) and the Patients screen
+  (`features/patients/screens/patients_screen.dart`) turned out to be the
+  *only* one actually inside a `CliniqnovvaTableRow` — every other
+  usage (chat, profile headers, reviews, booking/dispense patient
+  pickers) is a different list style, not a data table, so those are
+  unchanged. The Patients table's name cell is now plain text, no leading
+  `AvatarWidget`/`Row` wrapper.
+- **2026-07-30 (Offline-first for the three front-desk flows)** — Explicit
+  user instruction, following an earlier discussion about connectivity
+  drops in Rwandan clinics. Scope is deliberately narrow: **patient
+  registration**, **recording vitals**, and **appointment check-in** now
+  queue locally (`shared_preferences`, via new `core/offline/offline_queue.dart`)
+  instead of failing outright when offline, and replay automatically
+  (`core/offline/offline_sync.dart`) the moment `isOfflineProvider` flips
+  back to online — billing/invoicing and every other write stays
+  online-only (queuing money-related writes risks double-charges, judged
+  worse than "try again in a moment"). `OfflineBanner`
+  (`shared/widgets/offline_banner.dart`) gains two more states beyond
+  plain offline/online, both reusing the existing red/`AppColors.errorRed`
+  offline-bar treatment plus one new `AppColors.warningAmber` bar (no new
+  colors introduced) — a "Syncing N changes…" bar while queued writes
+  haven't synced yet, and a tappable "N changes couldn't sync" bar (opens
+  an `AlertDialog`, plain `TextButton`s, no new dialog component) for
+  entries that got a real rejection from the server rather than just
+  "still offline." `offline_message`'s copy was updated in all three
+  languages to say which actions still work while offline, instead of
+  just "changes won't save." No PWA/service-worker work was needed —
+  Flutter's default web build already caches the app shell for offline
+  loading; this is purely the data-layer queue+sync.
+- **2026-07-29 (New Laboratorian role + lab orders/results, and Audit Log
+  viewer restored)** — Explicit user instruction, two features.
+  (1) New **Laboratorian** staff role, added alongside the existing 8 in
+  `AppConstants`/`requireRole.js`. Doctor orders a lab test from inside
+  `PatientProfileScreen`'s new "Lab Orders" tab
+  (`features/lab_orders/widgets/patient_lab_orders_section.dart`); Nurse
+  *or* Laboratorian (intentional dual capability) collects the specimen and
+  records the result, either from that same tab or from the new branch-wide
+  worklist screen (`features/lab_orders/screens/lab_orders_screen.dart`,
+  `/lab-orders`, nav item shared with Nurse); Doctor reviews the result.
+  New `LaboratorianOverviewScreen`
+  (`features/lab_orders/screens/laboratorian_overview_screen.dart`,
+  `/laboratorian-overview`) is this role's home route, structured exactly
+  like `PharmacistOverviewScreen` — **Pending Collection**/**Awaiting
+  Result**/**Resulted Today** KPIs, a sky-blue "Tests resulted, last 30
+  days" line chart, a "Needs action" table capped at 5. `StatusBadge`
+  reused for the ordered/collected/resulted/reviewed lifecycle (amber for
+  anything still pending, green once reviewed) — no new badge colors.
+  (2) The Audit Log viewer, deliberately removed 2026-07-24, is restored:
+  `AuditLogScreen`/`AuditLogBody`
+  (`features/audit_log/screens/audit_log_screen.dart`) is shared by a
+  Clinic Admin route (`/audit-log`, new nav item, inside the general
+  `AppShell`) and a Super Admin route (`/super-admin/audit-log`, new nav
+  item in `superAdminNavItems`, wrapped in `SuperAdminScaffold` instead
+  since Super Admin never goes through `AppShell`) — same
+  `CliniqnovvaTableHeader`/`CliniqnovvaTableRow` list pattern as every
+  other admin table, actor name resolved via the existing staff lookup
+  (same pattern `inventory_screen.dart`'s `_ItemNameCell` already uses).
+  Both new icons (`AppIcons.labOrders` — beaker, `AppIcons.auditLog` —
+  clipboard) are Heroicons added to the existing catalog, never a raw
+  `Icons.*`. No new colors introduced anywhere in either feature — status
+  semantics reuse the existing `BadgeType` palette throughout.
+- **2026-07-26 (New Pharmacist Overview page — stock version of the
+  Accountant one)** — Explicit user instruction: `PharmacistOverviewScreen`
+  (`features/inventory/screens/pharmacist_overview_screen.dart`,
+  `/pharmacist-overview`) mirrors `AccountantOverviewScreen`'s structure
+  exactly — KPI row, a sky-blue line-chart card, a recent-items table card
+  — with Pharmacist's own numbers instead of billing ones: **Total
+  Items**/**Low Stock**/**Expired** KPIs, a "Dispensing trend" chart
+  (units dispensed per day, last 30 days, from `inventoryAdjustmentsProvider`
+  filtered to `type == 'dispense'`), and an "Items needing reorder" table
+  (items where `needsReorder`, capped at 5). Same branch-only scoping
+  reasoning as Accountant — Pharmacist is never org-level. Now the home
+  route for this role (`homeRouteForRole`), replacing the earlier plain
+  redirect to `/inventory`; new nav item added above Inventory reusing the
+  existing `nav_overview` translation key.
 - **2026-07-26 (Profile "more" menu sized back up a little)** — Explicit
   user instruction, follow-up to the earlier shrink of `_ProfileMenuContent`
   (`cliniqnovva_sidebar.dart`): that shrink went too far, so it's bumped

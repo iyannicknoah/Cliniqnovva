@@ -222,3 +222,12 @@ class PatientPossibleDuplicate extends PatientCreateResult {
   const PatientPossibleDuplicate(this.matches);
   final List<DuplicateMatch> matches;
 }
+
+/// Offline-first (2026-07-30) — registration was queued locally instead of
+/// sent to the server (see [OfflineQueueService]/`PatientsNotifier.register`
+/// for why). There's no created patient id yet, so callers can't deep-link
+/// anywhere the way [PatientCreated] does — they show a "saved locally"
+/// message and return to the patient list instead.
+class PatientQueuedOffline extends PatientCreateResult {
+  const PatientQueuedOffline();
+}

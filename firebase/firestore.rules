@@ -99,6 +99,15 @@ service cloud.firestore {
       allow write: if false; // stock never goes negative — enforced server-side
     }
 
+    // 2026-07-29 — new Laboratorian role + lab orders/results. Same
+    // scoped-read/write-denied shape as inventory above: the ordered ->
+    // collected -> resulted -> reviewed lifecycle (and who may transition
+    // which step) is enforced server-side only, in labOrders.service.js.
+    match /labOrders/{id} {
+      allow read: if isSuperAdmin() || inSameBranch(resource.data.branchId);
+      allow write: if false;
+    }
+
     match /reviews/{id} {
       allow read: if true; // public — patients browsing doctors/branches
       allow write: if false; // "only after completed appointment" enforced server-side
@@ -114,11 +123,21 @@ service cloud.firestore {
       allow write: if false; // system-triggered only
     }
 
-    // /auditLogs was removed entirely (general activity log feature retired,
-    // 2026-07-24) — see docs/security-review.md. patientMergeLogs is kept:
-    // it's a distinct, narrower feature (the merge tool's own history record,
-    // required so a merge never loses data — see patients.service.js) not
-    // the general audit log.
+    // /auditLogs was removed 2026-07-24 (general activity log feature
+    // retired), then restored 2026-07-29 — see docs/security-review.md and
+    // auditLog.service.js for the full history. Same append-only shape as
+    // patientMergeLogs below: writes only ever happen server-side via the
+    // Admin SDK (auditLogService.write(), called internally from other
+    // services), never through a route or directly from a client.
+    match /auditLogs/{id} {
+      allow read: if isSuperAdmin() || isClinicAdmin();
+      allow write: if false;
+    }
+
+    // patientMergeLogs is a distinct, narrower feature from the general
+    // audit log above — the merge tool's own history record, required so a
+    // merge never loses data (see patients.service.js#mergePatients, which
+    // writes to both this collection AND auditLogs for the same merge event).
     match /patientMergeLogs/{id} {
       allow read: if isSuperAdmin() || isClinicAdmin();
       allow write: if false;

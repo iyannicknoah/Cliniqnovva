@@ -184,6 +184,23 @@ class _RegisterFormState extends ConsumerState<_RegisterForm> {
         case PatientPossibleDuplicate(:final matches):
           setState(() => _saving = false);
           await _handlePossibleDuplicate(matches);
+        case PatientQueuedOffline():
+          // No created patient id yet (see PatientQueuedOffline's doc) —
+          // show what happened and go back to the list rather than trying
+          // to deep-link anywhere. Also skips returnTo/booking hand-off:
+          // booking isn't one of the offline-capable flows, so there's no
+          // patient to hand back to it yet either.
+          ScaffoldMessenger.of(context)
+            ..clearSnackBars()
+            ..showSnackBar(
+              const SnackBar(
+                content: Text(
+                  'Saved locally — will sync automatically once you\'re back online.',
+                ),
+                duration: Duration(seconds: 4),
+              ),
+            );
+          context.go('/patients');
       }
     } catch (e) {
       if (!mounted) return;

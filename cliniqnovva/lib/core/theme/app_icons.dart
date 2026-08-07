@@ -49,4 +49,8 @@ class AppIcons {
   static const reports = IconRef.hero(HeroIcons.chartBar);
   static const offline = IconRef.hero(HeroIcons.signalSlash);
   static const today = IconRef.hero(HeroIcons.clock);
+
+  // 2026-07-29 — Laboratorian role / lab orders + audit log viewer.
+  static const labOrders = IconRef.hero(HeroIcons.beaker);
+  static const auditLog = IconRef.hero(HeroIcons.clipboardDocumentList);
 }

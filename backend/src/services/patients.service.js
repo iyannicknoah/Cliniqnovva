@@ -10,6 +10,7 @@ const { randomUUID } = require('crypto');
 const { db } = require('../config/firebase-admin');
 const { ROLES } = require('../middleware/requireRole');
 const storageService = require('./storage.service');
+const auditLogService = require('./auditLog.service');
 
 const CLINICAL_ROLES = [ROLES.DOCTOR, ROLES.NURSE, ROLES.BRANCH_ADMIN, ROLES.CLINIC_ADMIN, ROLES.SUPER_ADMIN];
 
@@ -212,6 +213,12 @@ function assertAccess(patient, scope) {
  *     `documents` keys are omitted from the response entirely, not just
  *     emptied, so a receptionist-role request cannot see clinical fields
  *     even by inspecting the raw JSON.
+ *   - Laboratorian (2026-07-29): demographics (to identify the right
+ *     patient) + a `labOrders` key projected to test name/status/result
+ *     fields only. No `medicalRecords` key at all (not even a narrowed
+ *     one — diagnosis/prescriptions/notes/vitals are never relevant to
+ *     performing a lab test) and no `documents` key, same "omit entirely"
+ *     shaping as every other restricted tier here.
  */
 async function getById(id, actor) {
   const patient = await getRawById(id);
@@ -224,6 +231,25 @@ async function getById(id, actor) {
   if (role === ROLES.RECEPTIONIST || role === ROLES.PATIENT || role === ROLES.ACCOUNTANT) {
     const { nameLower, phoneDigits, ...safe } = patient;
     return safe;
+  }
+
+  if (role === ROLES.LABORATORIAN) {
+    const labOrdersSnap = await db.collection('labOrders').where('patientId', '==', id).orderBy('createdAt', 'desc').get();
+    const labOrders = labOrdersSnap.docs.map((doc) => {
+      const o = doc.data();
+      return {
+        id: doc.id,
+        patientId: o.patientId,
+        testName: o.testName,
+        status: o.status,
+        resultValue: o.resultValue || null,
+        resultUnit: o.resultUnit || null,
+        collectedAt: o.collectedAt || null,
+        resultedAt: o.resultedAt || null,
+      };
+    });
+    const { nameLower, phoneDigits, ...safe } = patient;
+    return { ...safe, labOrders };
   }
 
   const recordsSnap = await db
@@ -457,6 +483,14 @@ async function mergePatients({ survivingPatientId, mergedPatientId }, actor) {
     mergedPatientId,
     mergedBy: actor.actorId || null,
     timestamp: new Date().toISOString(),
+  });
+  await auditLogService.write({
+    actorId: actor.actorId,
+    actorRole: actor.actorRole,
+    clinicId: surviving.clinicId,
+    action: 'patient.merged',
+    targetCollection: 'patients',
+    targetId: survivingPatientId,
   });
 
   return {

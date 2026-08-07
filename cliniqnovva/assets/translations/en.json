@@ -15,10 +15,12 @@
   "nav_appointments": "Appointments",
   "nav_billing": "Billing",
   "nav_inventory": "Inventory",
+  "nav_lab_orders": "Lab Orders",
   "nav_reports": "Reports",
   "nav_chat": "Chat",
   "nav_reviews": "Reviews",
   "nav_popular_clinics": "Popular Clinics",
+  "nav_audit_log": "Audit Log",
   "nav_overview": "Overview",
   "nav_clinics": "Clinics",
 
@@ -49,6 +51,6 @@
   "empty_pick_branch": "Pick a branch above to get started.",
   "empty_no_branch": "No branch assigned yet — ask an admin to add you to one.",
 
-  "offline_message": "You're offline. Changes won't save until you're back online.",
+  "offline_message": "You're offline. Registering a patient, recording vitals, and checking in still work — they'll sync automatically once you're back online.",
   "offline_retry": "Retry"
 }

@@ -11,6 +11,7 @@ const ROLES = Object.freeze({
   PHARMACIST: 'pharmacist',
   DOCTOR: 'doctor',
   NURSE: 'nurse',
+  LABORATORIAN: 'laboratorian',
   PATIENT: 'patient',
 });
 

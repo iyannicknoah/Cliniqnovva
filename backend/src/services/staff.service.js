@@ -15,10 +15,12 @@ const { db } = require('../config/firebase-admin');
 const { auth } = require('../config/firebase-admin');
 const { ROLES } = require('../middleware/requireRole');
 const authService = require('./auth.service');
+const auditLogService = require('./auditLog.service');
 
 const STAFF_ROLES = [
   ROLES.DOCTOR,
   ROLES.NURSE,
+  ROLES.LABORATORIAN,
   ROLES.RECEPTIONIST,
   ROLES.PHARMACIST,
   ROLES.ACCOUNTANT,
@@ -172,6 +174,15 @@ async function create(
       });
   }
 
+  await auditLogService.write({
+    actorId: actor.actorId,
+    actorRole: actor.actorRole,
+    clinicId,
+    action: 'staff.created',
+    targetCollection: 'users',
+    targetId: uid,
+  });
+
   return getById(uid);
 }
 
@@ -222,6 +233,15 @@ async function setStatus(id, isActive, actor) {
 
   await db.collection('users').doc(id).update({ isActive });
   await auth.updateUser(id, { disabled: !isActive });
+
+  await auditLogService.write({
+    actorId: actor.actorId,
+    actorRole: actor.actorRole,
+    clinicId: staffMember.clinicId,
+    action: isActive ? 'staff.activated' : 'staff.deactivated',
+    targetCollection: 'users',
+    targetId: id,
+  });
 
   return getById(id);
 }
