@@ -5,6 +5,7 @@
 // sent as part of account creation.
 const { auth, db } = require('../config/firebase-admin');
 const { ROLES } = require('../middleware/requireRole');
+const { digitsOnly } = require('./patients.service');
 
 const ALL_ROLES = Object.values(ROLES);
 
@@ -101,4 +102,56 @@ async function setUserClaims({ uid, role, clinicId, branchId }) {
   return claims;
 }
 
-module.exports = { createStaffAccountWithPassword, setUserClaims };
+/**
+ * Finishes a patient's self-registration (Part 19, POST /api/auth/patient/
+ * finalize-registration). Unlike createStaffAccountWithPassword, the
+ * Firebase Auth user already exists by this point — the Flutter app creates
+ * it directly via createUserWithEmailAndPassword so it never has to send a
+ * patient's chosen password to this backend. This just:
+ *   1. Sets the `patient` custom claim (clinicId/branchId null — a patient
+ *      is never tied to one clinic, per the /users schema).
+ *   2. Writes/merges the /users/{uid} profile doc every other role already
+ *      gets, so a patient's own identity is readable the same way (and
+ *      Firestore rules already allow `request.auth.uid == userId` reads).
+ * Idempotent by design (`set(..., { merge: true })`) — safe to call again
+ * if e.g. the app retries after a dropped connection.
+ */
+async function registerPatientAccount({ uid, name, phone, email, nationalId, preferredLanguage }) {
+  await auth.setCustomUserClaims(uid, { role: ROLES.PATIENT, clinicId: null, branchId: null });
+
+  const data = {
+    role: ROLES.PATIENT,
+    clinicId: null,
+    branchId: null,
+    name: name.trim(),
+    phone: phone ? phone.trim() : null,
+    phoneDigits: phone ? digitsOnly(phone) : null,
+    email: email || null,
+    nationalId: nationalId || null,
+    preferredLanguage: preferredLanguage || 'en',
+    isActive: true,
+    createdAt: new Date().toISOString(),
+  };
+  await db.collection('users').doc(uid).set(data, { merge: true });
+  return data;
+}
+
+/**
+ * Mirrors a successful patients.service.js#linkPatientAccount call onto the
+ * account's own /users/{uid} doc, so the app can list which walk-in
+ * records this identity is linked to without a separate collection scan.
+ */
+async function recordLinkedPatient(uid, patientId) {
+  const ref = db.collection('users').doc(uid);
+  const doc = await ref.get();
+  const existing = (doc.exists && doc.data().linkedPatientIds) || [];
+  if (existing.includes(patientId)) return;
+  await ref.set({ linkedPatientIds: [...existing, patientId] }, { merge: true });
+}
+
+module.exports = {
+  createStaffAccountWithPassword,
+  setUserClaims,
+  registerPatientAccount,
+  recordLinkedPatient,
+};

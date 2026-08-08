@@ -32,11 +32,20 @@ async function attachScope(req, res, next) {
     req.scope = { level: 'platform' };
   } else if (role === ROLES.CLINIC_ADMIN) {
     req.scope = { level: 'clinic', clinicId };
+  } else if (role === ROLES.PATIENT) {
+    // Patients are never clinic-scoped (custom claims carry no clinicId/
+    // branchId for this role, per the /users schema) — they read/write
+    // across whichever clinics they've actually interacted with. Every
+    // route that lists ROLES.PATIENT in requireRole(...) was previously
+    // unreachable by an actual patient caller because this function fell
+    // through to the 'branch' case below and 403'd on the missing
+    // clinicId (Part 19 finding — those routes had no real caller yet).
+    req.scope = { level: 'patient' };
   } else {
     req.scope = { level: 'branch', clinicId, branchId };
   }
 
-  if (req.scope.level !== 'platform' && !req.scope.clinicId) {
+  if (!['platform', 'patient'].includes(req.scope.level) && !req.scope.clinicId) {
     return res.status(403).json({ error: 'Account is missing a clinic assignment' });
   }
   if (req.scope.level === 'branch' && !req.scope.branchId) {

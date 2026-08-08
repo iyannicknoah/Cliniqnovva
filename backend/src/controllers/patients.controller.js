@@ -1,5 +1,9 @@
 // Controller for /api/v1/patients — spec section 6.5A / 6.6 / 6.6A / 9 (Part 9).
 const patientsService = require('../services/patients.service');
+const appointmentsService = require('../services/appointments.service');
+const invoicesService = require('../services/invoices.service');
+const reviewsService = require('../services/reviews.service');
+const { ROLES } = require('../middleware/requireRole');
 
 function resolveClinicId(req, explicit) {
   return req.scope.level === 'platform' ? explicit : req.scope.clinicId;
@@ -141,12 +145,12 @@ async function addDocument(req, res, next) {
 // path segment; %2F round-trips correctly through Express's router).
 async function getDocumentSignedUrl(req, res, next) {
   try {
-    const url = await patientsService.getDocumentSignedUrl(
+    const result = await patientsService.getDocumentSignedUrl(
       req.params.patientId,
       req.params.key,
       actorFrom(req)
     );
-    res.json({ url });
+    res.json(result);
   } catch (err) {
     next(err);
   }
@@ -171,6 +175,98 @@ async function remove(req, res) {
   res.status(501).json({ error: 'Not implemented: patients are never hard-deleted' });
 }
 
+/**
+ * GET /:patientId/appointments — Part 22 Task 4, backs the Patient App's My
+ * Bookings screen. `:patientId` is one /patients walk-in-record id, NOT a
+ * patient's own uid (see patients.service.js's module docstring) — a
+ * patient with appointments at several clinics has one linked patientId per
+ * clinic, so the app calls this once per linked id and merges the results
+ * client-side, rather than this endpoint trying to be cross-clinic itself
+ * (appointmentsService.list() is deliberately single-clinic, same as every
+ * other staff-facing appointments read).
+ */
+async function getAppointments(req, res, next) {
+  try {
+    const patient = await patientsService.getRawById(req.params.patientId);
+    if (!patient) return res.status(404).json({ error: 'Patient not found' });
+
+    if (req.user?.role === ROLES.PATIENT) {
+      const owns = await patientsService.isPatientRecordOwnedBy(patient.id, req.user.uid);
+      if (!owns) return res.status(403).json({ error: 'You can only view your own appointments' });
+    } else {
+      if (req.scope.level !== 'platform' && patient.clinicId !== req.scope.clinicId) {
+        return res.status(403).json({ error: 'This patient belongs to a different clinic' });
+      }
+      if (req.scope.level === 'branch' && patient.branchId !== req.scope.branchId) {
+        return res.status(403).json({ error: 'This patient belongs to a different branch' });
+      }
+    }
+
+    const appointments = await appointmentsService.list({
+      clinicId: patient.clinicId,
+      patientId: patient.id,
+      tab: req.query.tab,
+    });
+    res.json({ appointments });
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * GET /:patientId/medical-records — Part 23 Task 3. Patient-only (unlike
+ * getAppointments above, staff already have a full path to this same data
+ * via GET /detail/:patientId's role-shaped getById) — the DONE CONDITION
+ * ("only ever retrieve their OWN medical records... enforced server-side")
+ * is `patientsService.getMedicalRecordsAndDocumentsForPatient`'s ownership
+ * check, not a route-level role restriction alone.
+ */
+async function getMedicalRecords(req, res, next) {
+  try {
+    const result = await patientsService.getMedicalRecordsAndDocumentsForPatient(req.params.patientId, req.user.uid);
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+}
+
+/** GET /:patientId/invoices — Part 23 Task 3, the Receipts screen. Same ownership-not-role gate as getMedicalRecords. */
+async function getInvoices(req, res, next) {
+  try {
+    const patient = await patientsService.getRawById(req.params.patientId);
+    if (!patient) return res.status(404).json({ error: 'Patient not found' });
+
+    const owns = await patientsService.isPatientRecordOwnedBy(patient.id, req.user.uid);
+    if (!owns) return res.status(403).json({ error: 'You can only view your own invoices' });
+
+    const invoices = await invoicesService.listForPatient(patient.id);
+    res.json({ invoices });
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * GET /:patientId/reviews — Part 24, the Patient App's My Reviews screen.
+ * Same single-clinic-per-call, ownership-not-role gate as
+ * getAppointments/getMedicalRecords/getInvoices — the app fans this out
+ * across every linked record client-side.
+ */
+async function getReviews(req, res, next) {
+  try {
+    const patient = await patientsService.getRawById(req.params.patientId);
+    if (!patient) return res.status(404).json({ error: 'Patient not found' });
+
+    const owns = await patientsService.isPatientRecordOwnedBy(patient.id, req.user.uid);
+    if (!owns) return res.status(403).json({ error: 'You can only view your own reviews' });
+
+    const reviews = await reviewsService.list({ clinicId: patient.clinicId, patientId: patient.id });
+    res.json({ reviews });
+  } catch (err) {
+    next(err);
+  }
+}
+
 module.exports = {
   checkDuplicate,
   search,
@@ -182,4 +278,8 @@ module.exports = {
   getDocumentSignedUrl,
   merge,
   remove,
+  getAppointments,
+  getMedicalRecords,
+  getInvoices,
+  getReviews,
 };

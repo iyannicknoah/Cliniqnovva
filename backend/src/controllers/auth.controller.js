@@ -2,6 +2,7 @@
 // PATCH (2026-07-23): invite-link flow removed. createUser is now the ONLY
 // account-creation path — direct, active immediately, password shown once.
 const authService = require('../services/auth.service');
+const patientsService = require('../services/patients.service');
 const { ROLES } = require('../middleware/requireRole');
 
 // Roles a scope-limited creator is never allowed to hand out, regardless of
@@ -86,4 +87,71 @@ async function me(req, res) {
   res.status(501).json({ error: 'Not implemented yet: return current user profile from req.user' });
 }
 
-module.exports = { createUser, setClaims, requestPasswordReset, deactivateAccount, me };
+/**
+ * POST /api/auth/patient/check-duplicate — {phone?, nationalId?} ->
+ * {matches}. Part 19 Task 3: called right after the Flutter app creates
+ * the Firebase Auth account (client-side createUserWithEmailAndPassword)
+ * but before finalize-registration, so the UI can show the "we found an
+ * existing record at [Clinic]" prompt. verifyToken-only — deliberately NOT
+ * behind attachScope, since this caller has no custom claims yet at all
+ * (the token was just minted, no role has been set).
+ */
+async function checkPatientDuplicate(req, res, next) {
+  try {
+    const { phone, nationalId } = req.body;
+    if (!phone && !nationalId) {
+      return res.status(400).json({ error: 'phone or nationalId is required' });
+    }
+    // No clinicId -> patients.service.js#checkDuplicate searches across
+    // every clinic and resolves each match's clinic name.
+    const matches = await patientsService.checkDuplicate({ phone, nationalId });
+    res.json({ matches });
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * POST /api/auth/patient/finalize-registration — {name, phone?, email?,
+ * nationalId?, preferredLanguage?, linkPatientId?} -> {uid, linkedPatientId}.
+ * The one write-side step of Part 19 Task 3's registration flow: sets the
+ * `patient` custom claim + /users/{uid} profile, and — if the caller chose
+ * "Yes, link my account" against a match from check-duplicate above —
+ * links to that walk-in record (re-verified server-side, see
+ * patients.service.js#linkPatientAccount).
+ */
+async function finalizePatientRegistration(req, res, next) {
+  try {
+    const { name, phone, email, nationalId, preferredLanguage, linkPatientId } = req.body;
+    if (!name || !name.trim()) {
+      return res.status(400).json({ error: 'Full name is required' });
+    }
+    if (!phone && !email) {
+      return res.status(400).json({ error: 'Phone or email is required' });
+    }
+    const uid = req.user.uid;
+
+    await authService.registerPatientAccount({ uid, name, phone, email, nationalId, preferredLanguage });
+
+    let linkedPatientId = null;
+    if (linkPatientId) {
+      const linked = await patientsService.linkPatientAccount({ patientId: linkPatientId, uid, phone, nationalId });
+      linkedPatientId = linked.id;
+      await authService.recordLinkedPatient(uid, linkedPatientId);
+    }
+
+    res.status(201).json({ success: true, uid, linkedPatientId });
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = {
+  createUser,
+  setClaims,
+  requestPasswordReset,
+  deactivateAccount,
+  me,
+  checkPatientDuplicate,
+  finalizePatientRegistration,
+};

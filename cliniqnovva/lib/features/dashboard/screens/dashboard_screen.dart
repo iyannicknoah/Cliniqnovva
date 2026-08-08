@@ -209,6 +209,7 @@ class _TodayAppointmentsCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return CliniqnovvaCard(
       title: 'dashboard_metric_appointments_today'.tr(),
+      showBorder: false,
       child: AppointmentsList(
         branchId: branchId,
         doctorId: null,
@@ -241,6 +242,7 @@ class _RevenueByDepartmentCard extends ConsumerWidget {
 
     return CliniqnovvaCard(
       title: 'dashboard_revenue_by_department'.tr(),
+      showBorder: false,
       child: SizedBox(
         height: 220,
         child: revenueAsync.when(
@@ -368,6 +370,7 @@ class _QuickActionsCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return CliniqnovvaCard(
       title: 'dashboard_quick_actions'.tr(),
+      showBorder: false,
       child: LayoutBuilder(
         // 2026-07-30, explicit user instruction (revises the same-day
         // side-by-side layout back to a column) — all three actions now

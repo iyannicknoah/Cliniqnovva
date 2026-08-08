@@ -353,10 +353,40 @@ async function voidInvoice(id, reason, actor) {
   return getRawById(id);
 }
 
+/**
+ * Part 23 — the Patient App's Receipts screen. Ownership is enforced by
+ * the CALLER (patients.controller.js, same `isPatientRecordOwnedBy`
+ * pattern already used for appointments/medical-records in Parts 21-23) —
+ * this is a plain patientId-filtered query, not routed through
+ * `assertAccess` (which assumes `actor.scope.clinicId` exists, always
+ * undefined for a patient's `{level:'patient'}` scope — the same bug
+ * class fixed repeatedly elsewhere). Resolves `clinicName` per invoice —
+ * normally only ever stitched on ad hoc from a staff caller's
+ * `req.scope.clinicName` (set by `attachScope`'s suspension-check side
+ * effect), which a patient's scope never has — needed for the receipt
+ * PDF header (Task 2: same header the web dashboard's printing uses).
+ */
+async function listForPatient(patientId) {
+  const snap = await db.collection('invoices').where('patientId', '==', patientId).get();
+  const invoices = snap.docs
+    .map((doc) => ({ id: doc.id, ...doc.data() }))
+    .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+
+  const clinicIds = [...new Set(invoices.map((inv) => inv.clinicId).filter(Boolean))];
+  const clinicDocs = await Promise.all(clinicIds.map((id) => db.collection('clinics').doc(id).get()));
+  const clinicNames = {};
+  clinicDocs.forEach((doc) => {
+    if (doc.exists) clinicNames[doc.id] = doc.data().name || null;
+  });
+
+  return invoices.map((inv) => ({ ...inv, clinicName: clinicNames[inv.clinicId] || null }));
+}
+
 module.exports = {
   create,
   createFromAppointment,
   list,
+  listForPatient,
   getById,
   updateLineItems,
   addLineItem,

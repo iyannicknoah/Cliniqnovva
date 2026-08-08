@@ -1,9 +1,18 @@
 // Controller for /api/v1/appointments — spec section 6.7 / 9 (Part 11).
+// Part 21 — Patient App booking/reschedule/cancel: reuses this exact
+// controller/service, no separate patient booking path. The double-booking
+// transaction in appointments.service.js is UNTOUCHED; every Part 21 change
+// below lives here, in the request-shaping layer, not the transaction.
 const appointmentsService = require('../services/appointments.service');
+const patientsService = require('../services/patients.service');
 const { ROLES } = require('../middleware/requireRole');
 
+// A patient's scope carries no clinicId (branchScope.middleware.js's
+// 'patient' level — patients aren't tied to one clinic), so — like Super
+// Admin's 'platform' level — the client-supplied value must be trusted here
+// instead of being silently discarded to `undefined`.
 function resolveClinicId(req, explicit) {
-  return req.scope.level === 'platform' ? explicit : req.scope.clinicId;
+  return ['platform', 'patient'].includes(req.scope.level) ? explicit : req.scope.clinicId;
 }
 
 function resolveBranchId(req, explicit) {
@@ -12,6 +21,21 @@ function resolveBranchId(req, explicit) {
 
 function actorFrom(req) {
   return { actorId: req.user?.uid, role: req.user?.role, actorRole: req.user?.role, scope: req.scope };
+}
+
+/**
+ * Ownership check for a Patient App caller (Part 21) — an appointment's
+ * `patientId` is a /patients walk-in-record id, not the caller's own uid
+ * (see patients.service.js), so "is this my appointment" means "is this
+ * /patients record linked to my account", not a direct id comparison.
+ */
+async function assertPatientOwnsAppointment(appt, uid) {
+  const owns = await patientsService.isPatientRecordOwnedBy(appt.patientId, uid);
+  if (!owns) {
+    const err = new Error('You can only manage your own appointments');
+    err.status = 403;
+    throw err;
+  }
 }
 
 async function getAvailableSlots(req, res, next) {
@@ -34,9 +58,27 @@ async function book(req, res, next) {
     if (!clinicId) return res.status(400).json({ error: 'clinicId is required' });
     if (!branchId) return res.status(400).json({ error: 'branchId is required' });
 
-    const { patientId, doctorId, serviceId, date, startTime, endTime } = req.body;
-    if (!patientId || !doctorId || !serviceId || !date || !startTime || !endTime) {
-      return res.status(400).json({ error: 'patientId, doctorId, serviceId, date, startTime, and endTime are required' });
+    const { doctorId, serviceId, date, startTime, endTime } = req.body;
+    if (!doctorId || !serviceId || !date || !startTime || !endTime) {
+      return res.status(400).json({ error: 'doctorId, serviceId, date, startTime, and endTime are required' });
+    }
+
+    // A patient caller NEVER supplies patientId directly (Part 21) — it's
+    // resolved server-side from their own account, so nothing they send in
+    // the request body can book an appointment under someone else's
+    // /patients record. Staff (Receptionist etc.) still pass patientId
+    // explicitly, unchanged.
+    let patientId;
+    if (req.user?.role === ROLES.PATIENT) {
+      const record = await patientsService.getOrCreatePatientRecordForClinic({
+        uid: req.user.uid,
+        clinicId,
+        branchId,
+      });
+      patientId = record.id;
+    } else {
+      patientId = req.body.patientId;
+      if (!patientId) return res.status(400).json({ error: 'patientId is required' });
     }
 
     const appointment = await appointmentsService.book(
@@ -68,6 +110,20 @@ async function setStatus(req, res, next) {
       }
     }
 
+    // A patient (Part 21, Task 3) can only ever cancel — confirm/check-in/
+    // complete stay staff/doctor-only actions — and only their own
+    // appointment. appointments.service.js's own VALID_TRANSITIONS still
+    // rejects cancelling an already-completed/cancelled appointment; this
+    // is strictly an extra caller-identity restriction on top of that.
+    if (req.user?.role === ROLES.PATIENT) {
+      if (status !== 'cancelled') {
+        return res.status(403).json({ error: 'You can only cancel an appointment, not change its status' });
+      }
+      const existing = await appointmentsService.getById(req.params.id);
+      if (!existing) return res.status(404).json({ error: 'Appointment not found' });
+      await assertPatientOwnsAppointment(existing, req.user.uid);
+    }
+
     const appointment = await appointmentsService.setStatus(req.params.id, status, actorFrom(req));
     res.json({ appointment });
   } catch (err) {
@@ -81,6 +137,13 @@ async function reschedule(req, res, next) {
     if (!date || !startTime || !endTime) {
       return res.status(400).json({ error: 'date, startTime, and endTime are required' });
     }
+
+    if (req.user?.role === ROLES.PATIENT) {
+      const existing = await appointmentsService.getById(req.params.id);
+      if (!existing) return res.status(404).json({ error: 'Appointment not found' });
+      await assertPatientOwnsAppointment(existing, req.user.uid);
+    }
+
     const appointment = await appointmentsService.reschedule(
       req.params.id,
       { date, startTime, endTime },
@@ -118,7 +181,12 @@ async function getById(req, res, next) {
   try {
     const appointment = await appointmentsService.getById(req.params.id);
     if (!appointment) return res.status(404).json({ error: 'Appointment not found' });
-    if (req.scope.level !== 'platform' && appointment.clinicId !== req.scope.clinicId) {
+
+    if (req.user?.role === ROLES.PATIENT) {
+      // A patient's scope has no clinicId to compare against (unlike every
+      // other role) — ownership is the only check that applies to them.
+      await assertPatientOwnsAppointment(appointment, req.user.uid);
+    } else if (req.scope.level !== 'platform' && appointment.clinicId !== req.scope.clinicId) {
       return res.status(403).json({ error: 'This appointment belongs to a different clinic' });
     }
     if (req.user?.role === ROLES.DOCTOR && appointment.doctorId !== req.user.uid) {

@@ -1,8 +1,12 @@
 // Controller for /api/v1/reviews — spec section 6.13(sibling) / 7 (Part 16).
 const reviewsService = require('../services/reviews.service');
 
+// A patient's scope has no clinicId (see appointments.controller.js's
+// identical Part 21 comment) — trust the client-supplied value the same
+// way 'platform' already does, needed here since Part 22's My Bookings
+// screen checks "already reviewed?" by calling GET /reviews as a patient.
 function resolveClinicId(req, explicit) {
-  return req.scope.level === 'platform' ? explicit : req.scope.clinicId;
+  return ['platform', 'patient'].includes(req.scope.level) ? explicit : req.scope.clinicId;
 }
 
 function resolveBranchId(req, explicit) {
@@ -25,7 +29,7 @@ async function list(req, res, next) {
     // doctor's reviews by passing/forging a different id.
     const doctorId = req.user?.role === 'doctor' ? req.user.uid : req.query.doctorId;
 
-    const reviews = await reviewsService.list({ clinicId, branchId, doctorId });
+    const reviews = await reviewsService.list({ clinicId, branchId, doctorId, appointmentId: req.query.appointmentId });
     res.json({ reviews });
   } catch (err) {
     next(err);
@@ -109,6 +113,15 @@ async function hide(req, res, next) {
   }
 }
 
+async function flag(req, res, next) {
+  try {
+    const review = await reviewsService.flag(req.params.id, { reason: req.body.reason }, actorFrom(req));
+    res.json({ review });
+  } catch (err) {
+    next(err);
+  }
+}
+
 async function popularityRank(req, res, next) {
   try {
     const branchId = resolveBranchId(req, req.query.branchId);
@@ -129,4 +142,4 @@ async function recalculatePopularity(req, res, next) {
   }
 }
 
-module.exports = { list, getById, create, update, remove, reply, hide, popularityRank, recalculatePopularity };
+module.exports = { list, getById, create, update, remove, reply, hide, flag, popularityRank, recalculatePopularity };

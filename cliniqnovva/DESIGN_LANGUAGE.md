@@ -353,9 +353,9 @@ growth/trend chart rather than introducing a new chart style or color.
   instruction, same day as the two changes below it.
   `_TodayAppointmentsCard`, `_RevenueByDepartmentCard`, and
   `_QuickActionsCard` (`features/dashboard/screens/dashboard_screen.dart`)
-  briefly went borderless (`showBorder: false`) and back to bordered again
-  within the same round of edits — no net change there, all three keep
-  their border. Quick Actions reverts today's earlier side-by-side layout
+  all pass `showBorder: false` to `CliniqnovvaCard` now (background/radius
+  kept, border dropped — the existing opt-out `CliniqnovvaCard` already
+  supports). Quick Actions reverts today's earlier side-by-side layout
   back to a column — all three buttons (including Run Reports, previously
   full-width) now sized to ~45% of the card's width via `LayoutBuilder`.
   The revenue chart no longer shows a "no revenue yet" placeholder text —
@@ -394,6 +394,133 @@ growth/trend chart rather than introducing a new chart style or color.
   pickers) is a different list style, not a data table, so those are
   unchanged. The Patients table's name cell is now plain text, no leading
   `AvatarWidget`/`Row` wrapper.
+- **2026-08-08 (Patient App foundation — new `cliniqnovva_patient` client
+  reuses this doc's tokens as-is)** — Part 19 of the Master Context: a
+  second Flutter app (Android/iOS, `C:\WhiteZebra\Cliniqnovva\cliniqnovva_patient`)
+  for patients, talking to the same backend/Firestore as this web
+  dashboard. **No new colors, radii, or fonts were introduced.** The new
+  app's `core/theme/` (`app_colors.dart`/`app_theme.dart`/`theme_ext.dart`)
+  is a byte-for-byte copy of this app's: black/white `context.appPrimary`
+  (light/dark inversion), `AppColors.textPrimary` `#0B2545` navy for
+  light-mode-only body text, `AppColors.skyBlue` `#38BDF8` as the second
+  accent, `cardRadius` 18 / `buttonRadius` 30 / `inputRadius` 12, General
+  Sans font (same bundled `.otf` files). This was a deliberate decision —
+  the part's own brief described an older "teal `#2A9D8F` primary, navy for
+  key accents" scheme (the system's design *before* the 2026-07-18 lime
+  swap and the 2026-07-24 lime-retirement covered earlier in this doc), and
+  matching the actual current tokens was chosen over the brief's stale
+  wording so the two clients look like one product. Mobile-specific
+  adaptations, none of which change a token: **sidebar → bottom navigation
+  bar** (`PatientAppShell`, 60px tall, same `context.appBorder` top border a
+  card would use, 5 tabs: Home/Browse/Bookings/Chat/Settings per Task 6),
+  and `AppTheme.sidebarWidth`/`topbarHeight` replaced by a single
+  `AppTheme.bottomNavHeight` constant (the desktop-only constants have no
+  mobile equivalent, so they were dropped rather than left unused). Shared
+  components (`CliniqnovvaButton`, `CliniqnovvaCard`, `CliniqnovvaTextField`,
+  `AvatarWidget`, `StatusBadge`, `CliniqnovvaLogo`) are likewise identical
+  copies, sized the same (e.g. the 45px-tall pill button) since touch
+  targets at these sizes already meet mobile accessibility minimums — no
+  "mobile-sized" scaling was needed despite Part 19's brief mentioning it.
+- **2026-08-08 (Patient App: Browse Clinics and Doctors — new components,
+  no new tokens)** — Part 20 of the Master Context, `cliniqnovva_patient`
+  only. Three new shared components, all built from existing tokens:
+  **`RatingStars`** (`shared/widgets/rating_stars.dart`) — a 1-5 star row,
+  rounds to the nearest whole star, filled stars use `AppColors.skyBlue`
+  (matching this doc's own 2026-07-25 rule that Reviews star ratings use the
+  second-primary accent, not amber — followed here rather than reintroducing
+  amber for a new client). **Filter chips** (`browse_screen.dart`'s
+  `_FilterChip`, sort-by/department) — pill-shaped (`borderRadius: 20`),
+  filled `context.appPrimary` with inverse text when selected, `context.
+  appSecondaryBg` fill with `context.appText` otherwise — the same
+  selected/unselected shape as the web app's existing "Selectable-option
+  chip" (`_BillingStatusChip`, documented above); this is the second call
+  site for that pattern, both apps now share the same chip language even
+  though the code isn't literally shared. **`BranchCard`**
+  (`features/browse/widgets/branch_card.dart`) — a `CliniqnovvaCard`
+  wrapping name/`RatingStars`/address/service tags, with an optional
+  "New" pill badge (`AppColors.pillTealBg`/`pillTealText`, an existing pill
+  pair token, no new color) for branches below the review-count threshold.
+  Doctor's review-reply box (`clinic_detail_screen.dart`'s `_ReviewTile`)
+  reuses `context.appSecondaryBg` on a 12px-radius container, the same
+  neutral-fill role `appSecondaryBg` already plays for sidebar active-nav
+  and menu tracks on the web app. No new colors, radii, or fonts introduced.
+- **2026-08-08 (Patient App: Book/Reschedule/Cancel — one new step-badge
+  component, one new date-strip component, no new tokens)** — Part 21 of
+  the Master Context, `cliniqnovva_patient` only. **`_StepLabel`**
+  (`booking_screen.dart`) — a numbered step indicator for the Booking
+  screen's department→service→doctor→date wizard: a 22px circle, filled
+  `context.appPrimary` with inverse-contrast number text, next to a 15px
+  w600 label. New shape, not a reuse of an existing component — flag if a
+  second multi-step flow needs it, worth promoting to `shared/widgets/`
+  then. **`DateStripPicker`** (`features/booking/widgets/`) — a
+  horizontally-scrolling next-14-days strip, 52px-wide rounded cells
+  (weekday abbreviation over day number), same selected/unselected fill
+  language as `BookingChip`/Browse's filter chips (`context.appPrimary`
+  filled + inverse text when selected, `context.appSecondaryBg` otherwise)
+  just in a taller cell shape suited to a two-line date. **`BookingChip`**
+  itself is not a new pattern — it's `browse_screen.dart`'s `_FilterChip`
+  promoted to a shared, feature-scoped widget (`features/booking/widgets/
+  booking_chip.dart`) since department/service/doctor/slot pickers all
+  needed the identical shape; Browse's own `_FilterChip` is untouched
+  (still private to that screen, not merged into this one to avoid a
+  cross-feature import for a purely cosmetic match). Appointment status
+  badges reuse the existing `StatusBadge`/`BadgeType` mapping unchanged
+  (`pending`/`checkedIn` → warning, `confirmed`/`completed` → success,
+  `cancelled` → error) — no new badge colors. The cancel-confirmation
+  dialog is a plain themed `AlertDialog` (see "Dialogs" above) with no
+  custom styling. No new colors, radii, or fonts introduced anywhere in
+  this part.
+- **2026-08-08 (Patient App: My Bookings + status timeline — one new
+  segmented-tabs component, one new timeline component, no new tokens)** —
+  Part 22 of the Master Context, `cliniqnovva_patient` only.
+  **Segmented tabs** (`my_bookings_screen.dart`'s `_SegmentedTabs`/
+  `_Segment`) — My Bookings' Upcoming/Past switcher: a `context.
+  appSecondaryBg`-filled 12px-radius track (3px inset padding) holding two
+  equal-width segments, the active one filled `context.appPrimary` with
+  inverse text (10px radius, so it reads as a pill nested inside the
+  outer track) — same selected/unselected black-white-inversion language
+  as every other chip/button in this app, just packaged as a fixed
+  two-way switch rather than a scrollable chip row. This is the Patient
+  App's first tabbed screen; reuse this component (not Material's
+  `TabBar`, which would need its own theming pass to match) for any
+  future two/three-way view switch. **`_StatusTimeline`**
+  (`booking_detail_screen.dart`) — a 4-step horizontal progress line
+  (pending → confirmed → checked in → completed): 12px filled/hollow dots
+  connected by 2px bars, `context.appPrimary` for reached steps,
+  `context.appBorder` for the rest, current step's label bolded. Only
+  rendered for a non-cancelled appointment — a cancelled one jumped out of
+  the linear sequence from wherever it was, so it shows only the existing
+  red `StatusBadge` instead of a broken/backtracked timeline. No new
+  colors, radii, or fonts introduced anywhere in this part.
+- **2026-08-08 (Patient App: Reviews — new interactive star input; web
+  Reviews screen gains a "Flagged" badge)** — Part 24 of the Master
+  Context. `cliniqnovva_patient` gets **`StarRatingInput`**
+  (`shared/widgets/star_rating_input.dart`) — a tappable 1-5 star row,
+  the write counterpart to the existing read-only `RatingStars` (Part
+  20): same `AppColors.skyBlue` filled-star color for consistency, plain
+  `GestureDetector`-per-star, no new color/radius. `CliniqnovvaTextField`
+  gained a `maxLines` param (defaults to 1, every existing call site
+  unaffected) for Leave/Edit Review's comment fields — same incremental-
+  extension pattern as the 2026-07-26 `prefixIcon` addition logged above.
+  On the WEB dashboard: `reviews_screen.dart`'s `_ReviewCard` gained a
+  `StatusBadge(type: BadgeType.warning)` "Flagged (N)" pill next to the
+  existing "Hidden" one, shown when `ReviewModel.flagCount > 0` (Part 24's
+  new patient-facing "Report" action) — reuses the existing badge
+  component/warning-amber semantic, not a new color. No new colors, radii,
+  or fonts introduced anywhere in this part.
+- **2026-08-08 (Patient App: Medical Records + Receipts — no new visual
+  patterns)** — Part 23 of the Master Context, `cliniqnovva_patient` only,
+  read-only screens. Every element (document rows, prescription list
+  items, invoice line-item/summary rows) is a plain `CliniqnovvaCard` +
+  `AppIcon` + the same label-left/value-right row shape Booking
+  Detail's `_Row` already established (Part 21) — nothing new to log here.
+  The downloadable receipt PDF (`receipt_detail_screen.dart`) deliberately
+  mirrors the web dashboard's `invoice_detail_screen.dart#
+  _generateReceiptPdf` layout byte-for-byte (same A5 page, same table/
+  totals structure, same plain-RWF-no-thousands-separator line-item
+  formatting) rather than inventing a Patient-App-specific receipt look —
+  intentional, so a receipt looks identical regardless of which client
+  printed it.
 - **2026-07-30 (Offline-first for the three front-desk flows)** — Explicit
   user instruction, following an earlier discussion about connectivity
   drops in Rwandan clinics. Scope is deliberately narrow: **patient

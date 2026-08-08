@@ -1,9 +1,24 @@
 const { test, beforeEach } = require('node:test');
 const assert = require('node:assert/strict');
-const { db, reset, actor } = require('./support/setup');
+const { db, auth, reset, actor } = require('./support/setup');
 const reviewsService = require('../src/services/reviews.service');
 
 beforeEach(() => reset());
+
+// Part 24 fixed a real bug where create()/update()/remove() compared
+// `appointment.patientId`/`review.patientId` (a /patients walk-in-record
+// id) directly against `actor.actorId` (the caller's Firebase uid) — two
+// values that can never be equal for a genuine Patient App caller. These
+// tests now seed a REAL linked walk-in record (`linkedAppAccountId: uid`)
+// and use that uid as the actor, instead of the old shortcut of setting
+// `patient.actorId = 'patientA'` to match a made-up patientId directly —
+// that shortcut is exactly what masked the bug (see test/patientReviews.
+// test.js for the dedicated ownership-bug regression tests).
+async function makePatientActor() {
+  const { uid } = await auth.createUser({ email: `p${Date.now()}${Math.random()}@x.com`, password: 'x', displayName: 'P' });
+  db.seed('patients/patientA', { clinicId: 'org1', branchId: 'branch1', linkedAppAccountId: uid });
+  return { actorId: uid, role: 'patient', actorRole: 'patient', scope: { level: 'patient' } };
+}
 
 function seedCompletedAppointment() {
   db.seed('appointments/appt1', {
@@ -19,8 +34,7 @@ function seedCompletedAppointment() {
 
 test('reviews: one review per appointment — a second review for the same appointment is rejected', async () => {
   seedCompletedAppointment();
-  const patient = actor({ role: 'patient', level: 'branch', clinicId: 'org1', branchId: 'branch1' });
-  patient.actorId = 'patientA';
+  const patient = await makePatientActor();
 
   await reviewsService.create(
     { appointmentId: 'appt1', branchRating: 5, branchComment: 'Great', doctorRating: 5, doctorComment: 'Great doc' },
@@ -41,6 +55,7 @@ test('reviews: one review per appointment — a second review for the same appoi
 });
 
 test('reviews: cannot review an appointment that has not been completed', async () => {
+  const patient = await makePatientActor();
   db.seed('appointments/appt2', {
     patientId: 'patientA',
     clinicId: 'org1',
@@ -48,8 +63,6 @@ test('reviews: cannot review an appointment that has not been completed', async 
     doctorId: 'doc1',
     status: 'confirmed',
   });
-  const patient = actor({ role: 'patient', level: 'branch', clinicId: 'org1', branchId: 'branch1' });
-  patient.actorId = 'patientA';
 
   await assert.rejects(
     () => reviewsService.create({ appointmentId: 'appt2', branchRating: 5, doctorRating: 5 }, patient),
@@ -62,8 +75,7 @@ test('reviews: cannot review an appointment that has not been completed', async 
 
 test('reviews: edit window — an edit within 48h succeeds, past 48h is rejected', async () => {
   seedCompletedAppointment();
-  const patient = actor({ role: 'patient', level: 'branch', clinicId: 'org1', branchId: 'branch1' });
-  patient.actorId = 'patientA';
+  const patient = await makePatientActor();
 
   const review = await reviewsService.create(
     { appointmentId: 'appt1', branchRating: 3, branchComment: 'ok', doctorRating: 3, doctorComment: 'ok' },
@@ -88,8 +100,7 @@ test('reviews: edit window — an edit within 48h succeeds, past 48h is rejected
 
 test('reviews: staff replying never touches the patient-authored rating/comment fields', async () => {
   seedCompletedAppointment();
-  const patient = actor({ role: 'patient', level: 'branch', clinicId: 'org1', branchId: 'branch1' });
-  patient.actorId = 'patientA';
+  const patient = await makePatientActor();
   const review = await reviewsService.create(
     { appointmentId: 'appt1', branchRating: 5, branchComment: 'Great', doctorRating: 5, doctorComment: 'Great doc' },
     patient
@@ -105,8 +116,7 @@ test('reviews: staff replying never touches the patient-authored rating/comment 
 
 test('reviews: hide() is soft-hide only — the document still exists, isHidden flips, aggregates exclude it', async () => {
   seedCompletedAppointment();
-  const patient = actor({ role: 'patient', level: 'branch', clinicId: 'org1', branchId: 'branch1' });
-  patient.actorId = 'patientA';
+  const patient = await makePatientActor();
   const review = await reviewsService.create(
     { appointmentId: 'appt1', branchRating: 5, branchComment: 'Great', doctorRating: 5, doctorComment: 'Great doc' },
     patient
@@ -123,8 +133,7 @@ test('reviews: hide() is soft-hide only — the document still exists, isHidden 
 
 test('reviews: access scoping — a branch_admin from a different branch cannot read a review from another branch', async () => {
   seedCompletedAppointment();
-  const patient = actor({ role: 'patient', level: 'branch', clinicId: 'org1', branchId: 'branch1' });
-  patient.actorId = 'patientA';
+  const patient = await makePatientActor();
   const review = await reviewsService.create(
     { appointmentId: 'appt1', branchRating: 5, branchComment: 'Great', doctorRating: 5, doctorComment: 'Great doc' },
     patient

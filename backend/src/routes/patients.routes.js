@@ -53,9 +53,37 @@ router.get('/detail/:patientId', requireRole(...READ_ROLES), controller.getById)
 router.put('/:patientId', requireRole(...WRITE_ROLES), controller.update);
 
 router.post('/:patientId/medical-records', requireRole(ROLES.DOCTOR, ROLES.NURSE), controller.addMedicalRecord);
+// Part 23 — Patient App's Medical Records screen. Deliberately PATIENT-only
+// (not READ_ROLES too) — staff already read this same data, role-shaped,
+// through GET /detail/:patientId; this is a dedicated full-detail path for
+// the record's own patient, ownership-enforced in the controller/service,
+// not a staff-facing route.
+router.get('/:patientId/medical-records', requireRole(ROLES.PATIENT), controller.getMedicalRecords);
 
 router.post('/:patientId/documents', requireRole(...CLINICAL_ROLES), upload.single('file'), controller.addDocument);
-router.get('/:patientId/documents/:key/signed-url', requireRole(...CLINICAL_ROLES), controller.getDocumentSignedUrl);
+// PATIENT added Part 23 — a patient may view their OWN document's signed
+// URL (their own lab results/X-rays); patients.service.js's
+// getDocumentSignedUrl() branches to an ownership check for this role
+// instead of the CLINICAL_ROLES/clinic-scope check every staff caller
+// still goes through.
+router.get(
+  '/:patientId/documents/:key/signed-url',
+  requireRole(...CLINICAL_ROLES, ROLES.PATIENT),
+  controller.getDocumentSignedUrl
+);
+
+// Part 22 — Patient App's My Bookings screen. PATIENT added alongside the
+// existing staff READ_ROLES; the controller enforces ownership for a
+// patient caller (their own linked record only) instead of clinic scope.
+router.get('/:patientId/appointments', requireRole(...READ_ROLES, ROLES.PATIENT), controller.getAppointments);
+
+// Part 23 — Patient App's Receipts screen. Same PATIENT-only, ownership-
+// enforced-in-controller shape as medical-records above.
+router.get('/:patientId/invoices', requireRole(ROLES.PATIENT), controller.getInvoices);
+
+// Part 24 — Patient App's My Reviews screen. Same PATIENT-only, ownership-
+// enforced-in-controller shape as medical-records/invoices above.
+router.get('/:patientId/reviews', requireRole(ROLES.PATIENT), controller.getReviews);
 
 router.delete('/:id', requireRole(...WRITE_ROLES), controller.remove);
 

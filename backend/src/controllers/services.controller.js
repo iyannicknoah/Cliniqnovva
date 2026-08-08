@@ -1,8 +1,11 @@
 // Controller for /api/v1/services — spec section 6.4 / 9 (Part 7).
 const servicesService = require('../services/services.service');
 
+// See departments.controller.js's identical comment — a patient's scope
+// has no clinicId, so it must be trusted from the client the same way
+// 'platform' already is (Part 21: Booking's department→service picker).
 function resolveClinicId(req, explicit) {
-  return req.scope.level === 'platform' ? explicit : req.scope.clinicId;
+  return ['platform', 'patient'].includes(req.scope.level) ? explicit : req.scope.clinicId;
 }
 
 async function list(req, res, next) {
@@ -25,7 +28,7 @@ async function getById(req, res, next) {
   try {
     const service = await servicesService.getById(req.params.id);
     if (!service) return res.status(404).json({ error: 'Service not found' });
-    if (req.scope.level !== 'platform' && service.clinicId !== req.scope.clinicId) {
+    if (!['platform', 'patient'].includes(req.scope.level) && service.clinicId !== req.scope.clinicId) {
       return res.status(403).json({ error: 'This service belongs to a different clinic' });
     }
     res.json({ service });

@@ -1,6 +1,16 @@
 // Service layer for patients (spec section 6.5A / 6.6 / 6.6A / 9 — Part 9).
-// Every patient in this web-only build is registered by front-desk staff
-// (registeredVia: 'walkIn') — there is no Patient App yet.
+// create() below is still the WALK-IN path only (registeredVia: 'walkIn',
+// always clinic-scoped) — front-desk staff calling POST /api/patients.
+// The Patient App's self-registration (Part 19) is a separate path that
+// doesn't create a /patients doc at all unless it must: it writes the
+// account's own identity to /users/{uid} (see auth.service.js#
+// registerPatientAccount) and, if the patient matches an existing walk-in
+// record, links to it via linkPatientAccount() below instead of ever
+// touching create(). See docs/technical-spec.md's /patients schema note:
+// "extends /users via same ID" was the ORIGINAL intent, but the Part 9
+// build gave every walk-in patient its own auto-ID doc rather than reusing
+// a uid (there is no uid at walk-in time) — linkedAppAccountId is the join
+// between the two instead of a shared document ID.
 //
 // SECURITY-CRITICAL: getById()'s response is shaped per requester role.
 // A receptionist must never receive diagnosis/prescription/document fields
@@ -100,19 +110,26 @@ async function create(
  * patients already merged away (isActive: false) — a record deactivated by
  * a prior merge shouldn't keep surfacing as a "possible duplicate" forever.
  * Returns lightweight matches only.
+ *
+ * `clinicId` is optional (Part 19) — staff calls (POST /api/patients/
+ * check-duplicate) always pass their own scoped clinicId and this behaves
+ * exactly as before. The Patient App's self-registration flow (POST
+ * /api/auth/patient/check-duplicate) omits it: a self-registering patient
+ * doesn't belong to a clinic yet, and the walk-in record they might be
+ * matching against could be at ANY clinic, so the query drops the clinicId
+ * filter entirely and searches the whole collection. Matches then also
+ * carry `clinicId`/`clinicName` so the app can show "we found a record at
+ * [Clinic Name]".
  */
 async function checkDuplicate({ clinicId, phone, nationalId }) {
   const phoneDigits = digitsOnly(phone);
   const queries = [];
+  const scoped = (q) => (clinicId ? q.where('clinicId', '==', clinicId) : q);
   if (phoneDigits) {
-    queries.push(
-      db.collection('patients').where('clinicId', '==', clinicId).where('phoneDigits', '==', phoneDigits).get()
-    );
+    queries.push(scoped(db.collection('patients')).where('phoneDigits', '==', phoneDigits).get());
   }
   if (nationalId) {
-    queries.push(
-      db.collection('patients').where('clinicId', '==', clinicId).where('nationalId', '==', nationalId).get()
-    );
+    queries.push(scoped(db.collection('patients')).where('nationalId', '==', nationalId).get());
   }
   if (queries.length === 0) return [];
 
@@ -122,10 +139,125 @@ async function checkDuplicate({ clinicId, phone, nationalId }) {
     snap.docs.forEach((doc) => {
       const d = doc.data();
       if (d.isActive === false) return;
-      byId[doc.id] = { id: doc.id, name: d.name, phone: d.phone, nationalId: d.nationalId || null };
+      byId[doc.id] = {
+        id: doc.id,
+        name: d.name,
+        phone: d.phone,
+        nationalId: d.nationalId || null,
+        clinicId: d.clinicId || null,
+      };
     })
   );
-  return Object.values(byId);
+  const matches = Object.values(byId);
+  if (clinicId || matches.length === 0) return matches; // caller already knows its own clinic name
+
+  const clinicIds = [...new Set(matches.map((m) => m.clinicId).filter(Boolean))];
+  const clinicDocs = await Promise.all(clinicIds.map((id) => db.collection('clinics').doc(id).get()));
+  const clinicNames = {};
+  clinicDocs.forEach((doc) => {
+    if (doc.exists) clinicNames[doc.id] = doc.data().name || null;
+  });
+  return matches.map((m) => ({ ...m, clinicName: m.clinicId ? clinicNames[m.clinicId] || null : null }));
+}
+
+/**
+ * Links a self-registered app account to an existing walk-in patient
+ * record (Part 19, spec 6.5A: "if the patient later installs the Patient
+ * App, they can be linked to their existing record ... rather than
+ * creating a duplicate"). Re-verifies server-side that the phone/
+ * nationalId the app account is registering with actually matches the
+ * target record — a client only ever learns a patientId from its own
+ * checkDuplicate() call, but this stops a tampered request from linking
+ * (and thereby reading, via getById's ROLES.PATIENT branch — a later
+ * part's concern) an arbitrary patient record it was never shown.
+ * `registeredVia` is deliberately left as `'walkIn'` — linking doesn't
+ * change how the record originated, only that it now also has app access.
+ */
+async function linkPatientAccount({ patientId, uid, phone, nationalId }) {
+  const ref = db.collection('patients').doc(patientId);
+  const doc = await ref.get();
+  if (!doc.exists) throw httpError(404, 'Patient record not found');
+  const d = doc.data();
+  if (d.isActive === false) throw httpError(409, 'This patient record is no longer active');
+
+  const phoneDigits = digitsOnly(phone);
+  const matchesPhone = Boolean(phoneDigits) && d.phoneDigits === phoneDigits;
+  const matchesNationalId = Boolean(nationalId) && d.nationalId === nationalId;
+  if (!matchesPhone && !matchesNationalId) {
+    throw httpError(403, "This record's phone/National ID doesn't match what you entered");
+  }
+
+  await ref.update({ linkedAppAccountId: uid });
+  return { id: patientId, ...d, linkedAppAccountId: uid };
+}
+
+/**
+ * Resolves the /patients/{id} record a self-registered Patient App account
+ * should book against for one clinic (Part 21) — reuses an existing linked
+ * walk-in record for that clinic if the account already has one (from
+ * checkDuplicate+linkPatientAccount at registration, or a prior call to
+ * this function), otherwise silently provisions a fresh app-originated one
+ * from the account's own /users profile. This is deliberately NOT the
+ * registration-time "is this you?" duplicate-check flow again — a patient
+ * who registered and found no match has already been searched cross-clinic
+ * once; a true duplicate this can't catch (a walk-in record created at this
+ * clinic independently, after registration) is left for staff to notice and
+ * fix with the existing Merge Patients tool, same as any other duplicate.
+ */
+async function getOrCreatePatientRecordForClinic({ uid, clinicId, branchId }) {
+  const userDoc = await db.collection('users').doc(uid).get();
+  if (!userDoc.exists) throw httpError(404, 'Patient account not found');
+  const user = userDoc.data();
+
+  const linkedIds = user.linkedPatientIds || [];
+  if (linkedIds.length > 0) {
+    const linkedDocs = await Promise.all(linkedIds.map((id) => db.collection('patients').doc(id).get()));
+    const existing = linkedDocs.find(
+      (d) => d.exists && d.data().clinicId === clinicId && d.data().isActive !== false
+    );
+    if (existing) return { id: existing.id, ...existing.data() };
+  }
+
+  const data = {
+    clinicId,
+    branchId: branchId || null,
+    name: user.name,
+    nameLower: (user.name || '').toLowerCase(),
+    phone: user.phone || null,
+    phoneDigits: user.phoneDigits || null,
+    dateOfBirth: null,
+    gender: null,
+    nationalId: user.nationalId || null,
+    emergencyContact: null,
+    location: null,
+    allergies: [],
+    chronicConditions: [],
+    registeredVia: 'app',
+    linkedAppAccountId: uid,
+    isActive: true,
+    createdAt: new Date().toISOString(),
+    createdBy: uid,
+  };
+  const ref = await db.collection('patients').add(data);
+
+  await db
+    .collection('users')
+    .doc(uid)
+    .set({ linkedPatientIds: [...linkedIds, ref.id] }, { merge: true });
+
+  return { id: ref.id, ...data };
+}
+
+/**
+ * True if [patientId]'s /patients record is linked to [uid] — the
+ * ownership check a Patient App caller must pass before touching an
+ * appointment/review/etc. that references a walk-in patientId rather than
+ * their own uid directly (Part 21).
+ */
+async function isPatientRecordOwnedBy(patientId, uid) {
+  if (!patientId || !uid) return false;
+  const doc = await db.collection('patients').doc(patientId).get();
+  return doc.exists && doc.data().linkedAppAccountId === uid;
 }
 
 /** Most recent medicalRecords.createdAt per patient, for the list's "last visit date" column. */
@@ -408,14 +540,28 @@ async function addDocument(patientId, { buffer, originalName, contentType }, act
 /**
  * A short-lived signed URL for one document (Part 9 Task 4: "role-gated" —
  * a receptionist must be refused here even if they somehow have the key,
- * not just have the Documents tab hidden client-side).
+ * not just have the Documents tab hidden client-side). Part 23 — the
+ * PATIENT the document belongs to may also view it (their own lab
+ * results/X-rays), via ownership rather than the CLINICAL_ROLES/clinic-
+ * scope check every staff caller goes through: `assertAccess` compares
+ * against `actor.scope.clinicId`, which is always undefined for a
+ * patient's `{level:'patient'}` scope (same class of bug fixed repeatedly
+ * in Parts 21/22 — see appointments/invoices/reviews controllers), so a
+ * patient actor takes a completely separate branch here instead of being
+ * routed through it.
  */
 async function getDocumentSignedUrl(patientId, key, actor) {
   const patient = await getRawById(patientId);
   if (!patient) throw httpError(404, 'Patient not found');
-  assertAccess(patient, actor.scope);
-  if (!CLINICAL_ROLES.includes(actor.role)) {
-    throw httpError(403, 'You are not allowed to view clinical documents');
+
+  if (actor.role === ROLES.PATIENT) {
+    const owns = await isPatientRecordOwnedBy(patientId, actor.actorId);
+    if (!owns) throw httpError(403, 'You can only view your own documents');
+  } else {
+    assertAccess(patient, actor.scope);
+    if (!CLINICAL_ROLES.includes(actor.role)) {
+      throw httpError(403, 'You are not allowed to view clinical documents');
+    }
   }
 
   // Confirm the key actually belongs to a document on THIS patient — never
@@ -428,8 +574,47 @@ async function getDocumentSignedUrl(patientId, key, actor) {
     .limit(1)
     .get();
   if (docsSnap.empty) throw httpError(404, 'Document not found');
+  const doc = docsSnap.docs[0].data();
 
-  return storageService.getSignedDownloadUrl(key);
+  const url = await storageService.getSignedDownloadUrl(key);
+  return { url, contentType: doc.contentType || null, originalName: doc.originalName || null };
+}
+
+/**
+ * Part 23 — the Patient App's Medical Records screen. Full clinical detail
+ * (diagnosis/prescriptions/notes/vitals), unlike the receptionist-tier
+ * shape `getById()` gives `ROLES.PATIENT` today (Part 19 added the role
+ * there defensively, before this screen existed — that path stays
+ * unchanged, this is a dedicated one instead). No "doctor's notes marked
+ * patient-visible" flag exists on `/medicalRecords` docs (see
+ * `addMedicalRecord()` above) — per Part 23's own instruction, every
+ * note is shown as-is; flagged here as worth revisiting if a real
+ * internal-only/patient-visible split is ever added to that schema.
+ * Bundles `documents` into the same response — the documents subcollection
+ * has no visit/appointment linkage in this schema (`addDocument()` never
+ * captured one), so there is no real per-visit grouping to expose; this
+ * returns the patient's full flat document list once, alongside the
+ * records, rather than pretending a document belongs to one visit.
+ */
+async function getMedicalRecordsAndDocumentsForPatient(patientId, uid) {
+  const patient = await getRawById(patientId);
+  if (!patient) throw httpError(404, 'Patient not found');
+  const owns = await isPatientRecordOwnedBy(patientId, uid);
+  if (!owns) throw httpError(403, 'You can only view your own medical records');
+
+  const [recordsSnap, docsSnap] = await Promise.all([
+    db.collection('medicalRecords').where('patientId', '==', patientId).get(),
+    db.collection('patients').doc(patientId).collection('documents').get(),
+  ]);
+
+  const records = recordsSnap.docs
+    .map((doc) => ({ id: doc.id, ...doc.data() }))
+    .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+  const documents = docsSnap.docs
+    .map((doc) => ({ id: doc.id, ...doc.data() }))
+    .sort((a, b) => (a.uploadedAt < b.uploadedAt ? 1 : -1));
+
+  return { records, documents };
 }
 
 const REASSIGNED_COLLECTIONS = ['appointments', 'medicalRecords', 'invoices'];
@@ -503,11 +688,17 @@ async function mergePatients({ survivingPatientId, mergedPatientId }, actor) {
 module.exports = {
   create,
   checkDuplicate,
+  linkPatientAccount,
+  getOrCreatePatientRecordForClinic,
+  isPatientRecordOwnedBy,
+  getMedicalRecordsAndDocumentsForPatient,
   search,
   getById,
+  getRawById,
   update,
   addMedicalRecord,
   addDocument,
   getDocumentSignedUrl,
   mergePatients,
+  digitsOnly,
 };

@@ -73,6 +73,18 @@ function kigaliDateString(date = new Date()) {
 }
 
 /**
+ * The real UTC instant a Kigali-local `date`+`startTime` refers to (Part
+ * 22's reminder job needs an actual timestamp to compare against "now",
+ * unlike isPastInKigali()'s same-day-only string/minute comparison above).
+ * Kigali local = UTC + 2h (fixed, no DST), so the reverse is UTC = Kigali
+ * local - 2h — same ±2h convention as kigaliDateString()/isPastInKigali()
+ * above, just solved for the opposite direction.
+ */
+function kigaliDateTimeToUtcMs(date, startTime) {
+  return Date.parse(`${date}T${startTime}:00Z`) - 2 * 60 * 60 * 1000;
+}
+
+/**
  * True if `date`+`startTime` (Africa/Kigali) has already passed. Used to
  * keep today's already-elapsed slots out of `getAvailableSlots`, and to
  * reject `book()`/`reschedule()` calls that slip a past time through
@@ -184,8 +196,14 @@ async function getRawById(id) {
   return { id: doc.id, ...doc.data() };
 }
 
+// Part 21 — a patient's scope carries no clinicId to compare against (see
+// branchScope.middleware.js's 'patient' level); the controller already ran
+// the real check for a patient caller (assertPatientOwnsAppointment, keyed
+// on the appointment's patientId, not clinic/branch) before ever calling
+// into setStatus()/reschedule() below, so this guard simply steps aside for
+// that scope the same way it already does for 'platform'.
 function assertAccess(appt, scope) {
-  if (scope.level === 'platform') return;
+  if (scope.level === 'platform' || scope.level === 'patient') return;
   if (appt.clinicId !== scope.clinicId) {
     throw httpError(403, 'This appointment belongs to a different clinic');
   }
@@ -323,6 +341,19 @@ async function setStatus(id, newStatus, actor) {
     }
   }
 
+  // Part 21 Task 4 — clinic-side alert on cancellation, fired the same way
+  // regardless of whether staff or a patient triggered it (see
+  // notifications.service.js#notifyCancellation). Same best-effort
+  // try/catch as notifyNewBooking above — a notification failure must never
+  // block the cancellation itself from taking effect.
+  if (newStatus === 'cancelled') {
+    try {
+      await notificationsService.notifyCancellation(updated, actor);
+    } catch (err) {
+      console.warn(`[appointments] notifyCancellation failed for ${id}: ${err.message}`);
+    }
+  }
+
   return updated;
 }
 
@@ -366,7 +397,16 @@ async function reschedule(id, { date, startTime, endTime }, actor) {
     tx.update(apptRef, { date, startTime, endTime, updatedAt: new Date().toISOString() });
   });
 
-  return getRawById(id);
+  const updated = await getRawById(id);
+
+  // Part 21 Task 4 — same clinic-side alert pattern as cancellation above.
+  try {
+    await notificationsService.notifyReschedule(updated, actor);
+  } catch (err) {
+    console.warn(`[appointments] notifyReschedule failed for ${id}: ${err.message}`);
+  }
+
+  return updated;
 }
 
 async function list({ clinicId, branchId, doctorId, patientId, tab }) {
@@ -421,6 +461,65 @@ async function getQueueDisplay(branchId, date) {
   };
 }
 
+const REMINDER_STATUSES = ['confirmed', 'checkedIn'];
+const REMINDER_WINDOWS_MS = {
+  twentyFourHour: 24 * 60 * 60 * 1000,
+  twoHour: 2 * 60 * 60 * 1000,
+};
+
+async function fetchNameSafe(collection, id) {
+  if (!id) return null;
+  const doc = await db.collection(collection).doc(id).get();
+  return doc.exists ? doc.data().name || null : null;
+}
+
+/**
+ * Part 22 Task 3 — the hourly reminder job's actual work (registered via
+ * jobs/appointmentReminders.job.js). For every confirmed/checkedIn
+ * appointment starting within the next 24h or 2h, sends (at most) one
+ * reminder per threshold, tracked on the appointment's own `sentReminders`
+ * map so a later run of this same hourly job never double-sends — the
+ * DONE CONDITION this whole function exists to satisfy. `pending`
+ * appointments are deliberately excluded (spec: nothing to remind about
+ * until staff have actually confirmed it).
+ */
+async function sendDueReminders(now = new Date()) {
+  const nowMs = now.getTime();
+  const snap = await db.collection('appointments').where('status', 'in', REMINDER_STATUSES).get();
+
+  let sent = 0;
+  for (const doc of snap.docs) {
+    const appt = { id: doc.id, ...doc.data() };
+    const apptMs = kigaliDateTimeToUtcMs(appt.date, appt.startTime);
+    if (apptMs <= nowMs) continue; // already started/passed — nothing to remind about
+
+    const existing = appt.sentReminders || { twentyFourHour: false, twoHour: false };
+    const due = Object.keys(REMINDER_WINDOWS_MS).filter(
+      (threshold) => !existing[threshold] && apptMs - nowMs <= REMINDER_WINDOWS_MS[threshold]
+    );
+    if (due.length === 0) continue;
+
+    const [doctorName, clinicName] = await Promise.all([
+      fetchNameSafe('users', appt.doctorId),
+      fetchNameSafe('branches', appt.branchId),
+    ]);
+
+    const updatedSentReminders = { ...existing };
+    for (const threshold of due) {
+      try {
+        await notificationsService.notifyAppointmentReminder(appt, { threshold, doctorName, clinicName });
+      } catch (err) {
+        console.warn(`[appointments] notifyAppointmentReminder(${threshold}) failed for ${appt.id}: ${err.message}`);
+      }
+      updatedSentReminders[threshold] = true;
+      sent++;
+    }
+    await db.collection('appointments').doc(appt.id).update({ sentReminders: updatedSentReminders });
+  }
+
+  return { sent };
+}
+
 module.exports = {
   getAvailableSlots,
   book,
@@ -429,6 +528,7 @@ module.exports = {
   list,
   getById: getRawById,
   getQueueDisplay,
+  sendDueReminders,
   ACTIVE_STATUSES,
   VALID_TRANSITIONS,
 };

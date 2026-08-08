@@ -7,11 +7,16 @@
 // invoice on appointment completion: a notification failure must never
 // block the real write it's reporting on.
 //
-// This is a web-only admin build with no Patient App yet (see
-// patients.service.js) — patients have no account/device to push to, so
-// every trigger here targets STAFF (receptionist/doctor/pharmacist/
-// accountant), not patients, even where the spec describes a patient-
-// facing message (e.g. "payment-recorded confirmation").
+// Historically a web-only admin build with no Patient App — every trigger
+// below targeted STAFF only (receptionist/doctor/pharmacist/accountant),
+// even where the spec described a patient-facing message (e.g.
+// "payment-recorded confirmation"), since there was no account/device to
+// push to. notifyAppointmentReminder (Part 22) is the FIRST genuinely
+// patient-facing trigger — it pushes to the appointment's own patient, not
+// staff. It resolves its recipient via `/patients/{patientId}.
+// linkedAppAccountId` (see patients.service.js), NOT `patientId` itself —
+// an appointment's patientId is a walk-in record id, never a real
+// `/users/{uid}` to push to directly.
 const { db, messaging } = require('../config/firebase-admin');
 const { ROLES } = require('../middleware/requireRole');
 
@@ -116,6 +121,107 @@ async function notifyNewBooking(appointment, actor) {
   ]);
 }
 
+/**
+ * Cancellation alert (Part 21, Task 4) — same recipients as
+ * notifyNewBooking (branch receptionists + the assigned doctor), fired from
+ * appointments.service.js#setStatus() whenever an appointment moves to
+ * 'cancelled'. Deliberately does NOT branch on `actor.role`/`actor.actorRole`
+ * — a staff-triggered and a patient-triggered cancellation must look
+ * identical to the clinic, which is exactly the DONE CONDITION this closes
+ * (Part 21's own audit found no such trigger existed at all before now, for
+ * either kind of caller).
+ */
+async function notifyCancellation(appointment, actor) {
+  const title = 'Appointment cancelled';
+  const body = `The appointment on ${appointment.date} at ${appointment.startTime} was cancelled.`;
+  const data = { appointmentId: appointment.id };
+
+  await Promise.all([
+    notifyRole({
+      clinicId: appointment.clinicId,
+      branchId: appointment.branchId,
+      role: ROLES.RECEPTIONIST,
+      type: 'appointmentCancelled',
+      title,
+      body,
+      data,
+      excludeActorId: actor.actorId,
+    }),
+    create({
+      clinicId: appointment.clinicId,
+      branchId: appointment.branchId,
+      recipientId: appointment.doctorId,
+      recipientRole: ROLES.DOCTOR,
+      type: 'appointmentCancelled',
+      title,
+      body,
+      data,
+    }),
+  ]);
+}
+
+/** Reschedule alert (Part 21, Task 4) — same shape/recipients as notifyCancellation. */
+async function notifyReschedule(appointment, actor) {
+  const title = 'Appointment rescheduled';
+  const body = `An appointment was rescheduled to ${appointment.date} at ${appointment.startTime}.`;
+  const data = { appointmentId: appointment.id };
+
+  await Promise.all([
+    notifyRole({
+      clinicId: appointment.clinicId,
+      branchId: appointment.branchId,
+      role: ROLES.RECEPTIONIST,
+      type: 'appointmentRescheduled',
+      title,
+      body,
+      data,
+      excludeActorId: actor.actorId,
+    }),
+    create({
+      clinicId: appointment.clinicId,
+      branchId: appointment.branchId,
+      recipientId: appointment.doctorId,
+      recipientRole: ROLES.DOCTOR,
+      type: 'appointmentRescheduled',
+      title,
+      body,
+      data,
+    }),
+  ]);
+}
+
+/**
+ * Appointment reminder (Part 22 Task 3) — pushes to the PATIENT, not staff
+ * (see this module's header). Silently no-ops if the appointment's
+ * /patients record was never linked to an app account (a pure walk-in
+ * booking has nobody to push to) — never an error, since that's an
+ * entirely expected, common case, not a failure.
+ */
+async function notifyAppointmentReminder(appointment, { threshold, doctorName, clinicName }) {
+  const patientDoc = await db.collection('patients').doc(appointment.patientId).get();
+  const linkedUid = patientDoc.exists ? patientDoc.data().linkedAppAccountId : null;
+  if (!linkedUid) return;
+
+  const doctorLabel = doctorName ? `Dr. ${doctorName}` : 'your doctor';
+  const clinicLabel = clinicName || 'the clinic';
+  const title = 'Appointment reminder';
+  const body =
+    threshold === 'twoHour'
+      ? `Your appointment with ${doctorLabel} at ${clinicLabel} is in 2 hours.`
+      : `Your appointment with ${doctorLabel} at ${clinicLabel} is tomorrow at ${appointment.startTime}.`;
+
+  await create({
+    clinicId: appointment.clinicId,
+    branchId: appointment.branchId,
+    recipientId: linkedUid,
+    recipientRole: ROLES.PATIENT,
+    type: 'appointmentReminder',
+    title,
+    body,
+    data: { appointmentId: appointment.id, threshold },
+  });
+}
+
 /** Low-stock alert (spec 6.11) — every pharmacist at the item's branch. */
 async function notifyLowStock(item, actor) {
   await notifyRole({
@@ -190,6 +296,9 @@ module.exports = {
   create,
   notifyRole,
   notifyNewBooking,
+  notifyCancellation,
+  notifyReschedule,
+  notifyAppointmentReminder,
   notifyLowStock,
   notifyPaymentRecorded,
   list,

@@ -2,8 +2,12 @@
 // Full CRUD: list/create (Part 6), update + guarded remove (Part 7).
 const departmentsService = require('../services/departments.service');
 
+// A patient's scope has no clinicId (see appointments.controller.js's
+// identical comment) — Part 21 needs the Browse→Booking flow to read
+// departments for a clinic it picks explicitly, so trust the client-
+// supplied value the same way 'platform' already does.
 function resolveClinicId(req, explicit) {
-  return req.scope.level === 'platform' ? explicit : req.scope.clinicId;
+  return ['platform', 'patient'].includes(req.scope.level) ? explicit : req.scope.clinicId;
 }
 
 async function list(req, res, next) {
@@ -25,7 +29,7 @@ async function getById(req, res, next) {
   try {
     const department = await departmentsService.getById(req.params.id);
     if (!department) return res.status(404).json({ error: 'Department not found' });
-    if (req.scope.level !== 'platform' && department.clinicId !== req.scope.clinicId) {
+    if (!['platform', 'patient'].includes(req.scope.level) && department.clinicId !== req.scope.clinicId) {
       return res.status(403).json({ error: 'This department belongs to a different clinic' });
     }
     res.json({ department });

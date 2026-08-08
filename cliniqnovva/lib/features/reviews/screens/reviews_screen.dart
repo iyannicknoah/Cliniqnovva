@@ -303,6 +303,10 @@ class _ReviewCard extends ConsumerWidget {
                   style: TextStyle(color: context.appText, fontSize: 14),
                 ),
               ),
+              if (review.flagCount > 0) ...[
+                StatusBadge(text: 'Flagged (${review.flagCount})', type: BadgeType.warning),
+                const SizedBox(width: 8),
+              ],
               if (review.isHidden) const StatusBadge(text: 'Hidden', type: BadgeType.error),
             ],
           ),

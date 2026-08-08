@@ -19,6 +19,7 @@ class ReviewModel {
     this.staffReply,
     this.createdAt,
     this.updatedAt,
+    this.flagCount = 0,
   });
 
   final String id;
@@ -35,6 +36,12 @@ class ReviewModel {
   final StaffReply? staffReply;
   final DateTime? createdAt;
   final DateTime? updatedAt;
+
+  /// Part 24 — how many patients have reported this review via the Patient
+  /// App's "Report" action (`reviews.service.js#flag()`). A count, not the
+  /// raw `flags` array — moderators need "is this worth a look", not each
+  /// reporter's identity, and the backend never sends that here anyway.
+  final int flagCount;
 
   factory ReviewModel.fromJson(Map<String, dynamic> json) => ReviewModel(
     id: json['id'] as String,
@@ -57,6 +64,7 @@ class ReviewModel {
     updatedAt: json['updatedAt'] != null
         ? DateTime.tryParse(json['updatedAt'] as String)
         : null,
+    flagCount: (json['flags'] as List?)?.length ?? 0,
   );
 }
 

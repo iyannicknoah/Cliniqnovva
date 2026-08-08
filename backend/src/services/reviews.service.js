@@ -18,6 +18,7 @@
 //      hide/unhide (Task 2: "not live-computed") — always excluding
 //      isHidden reviews.
 const { db } = require('../config/firebase-admin');
+const patientsService = require('./patients.service');
 
 const EDIT_WINDOW_MS = 48 * 60 * 60 * 1000;
 
@@ -110,9 +111,14 @@ async function recalculateAggregates(branchId, doctorId) {
 
 /**
  * Task 1 — one review per completed appointment. [actor] is always the
- * reviewing patient (role-gated in the route); there's no Patient App yet
- * (see patients.service.js's module docstring), so this endpoint is fully
- * built and correct but has no caller today — exactly per Part 16's brief.
+ * reviewing patient (role-gated in the route). `appointment.patientId` is
+ * a /patients walk-in-record id, NOT the caller's own Firebase uid (see
+ * patients.service.js's module docstring) — Part 24 found this function's
+ * original ownership check (`appointment.patientId !== actor.actorId`)
+ * compared the wrong two values and would NEVER have matched for a real
+ * Patient App caller (same bug class fixed repeatedly in Parts 21-23:
+ * appointments/invoices/medical-records all had it too). Fixed via
+ * `isPatientRecordOwnedBy`, same as those.
  */
 async function create({ appointmentId, branchRating, branchComment, doctorRating, doctorComment }, actor) {
   if (!appointmentId) throw httpError(400, 'appointmentId is required');
@@ -123,7 +129,8 @@ async function create({ appointmentId, branchRating, branchComment, doctorRating
   if (!apptDoc.exists) throw httpError(404, 'Appointment not found');
   const appointment = apptDoc.data();
 
-  if (appointment.patientId !== actor.actorId) {
+  const owns = await patientsService.isPatientRecordOwnedBy(appointment.patientId, actor.actorId);
+  if (!owns) {
     throw httpError(403, 'You can only review your own appointments');
   }
   if (appointment.status !== 'completed') {
@@ -136,7 +143,7 @@ async function create({ appointmentId, branchRating, branchComment, doctorRating
   }
 
   const data = {
-    patientId: actor.actorId,
+    patientId: appointment.patientId,
     clinicId: appointment.clinicId,
     branchId: appointment.branchId,
     doctorId: appointment.doctorId,
@@ -162,7 +169,9 @@ async function create({ appointmentId, branchRating, branchComment, doctorRating
 async function update(id, { branchRating, branchComment, doctorRating, doctorComment }, actor) {
   const review = await getRawById(id);
   if (!review) throw httpError(404, 'Review not found');
-  if (review.patientId !== actor.actorId) throw httpError(403, 'You can only edit your own review');
+  if (!(await patientsService.isPatientRecordOwnedBy(review.patientId, actor.actorId))) {
+    throw httpError(403, 'You can only edit your own review');
+  }
   if (review.isHidden) throw httpError(400, 'This review has been hidden and can no longer be edited');
   if (!withinEditWindow(review)) throw httpError(400, 'The 48-hour edit window for this review has passed');
 
@@ -188,7 +197,9 @@ async function update(id, { branchRating, branchComment, doctorRating, doctorCom
 async function remove(id, actor) {
   const review = await getRawById(id);
   if (!review) throw httpError(404, 'Review not found');
-  if (review.patientId !== actor.actorId) throw httpError(403, 'You can only remove your own review');
+  if (!(await patientsService.isPatientRecordOwnedBy(review.patientId, actor.actorId))) {
+    throw httpError(403, 'You can only remove your own review');
+  }
   if (!withinEditWindow(review)) throw httpError(400, 'The 48-hour edit window for this review has passed');
 
   await db.collection('reviews').doc(id).update({
@@ -201,14 +212,28 @@ async function remove(id, actor) {
   return { removed: true };
 }
 
-/** Staff browsing (Task 3) — every review at the branch, including hidden ones (moderators need to see what they hid). */
-async function list({ clinicId, branchId, doctorId }) {
+/**
+ * Staff browsing (Task 3) — every review at the branch, including hidden
+ * ones (moderators need to see what they hid). `appointmentId` (Part 22) —
+ * lets the Patient App's My Bookings screen check "has this completed
+ * appointment already been reviewed?" without a dedicated endpoint; note
+ * this still returns a hidden review too (same as everything else here),
+ * which is fine for an existence check, just not for display. `patientId`
+ * (Part 24) — backs `GET /api/v1/patients/:patientId/reviews` (My Reviews
+ * screen), same single-clinic-per-call + client-side fan-out-over-linked-
+ * records shape as appointments/medical-records/invoices in Parts 22/23;
+ * deliberately still includes this patient's own hidden reviews (they
+ * should see their own review's fate, unlike another patient's hidden one).
+ */
+async function list({ clinicId, branchId, doctorId, appointmentId, patientId }) {
   let query = db.collection('reviews').where('clinicId', '==', clinicId);
   if (branchId) query = query.where('branchId', '==', branchId);
 
   const snap = await query.get();
   let reviews = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
   if (doctorId) reviews = reviews.filter((r) => r.doctorId === doctorId);
+  if (appointmentId) reviews = reviews.filter((r) => r.appointmentId === appointmentId);
+  if (patientId) reviews = reviews.filter((r) => r.patientId === patientId);
   return reviews.sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
 }
 
@@ -260,6 +285,35 @@ async function hide(id, { hidden, reason }, actor) {
   });
   await recalculateAggregates(review.branchId, review.doctorId);
   return getRawById(id);
+}
+
+/**
+ * Part 24 Task 4 — reports a review for staff moderation. Deliberately
+ * does NOT hide it (Task 3's own framing: "does not hide it immediately" —
+ * moderation stays with Org Admin/Super Admin's existing hide() flow on
+ * the web side). Append-only, same convention as auditLogs/
+ * patientMergeLogs — a flag is never removed, only ever added to. A
+ * patient can't flag their own review, and re-flagging by the same
+ * reporter is a no-op rather than piling up duplicate entries.
+ */
+async function flag(id, { reason }, actor) {
+  const review = await getRawById(id);
+  if (!review) throw httpError(404, 'Review not found');
+
+  const isOwnReview = await patientsService.isPatientRecordOwnedBy(review.patientId, actor.actorId);
+  if (isOwnReview) throw httpError(400, 'You cannot report your own review');
+
+  const existingFlags = review.flags || [];
+  if (existingFlags.some((f) => f.reportedBy === actor.actorId)) {
+    return { ...review, flags: existingFlags };
+  }
+
+  const flags = [
+    ...existingFlags,
+    { reportedBy: actor.actorId, reason: reason && reason.trim() ? reason.trim() : null, reportedAt: new Date().toISOString() },
+  ];
+  await db.collection('reviews').doc(id).update({ flags });
+  return { ...review, flags };
 }
 
 function recencyWeight(createdAt, now) {
@@ -370,6 +424,7 @@ module.exports = {
   getById,
   reply,
   hide,
+  flag,
   recalculateAggregates,
   recalculatePopularityForBranch,
   recalculatePopularityForAllBranches,

@@ -21,5 +21,6 @@ router.use('/notifications', require('./notifications.routes'));
 router.use('/reports', require('./reports.routes'));
 router.use('/chats', require('./chats.routes'));
 router.use('/auth', require('./auth.routes'));
+router.use('/browse', require('./browse.routes'));
 
 module.exports = router;

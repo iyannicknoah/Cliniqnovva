@@ -43,4 +43,17 @@ router.post('/request-password-reset', authRateLimiter, controller.requestPasswo
 // Any authenticated user reading their own profile.
 router.get('/me', verifyToken, controller.me);
 
+// Part 19 — Patient App self-registration. Deliberately verifyToken-only,
+// no attachScope: the caller's Firebase Auth user already exists (created
+// client-side) but has no custom claims yet at the point it calls these, so
+// attachScope's role-branching would have nothing to key off. Rate-limited
+// same as every other auth-adjacent endpoint.
+router.post('/patient/check-duplicate', authRateLimiter, verifyToken, controller.checkPatientDuplicate);
+router.post(
+  '/patient/finalize-registration',
+  authRateLimiter,
+  verifyToken,
+  controller.finalizePatientRegistration
+);
+
 module.exports = router;

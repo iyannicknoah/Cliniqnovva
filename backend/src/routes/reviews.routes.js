@@ -36,5 +36,9 @@ router.delete('/:id', requireRole(ROLES.PATIENT), controller.remove);
 
 router.post('/:id/reply', requireRole(...REPLY_ROLES), controller.reply);
 router.patch('/:id/hide', requireRole(...HIDE_ROLES), controller.hide);
+// Part 24 Task 3/4 — "Report" on another patient's review from Clinic
+// Detail. Records the flag for staff moderation; never auto-hides (that
+// stays HIDE_ROLES-only, above).
+router.post('/:id/flag', requireRole(ROLES.PATIENT), controller.flag);
 
 module.exports = router;
