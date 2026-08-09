@@ -13,6 +13,7 @@ import '../../shared/widgets/cliniqnovva_button.dart';
 import '../../shared/widgets/cliniqnovva_card.dart';
 import '../../shared/widgets/loading_widget.dart';
 import '../../shared/widgets/rating_stars.dart';
+import '../chat/providers/chats_provider.dart';
 import '../reviews/providers/reviews_provider.dart';
 import 'models/branch_review_summary.dart';
 import 'models/branch_summary.dart';
@@ -46,13 +47,15 @@ class ClinicDetailScreen extends ConsumerWidget {
       ),
       body: async.when(
         loading: () => const LoadingWidget(),
-        error: (e, st) => Center(child: Text('$e', style: TextStyle(color: context.appSubtext))),
+        error: (e, st) => Center(child: Text(e.friendlyMessage, style: TextStyle(color: context.appSubtext))),
         data: (data) => SingleChildScrollView(
           padding: const EdgeInsets.all(20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _BranchInfoCard(branch: data.branch),
+              const SizedBox(height: 12),
+              _MessageClinicButton(branchId: branchId, clinicId: data.branch.clinicId),
               const SizedBox(height: 24),
               Text(
                 'browse_doctors_title'.tr(),
@@ -135,6 +138,50 @@ class _BranchInfoCard extends StatelessWidget {
   }
 }
 
+/// Part 25 Task 1's actual "start a new thread" entry point — "Message a
+/// Clinic" on the Chat List screen just opens Browse; the real call
+/// happens once a specific branch is chosen, here. No appointment or
+/// prior relationship required (Task 1's explicit DONE CONDITION).
+class _MessageClinicButton extends ConsumerStatefulWidget {
+  const _MessageClinicButton({required this.branchId, required this.clinicId});
+
+  final String branchId;
+  final String clinicId;
+
+  @override
+  ConsumerState<_MessageClinicButton> createState() => _MessageClinicButtonState();
+}
+
+class _MessageClinicButtonState extends ConsumerState<_MessageClinicButton> {
+  bool _loading = false;
+
+  Future<void> _start() async {
+    setState(() => _loading = true);
+    try {
+      final chatId = await ref
+          .read(chatsNotifierProvider.notifier)
+          .startChat(clinicId: widget.clinicId, branchId: widget.branchId);
+      if (mounted) context.go('/chat/$chatId');
+    } on ApiException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+      }
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return CliniqnovvaButton.text(
+      label: 'chat_message_this_clinic'.tr(),
+      isFullWidth: true,
+      isLoading: _loading,
+      onPressed: _loading ? null : _start,
+    );
+  }
+}
+
 class _DoctorTile extends StatelessWidget {
   const _DoctorTile({required this.doctor, required this.branchId});
 
@@ -190,7 +237,7 @@ class _ReviewsList extends ConsumerWidget {
 
     return async.when(
       loading: () => const Padding(padding: EdgeInsets.symmetric(vertical: 20), child: LoadingWidget()),
-      error: (e, st) => Text('$e', style: TextStyle(color: context.appSubtext)),
+      error: (e, st) => Text(e.friendlyMessage, style: TextStyle(color: context.appSubtext)),
       data: (state) {
         if (state.reviews.isEmpty) {
           return Text('browse_no_reviews'.tr(), style: TextStyle(color: context.appSubtext, fontSize: 13));

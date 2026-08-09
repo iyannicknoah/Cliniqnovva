@@ -9,6 +9,7 @@ import '../../core/theme/app_icons.dart';
 import '../../core/theme/theme_ext.dart';
 import '../../shared/widgets/app_icon.dart';
 import '../../shared/widgets/cliniqnovva_card.dart';
+import '../../shared/widgets/empty_state.dart';
 import '../../shared/widgets/loading_widget.dart';
 import '../browse/providers/browse_provider.dart';
 import 'models/medical_record_model.dart';
@@ -42,10 +43,15 @@ class MedicalRecordsScreen extends ConsumerWidget {
       ),
       body: async.when(
         loading: () => const LoadingWidget(),
-        error: (e, st) => Center(child: Text('$e', style: TextStyle(color: context.appSubtext))),
+        error: (e, st) => Center(child: Text(e.friendlyMessage, style: TextStyle(color: context.appSubtext))),
         data: (data) {
           if (data.records.isEmpty && data.documents.isEmpty) {
-            return Center(child: Text('records_empty'.tr(), style: TextStyle(color: context.appSubtext)));
+            return EmptyState(
+              icon: AppIcons.document,
+              message: 'records_empty'.tr(),
+              actionLabel: 'action_book_appointment'.tr(),
+              onAction: () => context.go('/browse'),
+            );
           }
           return ListView(
             padding: const EdgeInsets.all(20),

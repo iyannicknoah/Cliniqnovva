@@ -25,6 +25,9 @@
   "error_identifier_password_required": "Entrez votre téléphone/email et votre mot de passe.",
   "error_enter_identifier_first": "Entrez d'abord votre téléphone ou email.",
   "error_generic": "Une erreur s'est produite lors de la connexion. Veuillez réessayer.",
+  "error_unexpected": "Une erreur s'est produite. Veuillez réessayer.",
+  "offline_message": "Vous êtes hors ligne. Certains éléments peuvent ne pas se charger avant votre reconnexion.",
+  "offline_retry": "Réessayer",
 
   "info_password_reset_sent": "Si un compte existe, un email de réinitialisation est en route.",
 
@@ -48,8 +51,11 @@
   "home_popular_clinics": "Cliniques populaires",
   "home_new_clinics": "Nouveau sur Cliniqnovva",
   "home_upcoming_appointment": "Rendez-vous à venir",
+  "home_no_upcoming": "Aucun rendez-vous à venir pour le moment.",
   "action_reschedule": "Reporter",
   "action_cancel_appointment": "Annuler",
+  "action_book_appointment": "Prendre rendez-vous",
+  "action_view_bookings": "Voir mes rendez-vous",
 
   "browse_search_hint": "Rechercher cliniques, médecins, spécialités",
   "browse_sort_popular": "Plus populaires",
@@ -104,8 +110,8 @@
 
   "bookings_tab_upcoming": "À venir",
   "bookings_tab_past": "Passés",
-  "bookings_no_upcoming": "Aucun rendez-vous à venir.",
-  "bookings_no_past": "Aucun rendez-vous passé pour le moment.",
+  "bookings_no_upcoming": "Rien de prévu pour l'instant. Prêt quand vous l'êtes.",
+  "bookings_no_past": "Aucun rendez-vous passé pour le moment — votre historique de visites apparaîtra ici.",
 
   "review_prompt_title": "Comment s'est passée votre visite ?",
   "review_prompt_body": "Laissez un avis pour aider d'autres patients et informer la clinique.",
@@ -131,7 +137,7 @@
   "records_documents_title": "Documents",
   "records_visit_history_title": "Historique des visites",
   "records_no_visits": "Aucune visite enregistrée pour le moment.",
-  "records_empty": "Aucun dossier médical pour le moment.",
+  "records_empty": "Aucun dossier médical pour le moment. Il apparaîtra après votre première visite.",
   "records_doctor_at": "Dr {doctor} · {clinic}",
   "records_visit_detail_title": "Détails de la visite",
   "records_visit_not_found": "Visite introuvable.",
@@ -167,7 +173,7 @@
   "review_submitted_title": "Merci pour votre avis !",
   "action_done": "Terminé",
 
-  "my_reviews_empty": "Vous n'avez laissé aucun avis pour le moment.",
+  "my_reviews_empty": "Vous n'avez laissé aucun avis pour le moment. Partagez votre expérience après une visite.",
   "review_rate_clinic_label": "Clinique",
   "review_rate_doctor_label": "Dr {doctor}",
   "review_rate_doctor_generic_label": "Médecin",
@@ -211,5 +217,28 @@
   "settings_logout": "Se déconnecter",
   "settings_logout_confirm_title": "Se déconnecter ?",
   "settings_logout_confirm_body": "Vous devrez vous reconnecter pour prendre rendez-vous ou consulter vos dossiers.",
-  "action_cancel": "Annuler"
+  "action_cancel": "Annuler",
+
+  "chat_message_a_clinic": "Écrire à une clinique",
+  "chat_message_this_clinic": "Écrire à cette clinique",
+  "chat_list_empty": "Aucune conversation pour le moment. Écrivez à une clinique pour commencer.",
+  "chat_disclaimer": "Cette messagerie ne remplace pas une consultation médicale en personne.",
+  "chat_thread_empty": "Dites bonjour — un membre de l'équipe de la clinique vous répondra ici.",
+  "chat_appointment_context": "À propos de votre rendez-vous du {date}",
+  "chat_message_hint": "Écrivez un message…",
+
+  "settings_profile": "Profil",
+  "settings_profile_saved": "Profil mis à jour.",
+  "settings_date_of_birth": "Date de naissance",
+  "settings_date_of_birth_hint": "Choisir une date",
+  "settings_national_id": "Numéro d'identité nationale",
+  "settings_notification_preferences": "Préférences de notification",
+  "settings_pref_appointment_reminders": "Rappels de rendez-vous",
+  "settings_pref_chat_messages": "Messages de discussion",
+  "settings_pref_review_replies": "Réponses aux avis",
+  "settings_change_password": "Changer le mot de passe",
+
+  "notifications_mark_all_read": "Tout marquer comme lu",
+  "notifications_empty": "Aucune notification pour le moment.",
+  "notification_view": "Voir"
 }

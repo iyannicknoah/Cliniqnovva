@@ -17,6 +17,30 @@ function actorFrom(req) {
   return { actorId: req.user?.uid, role: req.user?.role, actorRole: req.user?.role, scope: req.scope };
 }
 
+/**
+ * POST /resolve-for-clinic — Part 25. The Patient App's chat feature
+ * writes /chats docs directly to Firestore (see firestore.rules), but a
+ * chat's `patientId` field must be the caller's walk-in /patients record
+ * id for that clinic (same convention appointments/reviews/invoices/
+ * medical-records already use) — this is the one step that still needs
+ * the backend first, reusing the exact same
+ * getOrCreatePatientRecordForClinic() the booking flow already calls.
+ */
+async function resolveForClinic(req, res, next) {
+  try {
+    const { clinicId, branchId } = req.body;
+    if (!clinicId) return res.status(400).json({ error: 'clinicId is required' });
+    const record = await patientsService.getOrCreatePatientRecordForClinic({
+      uid: req.user.uid,
+      clinicId,
+      branchId,
+    });
+    res.json({ patientId: record.id });
+  } catch (err) {
+    next(err);
+  }
+}
+
 // Part 10 Task 3 — POST (was GET in Part 9; the request now carries the
 // same shape POST /api/patients itself checks against, so this stays a
 // reusable pre-flight the client can call any time, e.g. before opening
@@ -282,4 +306,5 @@ module.exports = {
   getMedicalRecords,
   getInvoices,
   getReviews,
+  resolveForClinic,
 };

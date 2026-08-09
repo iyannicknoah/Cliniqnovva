@@ -25,6 +25,9 @@
   "error_identifier_password_required": "Enter your phone/email and password.",
   "error_enter_identifier_first": "Enter your phone or email first.",
   "error_generic": "Something went wrong signing you in. Please try again.",
+  "error_unexpected": "Something went wrong. Please try again.",
+  "offline_message": "You're offline. Some things may not load until you're back online.",
+  "offline_retry": "Retry",
 
   "info_password_reset_sent": "If an account exists, a password reset email is on its way.",
 
@@ -48,8 +51,11 @@
   "home_popular_clinics": "Popular Clinics",
   "home_new_clinics": "New on Cliniqnovva",
   "home_upcoming_appointment": "Upcoming Appointment",
+  "home_no_upcoming": "No upcoming appointments yet.",
   "action_reschedule": "Reschedule",
   "action_cancel_appointment": "Cancel",
+  "action_book_appointment": "Book an appointment",
+  "action_view_bookings": "View your bookings",
 
   "browse_search_hint": "Search clinics, doctors, specialties",
   "browse_sort_popular": "Most Popular",
@@ -104,8 +110,8 @@
 
   "bookings_tab_upcoming": "Upcoming",
   "bookings_tab_past": "Past",
-  "bookings_no_upcoming": "No upcoming appointments.",
-  "bookings_no_past": "No past appointments yet.",
+  "bookings_no_upcoming": "Nothing on the calendar yet. Ready when you are.",
+  "bookings_no_past": "No past appointments yet — your visit history will show up here.",
 
   "review_prompt_title": "How was your visit?",
   "review_prompt_body": "Leave a review to help other patients and let the clinic know how it went.",
@@ -131,7 +137,7 @@
   "records_documents_title": "Documents",
   "records_visit_history_title": "Visit History",
   "records_no_visits": "No visits recorded yet.",
-  "records_empty": "No medical records yet.",
+  "records_empty": "No medical records yet. They'll appear here after your first visit.",
   "records_doctor_at": "Dr. {doctor} · {clinic}",
   "records_visit_detail_title": "Visit Details",
   "records_visit_not_found": "Visit not found.",
@@ -167,7 +173,7 @@
   "review_submitted_title": "Thanks for your feedback!",
   "action_done": "Done",
 
-  "my_reviews_empty": "You haven't left any reviews yet.",
+  "my_reviews_empty": "You haven't left any reviews yet. Share how a visit went once it's done.",
   "review_rate_clinic_label": "Clinic",
   "review_rate_doctor_label": "Dr. {doctor}",
   "review_rate_doctor_generic_label": "Doctor",
@@ -211,5 +217,28 @@
   "settings_logout": "Log out",
   "settings_logout_confirm_title": "Log out?",
   "settings_logout_confirm_body": "You'll need to sign in again to book appointments or view your records.",
-  "action_cancel": "Cancel"
+  "action_cancel": "Cancel",
+
+  "chat_message_a_clinic": "Message a Clinic",
+  "chat_message_this_clinic": "Message this Clinic",
+  "chat_list_empty": "No conversations yet. Message a clinic to get started.",
+  "chat_disclaimer": "This chat is not a substitute for an in-person medical consultation.",
+  "chat_thread_empty": "Say hello — a member of the clinic team will reply here.",
+  "chat_appointment_context": "About your appointment on {date}",
+  "chat_message_hint": "Type a message…",
+
+  "settings_profile": "Profile",
+  "settings_profile_saved": "Profile updated.",
+  "settings_date_of_birth": "Date of birth",
+  "settings_date_of_birth_hint": "Select a date",
+  "settings_national_id": "National ID",
+  "settings_notification_preferences": "Notification Preferences",
+  "settings_pref_appointment_reminders": "Appointment reminders",
+  "settings_pref_chat_messages": "Chat messages",
+  "settings_pref_review_replies": "Review replies",
+  "settings_change_password": "Change Password",
+
+  "notifications_mark_all_read": "Mark all read",
+  "notifications_empty": "No notifications yet.",
+  "notification_view": "View"
 }

@@ -26,6 +26,24 @@ service cloud.firestore {
     function isClinicAdmin() { return isSignedIn() && role() == 'clinic_admin'; }
     function inSameClinic(docClinicId) { return isSignedIn() && docClinicId == clinicId(); }
     function inSameBranch(docBranchId) { return isSignedIn() && docBranchId == branchId(); }
+    // Part 25 — a /patients/{patientId} doc is a walk-in-style record
+    // created by staff (POST /api/patients) OR silently provisioned by
+    // getOrCreatePatientRecordForClinic() on a patient's first booking at a
+    // clinic — its id is NEVER the owning Patient App account's own
+    // request.auth.uid (see patients.service.js's module docstring and
+    // isPatientRecordOwnedBy()). A plain `request.auth.uid == patientId`
+    // check (the old shape of the /patients and /chats rules below) can
+    // therefore never actually match a genuine Patient App caller — the
+    // real join is the record's own linkedAppAccountId field, set by
+    // linkPatientAccount()/getOrCreatePatientRecordForClinic(). This
+    // mirrors the exact bug found and fixed repeatedly at the service layer
+    // in Parts 21-24 (appointments/reviews/invoices/medicalRecords), here
+    // in the rules file instead.
+    function isLinkedPatientAccount(patientId) {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/patients/$(patientId))
+        && get(/databases/$(database)/documents/patients/$(patientId)).data.linkedAppAccountId == request.auth.uid;
+    }
 
     // Default deny for anything not explicitly matched below.
     match /{document=**} {
@@ -67,7 +85,7 @@ service cloud.firestore {
     match /patients/{patientId} {
       allow read: if isSuperAdmin()
         || inSameClinic(resource.data.clinicId)
-        || request.auth.uid == patientId;
+        || isLinkedPatientAccount(patientId);
       allow write: if false; // dedupe/merge logic (6.6A) must run server-side
     }
 
@@ -75,14 +93,14 @@ service cloud.firestore {
       allow read: if isSuperAdmin()
         || inSameClinic(resource.data.clinicId)
         || inSameBranch(resource.data.branchId)
-        || request.auth.uid == resource.data.patientId;
+        || isLinkedPatientAccount(resource.data.patientId);
       allow write: if false; // double-booking transaction (6.7) must run server-side
     }
 
     match /medicalRecords/{id} {
       allow read: if isSuperAdmin()
         || inSameBranch(resource.data.branchId)
-        || request.auth.uid == resource.data.patientId;
+        || isLinkedPatientAccount(resource.data.patientId);
       allow write: if false; // clinical writes are backend-only, always
     }
 
@@ -90,7 +108,7 @@ service cloud.firestore {
       allow read: if isSuperAdmin()
         || inSameClinic(resource.data.clinicId)
         || inSameBranch(resource.data.branchId)
-        || request.auth.uid == resource.data.patientId;
+        || isLinkedPatientAccount(resource.data.patientId);
       allow write: if false; // totals/balances recalculated server-side only
     }
 
@@ -149,21 +167,21 @@ service cloud.firestore {
     // owning branch). Never expand this pattern to other collections without
     // updating the spec's "no direct client writes" rule deliberately.
     match /chats/{chatId} {
+      // Part 25 — patientId on every /chats doc (staff- or patient-created)
+      // is a walk-in /patients record id, same convention as appointments/
+      // medicalRecords/invoices above — NOT the Patient App account's own
+      // uid (the old Part 15 comment here assumed the latter; verified
+      // wrong once a real Patient App existed to check against). Ownership
+      // is isLinkedPatientAccount(), not a direct uid comparison.
       allow read: if isSignedIn()
-        && (request.auth.uid == resource.data.patientId
+        && (isLinkedPatientAccount(resource.data.patientId)
             || inSameBranch(resource.data.branchId)
             || isSuperAdmin());
-      // Part 15 Task 4: there is no Patient App yet, so a patient can't be
-      // request.auth.uid == patientId (patients have no account/token at
-      // all). Staff at the chat's own branch may create a thread on a
-      // patient's behalf until one exists — the patientId branch stays
-      // here, unchanged, for the day a Patient App calls this same rule
-      // with request.auth.uid actually equal to the patient's own uid.
       allow create: if isSignedIn()
-        && (request.auth.uid == request.resource.data.patientId
+        && (isLinkedPatientAccount(request.resource.data.patientId)
             || inSameBranch(request.resource.data.branchId));
       allow update: if isSignedIn()
-        && (request.auth.uid == resource.data.patientId || inSameBranch(resource.data.branchId));
+        && (isLinkedPatientAccount(resource.data.patientId) || inSameBranch(resource.data.branchId));
       allow delete: if false;
 
       match /messages/{messageId} {
@@ -171,15 +189,15 @@ service cloud.firestore {
           return get(/databases/$(database)/documents/chats/$(chatId)).data;
         }
         allow read: if isSignedIn()
-          && (request.auth.uid == chatDoc().patientId
+          && (isLinkedPatientAccount(chatDoc().patientId)
               || inSameBranch(chatDoc().branchId)
               || isSuperAdmin());
         allow create: if isSignedIn()
           && request.resource.data.senderId == request.auth.uid
-          && (request.auth.uid == chatDoc().patientId || inSameBranch(chatDoc().branchId));
+          && (isLinkedPatientAccount(chatDoc().patientId) || inSameBranch(chatDoc().branchId));
         // Messages are soft-deleted only (never hard-deleted) — spec 6.13.
         allow update: if isSignedIn()
-          && (request.auth.uid == chatDoc().patientId || inSameBranch(chatDoc().branchId));
+          && (isLinkedPatientAccount(chatDoc().patientId) || inSameBranch(chatDoc().branchId));
         allow delete: if false;
       }
     }

@@ -42,6 +42,8 @@ router.post('/request-password-reset', authRateLimiter, controller.requestPasswo
 
 // Any authenticated user reading their own profile.
 router.get('/me', verifyToken, controller.me);
+// Part 25 groundwork — any authenticated user saving their own push token.
+router.post('/fcm-token', authRateLimiter, verifyToken, controller.setFcmToken);
 
 // Part 19 — Patient App self-registration. Deliberately verifyToken-only,
 // no attachScope: the caller's Firebase Auth user already exists (created
@@ -55,5 +57,9 @@ router.post(
   verifyToken,
   controller.finalizePatientRegistration
 );
+// Part 26 — Settings screen's profile editing + notification preference
+// toggles. See auth.service.js#updatePatientProfile's doc comment for why
+// this edits /users/{uid} directly rather than reusing PUT /api/patients/:patientId.
+router.put('/patient/profile', authRateLimiter, verifyToken, controller.updatePatientProfile);
 
 module.exports = router;

@@ -16,4 +16,14 @@ router.post('/', requireRole(ROLES.PATIENT, ROLES.RECEPTIONIST, ROLES.BRANCH_ADM
 router.patch('/:id', requireRole(ROLES.PATIENT, ROLES.RECEPTIONIST, ROLES.BRANCH_ADMIN), controller.update);
 router.delete('/:id', requireRole(ROLES.PATIENT, ROLES.RECEPTIONIST, ROLES.BRANCH_ADMIN), controller.remove);
 
+// Part 25 Task 4 — called by whichever client just wrote a message
+// directly to Firestore (see chats.service.js's docstring); the handler
+// itself decides whether a notification is actually warranted, so it's
+// safe for either a staff or patient caller to hit this.
+router.post(
+  '/:id/notify-message',
+  requireRole(ROLES.PATIENT, ROLES.RECEPTIONIST, ROLES.BRANCH_ADMIN, ROLES.CLINIC_ADMIN, ROLES.DOCTOR, ROLES.NURSE),
+  controller.notifyMessage
+);
+
 module.exports = router;

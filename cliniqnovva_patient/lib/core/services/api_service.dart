@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 import '../constants/app_constants.dart';
 import 'firebase_service.dart';
@@ -12,6 +13,17 @@ class ApiException implements Exception {
 
   @override
   String toString() => message;
+}
+
+/// Part 27 Task 3 — every `AsyncValue.error` branch in the app used to
+/// render `'$e'` directly, which is only safe when [ApiException] is what
+/// actually got thrown. A Riverpod provider can throw anything (a raw
+/// Firestore stream error, a `TypeError` from bad JSON, a `FormatException`)
+/// and those would otherwise leak Dart/Firestore internals straight to the
+/// patient. Use `error.friendlyMessage` instead of `'$error'` everywhere an
+/// [AsyncValue]'s error is shown.
+extension FriendlyError on Object {
+  String get friendlyMessage => this is ApiException ? (this as ApiException).message : 'error_unexpected'.tr();
 }
 
 /// Dio-based HTTP client for the Node.js backend — same instance/interceptor

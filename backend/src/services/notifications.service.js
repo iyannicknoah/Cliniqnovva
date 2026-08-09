@@ -28,25 +28,58 @@ function httpError(status, message) {
 
 /**
  * Best-effort push (spec: "Push (FCM) is the default free channel"). Silent
- * no-op if the recipient has no `fcmToken` on their /users doc — there is
- * no client-side token-registration flow yet in this build, so this is
- * wired correctly for the moment one exists, with nothing to revisit. Never
+ * no-op if the recipient has no `fcmToken` on their /users doc. Never
  * throws — a push failure must not affect the in-app notification, which
  * has already been written by the time this runs.
+ *
+ * `data` (Part 26 Task 3) — FCM's `data` payload must be a flat
+ * `Record<string,string>`, so every value is coerced with `String()`
+ * before sending; without this, a tapped push (background/terminated app)
+ * would have nothing to deep-link with — the Notification Center's own
+ * in-app list already has the full Firestore doc to read `data` from, but
+ * the OS notification tray only ever sees whatever's in the FCM message
+ * itself.
  */
-async function sendPush(recipientId, { title, body }) {
+async function sendPush(recipientId, { title, body, data }) {
   try {
     const userDoc = await db.collection('users').doc(recipientId).get();
     const token = userDoc.exists ? userDoc.data().fcmToken : null;
     if (!token) return;
-    await messaging.send({ token, notification: { title, body } });
+    const stringData = data ? Object.fromEntries(Object.entries(data).map(([k, v]) => [k, String(v)])) : undefined;
+    await messaging.send({ token, notification: { title, body }, ...(stringData ? { data: stringData } : {}) });
   } catch (err) {
     console.warn(`[notifications] push to ${recipientId} failed: ${err.message}`);
   }
 }
 
-/** Writes one notification doc for one recipient, plus a best-effort push. */
-async function create({ clinicId, branchId, recipientId, recipientRole, type, title, body, data }) {
+/**
+ * Part 26 — a patient may turn off one notification TYPE entirely
+ * (Task 1: "toggles ... respected by the backend notification triggers";
+ * Task 3: "the backend should check this preference before sending" —
+ * both read as "skip the whole notification," not just its push channel,
+ * so a disabled type never shows up in the Notification Center either).
+ * Opt-OUT model: absent map, absent key, or any value other than
+ * `false` all mean enabled — a patient who never touched Settings still
+ * gets every notification, same as before this feature existed.
+ */
+async function isNotificationEnabled(recipientId, preferenceKey) {
+  const doc = await db.collection('users').doc(recipientId).get();
+  const prefs = doc.exists ? doc.data().notificationPreferences : null;
+  return !prefs || prefs[preferenceKey] !== false;
+}
+
+/**
+ * Writes one notification doc for one recipient, plus a best-effort push.
+ * `preferenceKey` (Part 26, optional) — only ever passed by the three
+ * triggers that target a patient recipient (notifyAppointmentReminder,
+ * chats.service.js#notifyNewMessage, notifyReviewReply below); staff-
+ * targeting calls never pass it; staff have no preferences to check.
+ */
+async function create({ clinicId, branchId, recipientId, recipientRole, type, title, body, data, preferenceKey }) {
+  if (preferenceKey && !(await isNotificationEnabled(recipientId, preferenceKey))) {
+    return null;
+  }
+
   const doc = {
     clinicId,
     branchId: branchId || null,
@@ -60,7 +93,7 @@ async function create({ clinicId, branchId, recipientId, recipientRole, type, ti
     createdAt: new Date().toISOString(),
   };
   const ref = await db.collection('notifications').add(doc);
-  await sendPush(recipientId, { title, body });
+  await sendPush(recipientId, { title, body, data: { ...(data || {}), type, notificationId: ref.id } });
   return { id: ref.id, ...doc };
 }
 
@@ -219,6 +252,34 @@ async function notifyAppointmentReminder(appointment, { threshold, doctorName, c
     title,
     body,
     data: { appointmentId: appointment.id, threshold },
+    preferenceKey: 'appointmentReminders',
+  });
+}
+
+/**
+ * Review-reply alert (Part 26) — pushes to the PATIENT who wrote the
+ * review, when staff reply to it. No trigger of any kind existed for this
+ * before Part 26 (reviews.service.js#reply() never called into this
+ * module) — confirmed by reading it in full, not assumed. Same
+ * linkedAppAccountId resolution as notifyAppointmentReminder (review.
+ * patientId is a walk-in record id, not a uid) and same silent no-op for
+ * an unlinked walk-in-only patient.
+ */
+async function notifyReviewReply(review) {
+  const patientDoc = await db.collection('patients').doc(review.patientId).get();
+  const linkedUid = patientDoc.exists ? patientDoc.data().linkedAppAccountId : null;
+  if (!linkedUid) return;
+
+  await create({
+    clinicId: review.clinicId,
+    branchId: review.branchId,
+    recipientId: linkedUid,
+    recipientRole: ROLES.PATIENT,
+    type: 'reviewReply',
+    title: 'The clinic replied to your review',
+    body: review.staffReply?.text ? review.staffReply.text.slice(0, 120) : 'The clinic replied to your review.',
+    data: { reviewId: review.id },
+    preferenceKey: 'reviewReplies',
   });
 }
 
@@ -299,6 +360,8 @@ module.exports = {
   notifyCancellation,
   notifyReschedule,
   notifyAppointmentReminder,
+  notifyReviewReply,
+  isNotificationEnabled,
   notifyLowStock,
   notifyPaymentRecorded,
   list,

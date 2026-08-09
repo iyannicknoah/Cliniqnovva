@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/services/api_service.dart';
 import '../../core/theme/app_icons.dart';
 import '../../core/theme/theme_ext.dart';
 import '../../shared/widgets/app_icon.dart';
@@ -49,7 +50,7 @@ class ReceiptsScreen extends ConsumerWidget {
       ),
       body: async.when(
         loading: () => const LoadingWidget(),
-        error: (e, st) => Center(child: Text('$e', style: TextStyle(color: context.appSubtext))),
+        error: (e, st) => Center(child: Text(e.friendlyMessage, style: TextStyle(color: context.appSubtext))),
         data: (invoices) {
           if (invoices.isEmpty) {
             return Center(child: Text('receipts_empty'.tr(), style: TextStyle(color: context.appSubtext)));

@@ -3,12 +3,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/providers/patient_profile_provider.dart';
 import '../../core/theme/app_icons.dart';
 import '../../core/theme/theme_ext.dart';
 import '../../shared/widgets/app_icon.dart';
 import '../../shared/widgets/cliniqnovva_button.dart';
 import '../../shared/widgets/cliniqnovva_card.dart';
 import '../auth/providers/auth_provider.dart';
+import 'widgets/notification_preferences_section.dart';
+import 'widgets/profile_section.dart';
 
 /// Bottom-nav tab (Task 6). The one screen in this part that's fully wired
 /// rather than a placeholder — it's the concrete consumer of
@@ -41,6 +44,30 @@ class SettingsScreen extends ConsumerWidget {
     }
   }
 
+  /// Reuses the same `sendPasswordResetEmail` flow the login screen's
+  /// "Forgot password?" link already relies on (Firebase Auth's own
+  /// `sendPasswordResetEmail`) instead of a raw old/new-password form —
+  /// that alternative would need Firebase Auth reauthentication
+  /// (`updatePassword()` requires a recent sign-in), which this sidesteps
+  /// entirely. The identifier is the signed-in patient's own phone/email
+  /// (whichever exists), not typed in again.
+  Future<void> _changePassword(BuildContext context, WidgetRef ref) async {
+    final profile = ref.read(patientProfileProvider).valueOrNull;
+    final identifier = (profile?['email'] as String?) ?? (profile?['phone'] as String?);
+    if (identifier == null || identifier.isEmpty) return;
+
+    try {
+      await ref.read(authNotifierProvider.notifier).sendPasswordResetEmail(identifier);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('info_password_reset_sent'.tr())));
+      }
+    } on AuthException catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final themeMode = ref.watch(themeNotifierProvider);
@@ -57,6 +84,10 @@ class SettingsScreen extends ConsumerWidget {
               style: TextStyle(color: context.appText, fontSize: 20, fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 20),
+            const ProfileSection(),
+            const SizedBox(height: 14),
+            const NotificationPreferencesSection(),
+            const SizedBox(height: 14),
             CliniqnovvaCard(
               title: 'settings_appearance'.tr(),
               child: Row(
@@ -121,6 +152,12 @@ class SettingsScreen extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: 20),
+            CliniqnovvaButton.text(
+              label: 'settings_change_password'.tr(),
+              isFullWidth: true,
+              onPressed: () => _changePassword(context, ref),
+            ),
+            const SizedBox(height: 12),
             CliniqnovvaButton(
               label: 'settings_logout'.tr(),
               onPressed: () => _confirmLogout(context, ref),

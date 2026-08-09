@@ -2,6 +2,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/services/api_service.dart';
 import '../../../core/theme/theme_ext.dart';
 import '../../../shared/widgets/loading_widget.dart';
 import '../models/slot_model.dart';
@@ -38,7 +39,7 @@ class SlotChipPicker extends ConsumerWidget {
 
     return async.when(
       loading: () => const LoadingWidget(),
-      error: (e, st) => Text('$e', style: TextStyle(color: context.appSubtext)),
+      error: (e, st) => Text(e.friendlyMessage, style: TextStyle(color: context.appSubtext)),
       data: (slots) {
         if (slots.isEmpty) {
           return Text('booking_no_slots'.tr(), style: TextStyle(color: context.appSubtext, fontSize: 13));

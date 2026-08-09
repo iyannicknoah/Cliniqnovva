@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/services/api_service.dart';
 import '../../../core/services/firebase_service.dart';
 import '../../auth/providers/access_control_provider.dart';
 import '../models/chat_model.dart';
@@ -131,7 +132,7 @@ class ChatsNotifier extends AsyncNotifier<void> {
     if (senderId == null) return;
 
     final chatRef = FirebaseService.db.collection('chats').doc(chatId);
-    await chatRef.collection('messages').add({
+    final messageRef = await chatRef.collection('messages').add({
       'senderId': senderId,
       'senderRole': senderRole,
       'text': trimmed,
@@ -142,6 +143,18 @@ class ChatsNotifier extends AsyncNotifier<void> {
       'lastMessage': trimmed,
       'lastMessageAt': FieldValue.serverTimestamp(),
     });
+
+    // Part 25 Task 4 — pushes a notification to the patient, IF this
+    // message is actually from staff (the backend re-checks senderRole
+    // itself, see chats.service.js#notifyNewMessage). Best-effort: the
+    // message write above already succeeded, this must never undo that or
+    // surface as a failure to the sending staff member.
+    try {
+      await ApiService.instance.post<Map<String, dynamic>>(
+        '/api/v1/chats/$chatId/notify-message',
+        data: {'messageId': messageRef.id},
+      );
+    } catch (_) {}
   }
 
   /// Marks every patient-sent message in this thread read — called when a

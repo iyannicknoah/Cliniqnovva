@@ -4,24 +4,26 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../core/services/firebase_service.dart';
+import '../../core/providers/patient_profile_provider.dart';
+import '../../core/services/api_service.dart';
+import '../../core/services/notification_service.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_icons.dart';
 import '../../core/theme/theme_ext.dart';
+import '../../shared/widgets/app_icon.dart';
 import '../../shared/widgets/cliniqnovva_button.dart';
 import '../../shared/widgets/cliniqnovva_card.dart';
 import '../../shared/widgets/loading_widget.dart';
 import '../browse/models/branch_summary.dart';
 import '../browse/providers/browse_provider.dart';
 import '../browse/widgets/branch_card.dart';
+import '../notifications/widgets/notification_bell.dart';
 
-/// Streams the signed-in patient's own /users/{uid} doc (Firestore rules
-/// already allow `request.auth.uid == userId` reads — no backend call
-/// needed just to show a name).
-final _profileProvider = StreamProvider<Map<String, dynamic>?>((ref) {
-  final uid = FirebaseService.currentUserId;
-  if (uid == null) return Stream.value(null);
-  return FirebaseService.userDoc(uid).snapshots().map((doc) => doc.data());
-});
+/// Registers this device's push token once per app session (Part 25 Task
+/// 4's prerequisite) — deliberately NOT `.autoDispose`, so it runs exactly
+/// once for as long as the app process lives, regardless of how many times
+/// Home rebuilds or the user navigates away and back.
+final _fcmRegistrationProvider = FutureProvider<void>((ref) => NotificationService.registerDeviceToken());
 
 /// Bottom-nav tab (Task 6 of Part 19; real content added Part 20 Task 1):
 /// greeting, upcoming-appointment card (once Part 21 has bookings to show),
@@ -31,13 +33,14 @@ class HomeScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final profile = ref.watch(_profileProvider);
+    final profile = ref.watch(patientProfileProvider);
+    ref.watch(_fcmRegistrationProvider);
 
     return Scaffold(
       backgroundColor: context.appBg,
       body: profile.when(
         loading: () => const LoadingWidget(),
-        error: (e, st) => Center(child: Text('$e', style: TextStyle(color: context.appSubtext))),
+        error: (e, st) => Center(child: Text(e.friendlyMessage, style: TextStyle(color: context.appSubtext))),
         data: (data) {
           final name = (data?['name'] as String?)?.split(' ').first ?? '';
           return SafeArea(
@@ -52,11 +55,24 @@ class HomeScreen extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'home_greeting'.tr(namedArgs: {'name': name}),
-                      style: TextStyle(color: context.appText, fontSize: 20, fontWeight: FontWeight.w600),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'home_greeting'.tr(namedArgs: {'name': name}),
+                                style: TextStyle(color: context.appText, fontSize: 20, fontWeight: FontWeight.w600),
+                              ),
+                              Text('home_subtitle'.tr(), style: TextStyle(color: context.appSubtext)),
+                            ],
+                          ),
+                        ),
+                        const NotificationBell(),
+                      ],
                     ),
-                    Text('home_subtitle'.tr(), style: TextStyle(color: context.appSubtext)),
                     const _UpcomingAppointmentSection(),
                     const SizedBox(height: 24),
                     CliniqnovvaButton(
@@ -93,7 +109,20 @@ class _UpcomingAppointmentSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final appointment = ref.watch(upcomingAppointmentProvider).valueOrNull;
-    if (appointment == null) return const SizedBox(height: 20);
+    if (appointment == null) {
+      return Padding(
+        padding: const EdgeInsets.only(top: 20),
+        child: Row(
+          children: [
+            AppIcon(AppIcons.calendar, size: 18, color: context.appSubtext),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text('home_no_upcoming'.tr(), style: TextStyle(color: context.appSubtext, fontSize: 13)),
+            ),
+          ],
+        ),
+      );
+    }
 
     // Data source lands in Part 21 (booking) — this card is ready to render
     // whatever shape that endpoint returns once upcomingAppointmentProvider

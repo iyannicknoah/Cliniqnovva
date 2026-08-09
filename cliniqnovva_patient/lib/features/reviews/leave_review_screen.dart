@@ -82,7 +82,7 @@ class _LeaveReviewScreenState extends ConsumerState<LeaveReviewScreen> {
       ),
       body: appointmentAsync.when(
         loading: () => const LoadingWidget(),
-        error: (e, st) => Center(child: Text('$e', style: TextStyle(color: context.appSubtext))),
+        error: (e, st) => Center(child: Text(e.friendlyMessage, style: TextStyle(color: context.appSubtext))),
         data: (appointment) {
           if (submitted != null) {
             return Center(

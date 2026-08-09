@@ -45,6 +45,11 @@ router.post('/', requireRole(...WRITE_ROLES), controller.create);
 // POST /'s own built-in duplicate check uses).
 router.post('/check-duplicate', requireRole(...WRITE_ROLES), controller.checkDuplicate);
 router.post('/merge', requireRole(...MERGE_ROLES), controller.merge);
+// Part 25 — Patient App's chat feature (before writing a /chats doc
+// directly to Firestore, it needs its own walk-in patientId for that
+// clinic). PATIENT-only, same as the other Part 21-24 patient-facing
+// additions below.
+router.post('/resolve-for-clinic', requireRole(ROLES.PATIENT), controller.resolveForClinic);
 
 // NOTE: literal-segment routes ('detail' above) MUST stay registered
 // BEFORE the '/:clinicId' catch-all below, or Express would capture

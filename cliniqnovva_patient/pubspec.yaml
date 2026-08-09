@@ -12,6 +12,29 @@ flutter_launcher_icons:
   ios: true
   image_path: "assets/images/logo.png"
   min_sdk_android: 21
+  # App Store rejects icons with an alpha channel — logo.png has one.
+  remove_alpha_ios: true
+  # Part 27 Task 4 — Android adaptive icon (foreground/background layers),
+  # not just the legacy square/round icon the app shipped with before.
+  # White background matches AppColors.pageBackground (light mode) / the
+  # "no mixing colors" rule; the transparent mark composites cleanly on it.
+  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_foreground: "assets/images/splash_logo.png"
+
+# Part 27 Task 4 — branded splash screen (was the stock Flutter placeholder
+# on both platforms before this). White/black backgrounds match
+# AppColors.pageBackground/pageBackgroundDark exactly — same theme-aware
+# background rule as the rest of the app, no new color introduced.
+flutter_native_splash:
+  color: "#FFFFFF"
+  image: assets/images/splash_logo.png
+  color_dark: "#000000"
+  image_dark: assets/images/splash_logo.png
+  android_12:
+    image: assets/images/splash_logo.png
+    icon_background_color: "#FFFFFF"
+    image_dark: assets/images/splash_logo.png
+    icon_background_color_dark: "#000000"
 
 dependencies:
   flutter:
@@ -37,12 +60,14 @@ dependencies:
   go_router: 15.1.2
   easy_localization: ^3.0.8
   heroicons: ^0.11.0
+  connectivity_plus: ^7.0.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
   flutter_launcher_icons: ^0.14.4
+  flutter_native_splash: ^2.4.6
 
 flutter:
 

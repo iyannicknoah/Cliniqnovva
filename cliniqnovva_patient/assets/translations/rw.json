@@ -25,6 +25,9 @@
   "error_identifier_password_required": "Andika telefoni/imeyili n'ijambo ry'ibanga byawe.",
   "error_enter_identifier_first": "Banza wandike telefoni cyangwa imeyili yawe.",
   "error_generic": "Habaye ikibazo mu kwinjira. Ongera ugerageze.",
+  "error_unexpected": "Habaye ikibazo. Ongera ugerageze.",
+  "offline_message": "Nta murandasi ufite. Ibintu bimwe ntibishobora gupakira kugeza ugarutse kuri murandasi.",
+  "offline_retry": "Ongera ugerageze",
 
   "info_password_reset_sent": "Niba konti ibaho, imeyili yo guhindura ijambo ry'ibanga iraza.",
 
@@ -48,8 +51,11 @@
   "home_popular_clinics": "Ibitaro Bikunzwe",
   "home_new_clinics": "Bishya kuri Cliniqnovva",
   "home_upcoming_appointment": "Gahunda Iri Imbere",
+  "home_no_upcoming": "Nta gahunda iri imbere kuri ubu.",
   "action_reschedule": "Hindura Igihe",
   "action_cancel_appointment": "Kureka",
+  "action_book_appointment": "Tegura gahunda",
+  "action_view_bookings": "Reba gahunda zawe",
 
   "browse_search_hint": "Shakisha ibitaro, abaganga, ubuzobere",
   "browse_sort_popular": "Bikunzwe Cyane",
@@ -104,8 +110,8 @@
 
   "bookings_tab_upcoming": "Ziri Imbere",
   "bookings_tab_past": "Zarangiye",
-  "bookings_no_upcoming": "Nta gahunda iri imbere.",
-  "bookings_no_past": "Nta gahunda yarangiye kuri ubu.",
+  "bookings_no_upcoming": "Nta kintu cyateganyijwe kuri ubu. Tegura gahunda igihe cyose ubishatse.",
+  "bookings_no_past": "Nta gahunda yarangiye kuri ubu — amateka yawe azagaragara hano.",
 
   "review_prompt_title": "Wumvise ute ubuvuzi bwawe?",
   "review_prompt_body": "Tanga igitekerezo kugira ngo ufashe abandi barwayi n'ivuriro kumenya uko byagenze.",
@@ -131,7 +137,7 @@
   "records_documents_title": "Inyandiko",
   "records_visit_history_title": "Amateka y'Ubuvuzi",
   "records_no_visits": "Nta gusura kwanditswe kuri ubu.",
-  "records_empty": "Nta makuru y'ubuvuzi ahari kuri ubu.",
+  "records_empty": "Nta makuru y'ubuvuzi ahari kuri ubu. Azagaragara nyuma y'isura yawe ya mbere.",
   "records_doctor_at": "Dogiteri {doctor} · {clinic}",
   "records_visit_detail_title": "Amakuru y'Isura",
   "records_visit_not_found": "Isura ntiboneka.",
@@ -167,7 +173,7 @@
   "review_submitted_title": "Murakoze ku gitekerezo cyanyu!",
   "action_done": "Byarangiye",
 
-  "my_reviews_empty": "Nturaha igitekerezo na kimwe.",
+  "my_reviews_empty": "Nturaha igitekerezo na kimwe. Sangira uko isura yagenze nyuma yayo.",
   "review_rate_clinic_label": "Ivuriro",
   "review_rate_doctor_label": "Dogiteri {doctor}",
   "review_rate_doctor_generic_label": "Umuganga",
@@ -211,5 +217,28 @@
   "settings_logout": "Sohoka",
   "settings_logout_confirm_title": "Sohoka?",
   "settings_logout_confirm_body": "Uzasubira kwinjira kugira ngo ufate gahunda cyangwa urebe amakuru yawe.",
-  "action_cancel": "Reka"
+  "action_cancel": "Reka",
+
+  "chat_message_a_clinic": "Andikira Ivuriro",
+  "chat_message_this_clinic": "Andikira iri Vuriro",
+  "chat_list_empty": "Nta kiganiro kirahari. Andikira ivuriro kugira ngo utangire.",
+  "chat_disclaimer": "Iki kiganiro ntikisimbura kubonana n'umuganga ubwawe.",
+  "chat_thread_empty": "Vuga muraho — umukozi w'ivuriro azagusubiza hano.",
+  "chat_appointment_context": "Ku byerekeye gahunda yawe yo ku {date}",
+  "chat_message_hint": "Andika ubutumwa…",
+
+  "settings_profile": "Umwirondoro",
+  "settings_profile_saved": "Umwirondoro wahinduwe.",
+  "settings_date_of_birth": "Itariki y'amavuko",
+  "settings_date_of_birth_hint": "Hitamo itariki",
+  "settings_national_id": "Indangamuntu",
+  "settings_notification_preferences": "Uburyo bwo Kumenyeshwa",
+  "settings_pref_appointment_reminders": "Kwibutswa gahunda",
+  "settings_pref_chat_messages": "Ubutumwa bw'ikiganiro",
+  "settings_pref_review_replies": "Ibisubizo ku bitekerezo",
+  "settings_change_password": "Hindura Ijambo ry'Ibanga",
+
+  "notifications_mark_all_read": "Byose ni ibyasomwe",
+  "notifications_empty": "Nta menyesha rihari kuri ubu.",
+  "notification_view": "Reba"
 }

@@ -348,6 +348,36 @@ growth/trend chart rather than introducing a new chart style or color.
 
 ## Change log
 
+- **2026-08-09 (Patient App: empty states, offline banner, app icon/splash —
+  Part 27 Tasks 2-4, `cliniqnovva_patient` only, no new tokens)** —
+  `cliniqnovva_patient/lib/shared/widgets/empty_state.dart` is a
+  byte-for-byte port of the web dashboard's `EmptyState` (icon + warm
+  one-liner + optional action button, both-or-neither) — every prior empty
+  list in the Patient App (My Bookings, Medical Records, Chat, My Reviews)
+  was a bare `context.appSubtext` `Text`, same starting point the web
+  dashboard's own Part 17 pass fixed. Wired into those four screens plus a
+  small inline (non-full-page) version on Home's upcoming-appointment card,
+  which previously rendered nothing at all when there was no booking to
+  show. `offline_banner.dart` + `core/providers/connectivity_provider.dart`
+  mirror the web dashboard's own Part 17 Task 8 pair (same `errorRed` strip
+  pinned above the app via `MaterialApp.router`'s `builder:`, same
+  `AppIcons.offline` / `HeroIcons.signalSlash`) — deliberately a smaller
+  port: the web version also drives a local offline-write queue (walk-in
+  registration/vitals/check-in typed while offline) that has no Patient App
+  equivalent, so only the connectivity strip itself was copied, not the
+  queue/sync machinery. New dependency: `connectivity_plus` (same version
+  as the web app already pins). Launcher icon regenerated as a proper
+  Android adaptive icon (`adaptive_icon_background: "#FFFFFF"` +
+  `adaptive_icon_foreground`, the transparent brand mark) instead of the
+  legacy flat icon it shipped with since Part 19 — background matches
+  `AppColors.pageBackground` exactly, no new color. `remove_alpha_ios: true`
+  added after `flutter_launcher_icons` warned the base icon has an alpha
+  channel (App Store rejects that). Splash screen added via
+  `flutter_native_splash` for the first time — was the stock unbranded
+  Flutter placeholder on both platforms before this; white (light) / pure
+  black (dark) backgrounds, same as `AppColors.pageBackground`/
+  `pageBackgroundDark` — no new color introduced here either, consistent
+  with "No mixing colors."
 - **2026-07-30 (Dashboard: Quick Actions back to a column at 45% width,
   revenue chart always renders, section reorder)** — Explicit user
   instruction, same day as the two changes below it.
@@ -492,6 +522,44 @@ growth/trend chart rather than introducing a new chart style or color.
   the linear sequence from wherever it was, so it shows only the existing
   red `StatusBadge` instead of a broken/backtracked timeline. No new
   colors, radii, or fonts introduced anywhere in this part.
+- **2026-08-08 (Patient App: Settings profile form + Notification Center —
+  one new badge component, everything else reused)** — Part 26 of the
+  Master Context, `cliniqnovva_patient` only. **`NotificationBell`**
+  (`features/notifications/widgets/notification_bell.dart`) is the one
+  new piece: a bell `AppIcon` with a small `AppColors.errorRed` count
+  pill (`borderRadius: 8`, not a circle — a circle distorts once the
+  count needs two characters, i.e. "9+") positioned top-right, same
+  `errorRed` token the app already uses for destructive actions
+  (Cancel/Delete buttons). Notification Center rows and the Settings
+  profile form both reuse existing patterns exactly: unread dot in
+  `AppColors.skyBlue` (the system's second-primary accent — same role it
+  already plays as `RatingStars`'/`AvatarWidget`'s accent color, not a
+  new "unread" color), the profile form's date-of-birth field is a
+  tappable container styled with the same `context.appBorder`/12px-radius
+  input border every `CliniqnovvaTextField` already uses (opening the
+  existing themed date picker, see "Date pickers" above), and the
+  notification-preference toggles are the exact same `Switch` Settings'
+  Appearance section already had — no new colors, radii, or fonts
+  introduced anywhere in this part.
+- **2026-08-08 (Patient App: Chat — first messaging UI in either client,
+  built from existing tokens only)** — Part 25 of the Master Context,
+  `cliniqnovva_patient` only (`features/chat/`). Chat List rows reuse
+  `CliniqnovvaCard` + `AvatarWidget` (branch-initial avatar, same as every
+  other list row in this app) with a small unread dot in
+  `context.appPrimary`. Thread bubbles are new: "mine" (patient) bubbles
+  are `context.appPrimary`-filled with inverse text, "theirs" (staff)
+  bubbles are `context.appSecondaryBg` — the exact same filled/neutral
+  selected-vs-unselected language `BookingChip`/Browse's filter chips
+  already established (Part 20/21), just applied to a chat bubble instead
+  of a pill. The composer is a rounded-pill `TextField` (`context.
+  appSecondaryBg`, `borderRadius: 24`, matching the search-field radius
+  used elsewhere) with a circular `context.appPrimary` send button. Two
+  small full-width info banners sit above the message list: the fixed
+  disclaimer ("not a substitute for an in-person consultation," `context.
+  appSecondaryBg`) and, when the thread is linked to an appointment, a
+  tappable context banner in `AppColors.pillTealBg`/`pillTealText` — same
+  teal pill pair Browse's "New" badge already uses, not a new color. No
+  new colors, radii, or fonts introduced.
 - **2026-08-08 (Patient App: Reviews — new interactive star input; web
   Reviews screen gains a "Flagged" badge)** — Part 24 of the Master
   Context. `cliniqnovva_patient` gets **`StarRatingInput`**

@@ -33,7 +33,7 @@ function chatBlock() {
 test('chat rules: read is scoped to the chat\'s own patient, same-branch staff, or Super Admin', () => {
   const block = chatBlock();
   const readSection = block.slice(block.indexOf('allow read:'), block.indexOf('allow create:'));
-  assert.match(readSection, /request\.auth\.uid == resource\.data\.patientId/);
+  assert.match(readSection, /isLinkedPatientAccount\(resource\.data\.patientId\)/);
   assert.match(readSection, /inSameBranch\(resource\.data\.branchId\)/);
   assert.match(readSection, /isSuperAdmin\(\)/);
 });
@@ -41,8 +41,30 @@ test('chat rules: read is scoped to the chat\'s own patient, same-branch staff, 
 test('chat rules: create requires the caller to be the chat\'s own patient or staff at its branch', () => {
   const block = chatBlock();
   const createSection = block.slice(block.indexOf('allow create:'), block.indexOf('allow update:'));
-  assert.match(createSection, /request\.auth\.uid == request\.resource\.data\.patientId/);
+  assert.match(createSection, /isLinkedPatientAccount\(request\.resource\.data\.patientId\)/);
   assert.match(createSection, /inSameBranch\(request\.resource\.data\.branchId\)/);
+});
+
+// Part 25 — patientId on a /chats doc is a walk-in /patients record id
+// (same convention as appointments/medicalRecords/invoices), never the
+// Patient App account's own uid directly — isLinkedPatientAccount() is
+// the join, via that record's own linkedAppAccountId field. A prior
+// version of this rule (and this test file) assumed `request.auth.uid ==
+// ...patientId` was the right check; it never actually matched a real
+// Patient App caller, since no /patients doc's own id is ever a
+// Firebase uid. This guards against that specific regression coming back.
+test('chat rules: patient ownership is resolved via isLinkedPatientAccount(), not a direct uid==patientId comparison', () => {
+  const fnStart = rules.indexOf('function isLinkedPatientAccount(');
+  assert.ok(fnStart !== -1, 'firestore.rules must define isLinkedPatientAccount()');
+  const fnBody = rules.slice(fnStart, rules.indexOf('\n    }', fnStart));
+  assert.match(fnBody, /get\(\/databases\/\$\(database\)\/documents\/patients\/\$\(patientId\)\)\.data\.linkedAppAccountId == request\.auth\.uid/);
+
+  const block = chatBlock();
+  assert.ok(
+    !/request\.auth\.uid == resource\.data\.patientId/.test(block) &&
+      !/request\.auth\.uid == request\.resource\.data\.patientId/.test(block),
+    'the /chats rules must never fall back to a direct uid==patientId comparison — patientId is a walk-in record id, not a uid'
+  );
 });
 
 test('chat rules: delete is always denied — messages are soft-deleted only', () => {

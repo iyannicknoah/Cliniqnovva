@@ -77,7 +77,7 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
       ),
       body: branchAsync.when(
         loading: () => const LoadingWidget(),
-        error: (e, st) => Center(child: Text('$e', style: TextStyle(color: context.appSubtext))),
+        error: (e, st) => Center(child: Text(e.friendlyMessage, style: TextStyle(color: context.appSubtext))),
         data: (branchData) {
           if (appointment != null) {
             return _BookingSuccess(
@@ -175,7 +175,7 @@ class _BookingForm extends ConsumerWidget {
           const SizedBox(height: 10),
           departmentsAsync.when(
             loading: () => const LoadingWidget(),
-            error: (e, st) => Text('$e', style: TextStyle(color: context.appSubtext)),
+            error: (e, st) => Text(e.friendlyMessage, style: TextStyle(color: context.appSubtext)),
             data: (departments) => _DepartmentPicker(
               departments: departments,
               selected: departmentId,
@@ -188,7 +188,7 @@ class _BookingForm extends ConsumerWidget {
             const SizedBox(height: 10),
             servicesAsync.when(
               loading: () => const LoadingWidget(),
-              error: (e, st) => Text('$e', style: TextStyle(color: context.appSubtext)),
+              error: (e, st) => Text(e.friendlyMessage, style: TextStyle(color: context.appSubtext)),
               data: (services) {
                 final filtered = services.where((s) => s.departmentId == departmentId).toList();
                 return _ServicePicker(services: filtered, selected: serviceId, onSelected: onServiceChanged);

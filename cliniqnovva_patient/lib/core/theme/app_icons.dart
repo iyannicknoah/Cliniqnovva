@@ -32,6 +32,7 @@ class AppIcons {
   static const filterList = IconRef.hero(HeroIcons.adjustmentsHorizontal);
   static const calendar = IconRef.hero(HeroIcons.calendarDays);
   static const flag = IconRef.hero(HeroIcons.flag);
+  static const offline = IconRef.hero(HeroIcons.signalSlash);
 
   // Bottom nav (Task 6).
   static const navHome = IconRef.hero(HeroIcons.home);

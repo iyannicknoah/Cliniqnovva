@@ -10,6 +10,7 @@ import '../../core/theme/theme_ext.dart';
 import '../../shared/widgets/app_icon.dart';
 import '../../shared/widgets/cliniqnovva_button.dart';
 import '../../shared/widgets/cliniqnovva_card.dart';
+import '../../shared/widgets/empty_state.dart';
 import '../../shared/widgets/loading_widget.dart';
 import '../../shared/widgets/rating_stars.dart';
 import '../browse/providers/browse_provider.dart';
@@ -44,10 +45,15 @@ class MyReviewsScreen extends ConsumerWidget {
       ),
       body: async.when(
         loading: () => const LoadingWidget(),
-        error: (e, st) => Center(child: Text('$e', style: TextStyle(color: context.appSubtext))),
+        error: (e, st) => Center(child: Text(e.friendlyMessage, style: TextStyle(color: context.appSubtext))),
         data: (reviews) {
           if (reviews.isEmpty) {
-            return Center(child: Text('my_reviews_empty'.tr(), style: TextStyle(color: context.appSubtext)));
+            return EmptyState(
+              icon: AppIcons.star,
+              message: 'my_reviews_empty'.tr(),
+              actionLabel: 'action_view_bookings'.tr(),
+              onAction: () => context.go('/my-bookings'),
+            );
           }
           return ListView.separated(
             padding: const EdgeInsets.all(20),

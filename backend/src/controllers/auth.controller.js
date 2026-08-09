@@ -87,6 +87,41 @@ async function me(req, res) {
   res.status(501).json({ error: 'Not implemented yet: return current user profile from req.user' });
 }
 
+/** POST /api/auth/fcm-token — {token} -> {success: true}. See auth.service.js#setFcmToken's doc comment. */
+async function setFcmToken(req, res, next) {
+  try {
+    const { token } = req.body;
+    if (!token) return res.status(400).json({ error: 'token is required' });
+    await authService.setFcmToken(req.user.uid, token);
+    res.json({ success: true });
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * PUT /api/auth/patient/profile — Part 26 Settings screen. Any of
+ * name/phone/email/dateOfBirth/nationalId/notificationPreferences may be
+ * omitted (unchanged); see auth.service.js#updatePatientProfile's doc
+ * comment for why this is /users/{uid}, not PUT /api/patients/:patientId.
+ */
+async function updatePatientProfile(req, res, next) {
+  try {
+    const { name, phone, email, dateOfBirth, nationalId, notificationPreferences } = req.body;
+    const profile = await authService.updatePatientProfile(req.user.uid, {
+      name,
+      phone,
+      email,
+      dateOfBirth,
+      nationalId,
+      notificationPreferences,
+    });
+    res.json({ success: true, profile });
+  } catch (err) {
+    next(err);
+  }
+}
+
 /**
  * POST /api/auth/patient/check-duplicate — {phone?, nationalId?} ->
  * {matches}. Part 19 Task 3: called right after the Flutter app creates
@@ -152,6 +187,8 @@ module.exports = {
   requestPasswordReset,
   deactivateAccount,
   me,
+  setFcmToken,
+  updatePatientProfile,
   checkPatientDuplicate,
   finalizePatientRegistration,
 };

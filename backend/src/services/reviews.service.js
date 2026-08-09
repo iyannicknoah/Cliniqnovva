@@ -19,6 +19,7 @@
 //      isHidden reviews.
 const { db } = require('../config/firebase-admin');
 const patientsService = require('./patients.service');
+const notificationsService = require('./notifications.service');
 
 const EDIT_WINDOW_MS = 48 * 60 * 60 * 1000;
 
@@ -261,7 +262,18 @@ async function reply(id, text, actor) {
     repliedAt: new Date().toISOString(),
   };
   await db.collection('reviews').doc(id).update({ staffReply });
-  return { ...review, staffReply };
+  const updated = { ...review, staffReply };
+
+  // Part 26 — no trigger of any kind existed here before (confirmed by
+  // reading this function in full); best-effort, same non-blocking
+  // try/catch pattern as every other notify* hook in this codebase.
+  try {
+    await notificationsService.notifyReviewReply(updated);
+  } catch (err) {
+    console.warn(`[reviews] notifyReviewReply failed for ${id}: ${err.message}`);
+  }
+
+  return updated;
 }
 
 /**

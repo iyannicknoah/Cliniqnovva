@@ -86,7 +86,7 @@ class _EditReviewScreenState extends ConsumerState<EditReviewScreen> {
       ),
       body: async.when(
         loading: () => const LoadingWidget(),
-        error: (e, st) => Center(child: Text('$e', style: TextStyle(color: context.appSubtext))),
+        error: (e, st) => Center(child: Text(e.friendlyMessage, style: TextStyle(color: context.appSubtext))),
         data: (reviews) {
           ReviewModel? review;
           for (final r in reviews) {

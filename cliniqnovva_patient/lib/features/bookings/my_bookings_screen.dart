@@ -3,7 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/services/api_service.dart';
+import '../../core/theme/app_icons.dart';
 import '../../core/theme/theme_ext.dart';
+import '../../shared/widgets/empty_state.dart';
 import '../../shared/widgets/loading_widget.dart';
 import '../booking/models/appointment_model.dart';
 import 'providers/my_bookings_provider.dart';
@@ -51,7 +54,7 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen> {
             Expanded(
               child: async.when(
                 loading: () => const LoadingWidget(),
-                error: (e, st) => Center(child: Text('$e', style: TextStyle(color: context.appSubtext))),
+                error: (e, st) => Center(child: Text(e.friendlyMessage, style: TextStyle(color: context.appSubtext))),
                 data: (appointments) {
                   final today = todayInKigali();
                   final filtered = appointments.where((a) => isUpcoming(a, today) == _showUpcoming).toList()
@@ -62,11 +65,11 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen> {
                     });
 
                   if (filtered.isEmpty) {
-                    return Center(
-                      child: Text(
-                        _showUpcoming ? 'bookings_no_upcoming'.tr() : 'bookings_no_past'.tr(),
-                        style: TextStyle(color: context.appSubtext),
-                      ),
+                    return EmptyState(
+                      icon: AppIcons.calendar,
+                      message: _showUpcoming ? 'bookings_no_upcoming'.tr() : 'bookings_no_past'.tr(),
+                      actionLabel: _showUpcoming ? 'action_book_appointment'.tr() : null,
+                      onAction: _showUpcoming ? () => context.go('/browse') : null,
                     );
                   }
 
