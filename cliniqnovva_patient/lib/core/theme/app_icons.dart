@@ -33,6 +33,8 @@ class AppIcons {
   static const calendar = IconRef.hero(HeroIcons.calendarDays);
   static const flag = IconRef.hero(HeroIcons.flag);
   static const offline = IconRef.hero(HeroIcons.signalSlash);
+  static const clinic = IconRef.hero(HeroIcons.buildingOffice2);
+  static const phone = IconRef.hero(HeroIcons.phone);
 
   // Bottom nav (Task 6).
   static const navHome = IconRef.hero(HeroIcons.home);

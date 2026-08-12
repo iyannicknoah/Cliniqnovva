@@ -1,3 +1,6 @@
+import 'dart:typed_data';
+
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -13,13 +16,19 @@ import '../../../shared/widgets/cliniqnovva_text_field.dart';
 import '../providers/branches_provider.dart';
 import '../widgets/branch_form.dart';
 
-/// Part 6 Task 1 — the full-screen 3-step onboarding wizard a brand-new
+final _emailPattern = RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$');
+
+/// Part 6 Task 1 — the full-screen 4-step onboarding wizard a brand-new
 /// Clinic Admin lands on (the router redirects here while their
 /// clinic has zero branches):
 ///   1. Create your first branch (full branch form)
 ///   2. Add your first department (chips, at least one)
-///   3. Confirm and finish → creates the branch + department(s), then
-///      redirects to /dashboard.
+///   3. Public visibility — public on the Patient App, or private (a
+///      Switch); if public, requires a profile/banner image + display
+///      name + public phone/email/address, kept separate from the
+///      internal name/phone/address above.
+///   4. Confirm and finish → creates the branch + department(s) [+ public
+///      profile], then redirects to /dashboard.
 class OnboardingScreen extends ConsumerStatefulWidget {
   const OnboardingScreen({super.key});
 
@@ -28,13 +37,22 @@ class OnboardingScreen extends ConsumerStatefulWidget {
 }
 
 class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
-  static const _stepCount = 3;
+  static const _stepCount = 4;
 
   final _branchFormKey = GlobalKey<BranchFormState>();
   final _departmentController = TextEditingController();
+  final _publicNameController = TextEditingController();
+  final _publicPhoneController = TextEditingController();
+  final _publicEmailController = TextEditingController();
+  final _publicAddressController = TextEditingController();
 
   int _step = 0;
   final List<String> _departments = [];
+
+  bool _isPublic = false;
+  Uint8List? _pickedImageBytes;
+  String? _pickedImageName;
+  String? _pickedImageContentType;
 
   /// Step 1's validated output, kept once the user advances so the form
   /// (which is disposed when Step 1 unmounts) doesn't need to stay alive.
@@ -46,7 +64,22 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   @override
   void dispose() {
     _departmentController.dispose();
+    _publicNameController.dispose();
+    _publicPhoneController.dispose();
+    _publicEmailController.dispose();
+    _publicAddressController.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickImage() async {
+    final result = await FilePicker.platform.pickFiles(withData: true, type: FileType.image);
+    final file = result?.files.singleOrNull;
+    if (file?.bytes == null || !mounted) return;
+    setState(() {
+      _pickedImageBytes = file!.bytes;
+      _pickedImageName = file.name;
+      _pickedImageContentType = 'image/${file.extension ?? 'jpeg'}';
+    });
   }
 
   void _back() {
@@ -75,6 +108,24 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       return;
     }
 
+    if (_step == 2 && _isPublic) {
+      if (_publicNameController.text.trim().isEmpty ||
+          _publicPhoneController.text.trim().isEmpty ||
+          _publicEmailController.text.trim().isEmpty ||
+          _publicAddressController.text.trim().isEmpty) {
+        setState(() => _error = 'Fill in every public profile field, or turn off "Public" to skip.');
+        return;
+      }
+      if (!_emailPattern.hasMatch(_publicEmailController.text.trim())) {
+        setState(() => _error = 'Enter a valid public email address.');
+        return;
+      }
+      if (_pickedImageBytes == null) {
+        setState(() => _error = 'Add a profile/banner image to go public.');
+        return;
+      }
+    }
+
     setState(() => _step += 1);
   }
 
@@ -100,6 +151,29 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       for (final department in _departments) {
         await notifier.createDepartment(branchId: branch.id, name: department);
       }
+
+      if (_isPublic) {
+        await notifier.uploadBranchPublicImage(
+          branch.id,
+          bytes: _pickedImageBytes!,
+          filename: _pickedImageName!,
+          contentType: _pickedImageContentType!,
+        );
+        await notifier.updateBranch(branch.id, {
+          'isPublic': true,
+          'publicDisplayName': _publicNameController.text.trim(),
+          'publicPhone': _publicPhoneController.text.trim(),
+          'publicEmail': _publicEmailController.text.trim(),
+          'publicAddress': _publicAddressController.text.trim(),
+        });
+      } else {
+        // Persisted explicitly — a freshly created branch has no `isPublic`
+        // field at all, and the Patient App's visibility filter treats that
+        // as visible-by-default (see browse.service.js#isVisibleToPatients).
+        // Choosing "Private" here must actually record the choice.
+        await notifier.updateBranch(branch.id, {'isPublic': false});
+      }
+
       if (!mounted) return;
       context.go('/dashboard');
     } catch (e) {
@@ -178,6 +252,22 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                                 setState(() => _departments.remove(name)),
                           ),
                         ),
+                        2 => _StepShell(
+                          title: 'Public visibility',
+                          subtitle:
+                              'Show this branch to patients browsing the Cliniqnovva app? You can change this later.',
+                          child: _PublicVisibilityStep(
+                            isPublic: _isPublic,
+                            onPublicChanged: (value) => setState(() => _isPublic = value),
+                            nameController: _publicNameController,
+                            phoneController: _publicPhoneController,
+                            emailController: _publicEmailController,
+                            addressController: _publicAddressController,
+                            imageBytes: _pickedImageBytes,
+                            imageName: _pickedImageName,
+                            onPickImage: _pickImage,
+                          ),
+                        ),
                         _ => _StepShell(
                           title: 'Confirm and finish',
                           subtitle:
@@ -185,6 +275,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                           child: _SummaryStep(
                             branchBody: _branchBody ?? const {},
                             departments: _departments,
+                            isPublic: _isPublic,
+                            publicName: _publicNameController.text,
                           ),
                         ),
                       },
@@ -367,11 +459,174 @@ class _DepartmentsStep extends StatelessWidget {
   }
 }
 
+class _PublicVisibilityStep extends StatelessWidget {
+  const _PublicVisibilityStep({
+    required this.isPublic,
+    required this.onPublicChanged,
+    required this.nameController,
+    required this.phoneController,
+    required this.emailController,
+    required this.addressController,
+    required this.imageBytes,
+    required this.imageName,
+    required this.onPickImage,
+  });
+
+  final bool isPublic;
+  final ValueChanged<bool> onPublicChanged;
+  final TextEditingController nameController;
+  final TextEditingController phoneController;
+  final TextEditingController emailController;
+  final TextEditingController addressController;
+  final Uint8List? imageBytes;
+  final String? imageName;
+  final VoidCallback onPickImage;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: context.cardDeco(),
+          child: Row(
+            children: [
+              SizedBox(
+                width: 36,
+                height: 24,
+                child: FittedBox(
+                  fit: BoxFit.contain,
+                  child: Switch(
+                    value: isPublic,
+                    activeTrackColor: context.appPrimary,
+                    onChanged: onPublicChanged,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      isPublic ? 'Public' : 'Private',
+                      style: TextStyle(color: context.appText, fontSize: 14, fontWeight: FontWeight.w600),
+                    ),
+                    Text(
+                      isPublic
+                          ? 'Patients can find this branch in the app.'
+                          : 'Hidden from the app — staff can still use everything internally.',
+                      style: TextStyle(color: context.appSubtext, fontSize: 12.5),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        if (isPublic) ...[
+          const SizedBox(height: 20),
+          Text(
+            'Profile / banner image',
+            style: TextStyle(color: context.appText, fontSize: 14, fontWeight: FontWeight.w500),
+          ),
+          const SizedBox(height: 8),
+          InkWell(
+            borderRadius: BorderRadius.circular(AppTheme.inputRadius),
+            onTap: onPickImage,
+            child: Container(
+              width: double.infinity,
+              height: 140,
+              decoration: BoxDecoration(
+                border: Border.all(color: context.appBorder),
+                borderRadius: BorderRadius.circular(AppTheme.inputRadius),
+                image: imageBytes != null
+                    ? DecorationImage(image: MemoryImage(imageBytes!), fit: BoxFit.cover)
+                    : null,
+              ),
+              alignment: Alignment.center,
+              child: imageBytes == null
+                  ? Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        AppIcon(AppIcons.image, size: 22, color: context.appSubtext),
+                        const SizedBox(height: 6),
+                        Text(
+                          'Tap to choose an image',
+                          style: TextStyle(color: context.appSubtext, fontSize: 13),
+                        ),
+                      ],
+                    )
+                  : Align(
+                      alignment: Alignment.bottomRight,
+                      child: Container(
+                        margin: const EdgeInsets.all(8),
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.55),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          imageName ?? 'Change image',
+                          style: const TextStyle(color: Colors.white, fontSize: 11.5),
+                        ),
+                      ),
+                    ),
+            ),
+          ),
+          const SizedBox(height: 20),
+          CliniqnovvaTextField(
+            label: 'Public display name',
+            controller: nameController,
+            hint: 'Shown to patients — can differ from the internal branch name',
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: CliniqnovvaTextField(
+                  label: 'Public phone',
+                  controller: phoneController,
+                  hint: '+250 7XX XXX XXX',
+                  keyboardType: TextInputType.phone,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: CliniqnovvaTextField(
+                  label: 'Public email',
+                  controller: emailController,
+                  hint: 'clinic@example.com',
+                  keyboardType: TextInputType.emailAddress,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          CliniqnovvaTextField(
+            label: 'Public address',
+            controller: addressController,
+            hint: 'Street, sector — how a patient would find you',
+          ),
+        ],
+      ],
+    );
+  }
+}
+
 class _SummaryStep extends StatelessWidget {
-  const _SummaryStep({required this.branchBody, required this.departments});
+  const _SummaryStep({
+    required this.branchBody,
+    required this.departments,
+    required this.isPublic,
+    required this.publicName,
+  });
 
   final Map<String, dynamic> branchBody;
   final List<String> departments;
+  final bool isPublic;
+  final String publicName;
 
   /// Mirrors BranchHours.label: 24-hour flag, or a start–end pair where an
   /// end earlier than the start means the branch closes the next day.
@@ -428,6 +683,10 @@ class _SummaryStep extends StatelessWidget {
           _SummaryRow(
             label: departments.length == 1 ? 'Department' : 'Departments',
             value: departments.join(', '),
+          ),
+          _SummaryRow(
+            label: 'Patient App',
+            value: isPublic ? 'Public — as "$publicName"' : 'Private',
             isLast: true,
           ),
         ],

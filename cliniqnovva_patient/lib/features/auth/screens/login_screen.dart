@@ -90,70 +90,76 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     return Scaffold(
       backgroundColor: context.appBg,
       body: SafeArea(
-        child: Align(
-          alignment: Alignment.topCenter,
+        child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 400),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: SingleChildScrollView(
-                child: Column(
-                  children: [
-                    const SizedBox(height: 60),
-                    const _LogoMark(),
-                    const SizedBox(height: 24),
-                    Text(
-                      'login_welcome_back'.tr(),
-                      style: TextStyle(color: context.appText, fontSize: 18, fontWeight: FontWeight.w600),
-                    ),
-                    Text('login_subtitle'.tr(), style: TextStyle(color: context.appSubtext)),
-                    const SizedBox(height: 30),
-                    CliniqnovvaTextField(
-                      label: 'field_phone_or_email'.tr(),
-                      controller: _identifierController,
-                      hint: '0788123456',
-                    ),
-                    const SizedBox(height: 10),
-                    CliniqnovvaTextField(
-                      label: 'field_password'.tr(),
-                      controller: _passwordController,
-                      obscureText: _obscurePassword,
-                      onFieldSubmitted: (_) => _handleSignIn(),
-                      suffixIcon: IconButton(
-                        icon: AppIcon(
-                          _obscurePassword ? AppIcons.view : AppIcons.eyeSlash,
-                          color: context.appSubtext,
-                          size: 20,
+              child: Column(
+                children: [
+                  const SizedBox(height: 40),
+                  const _LogoMark(),
+                  Expanded(
+                    child: Center(
+                      child: SingleChildScrollView(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'login_welcome_back'.tr(),
+                              style: TextStyle(color: context.appText, fontSize: 18, fontWeight: FontWeight.w600),
+                            ),
+                            Text('login_subtitle'.tr(), style: TextStyle(color: context.appSubtext)),
+                            const SizedBox(height: 30),
+                            CliniqnovvaTextField(
+                              controller: _identifierController,
+                              hint: 'field_phone_or_email'.tr(),
+                            ),
+                            const SizedBox(height: 10),
+                            CliniqnovvaTextField(
+                              label: 'field_password'.tr(),
+                              controller: _passwordController,
+                              hint: 'Enter your password',
+                              obscureText: _obscurePassword,
+                              onFieldSubmitted: (_) => _handleSignIn(),
+                              suffixIcon: IconButton(
+                                icon: AppIcon(
+                                  _obscurePassword ? AppIcons.view : AppIcons.eyeSlash,
+                                  color: context.appSubtext,
+                                  size: 20,
+                                ),
+                                onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                              ),
+                            ),
+                            Align(
+                              alignment: Alignment.centerRight,
+                              child: CliniqnovvaButton.text(
+                                label: 'action_forgot_password'.tr(),
+                                onPressed: _handleForgotPassword,
+                              ),
+                            ),
+                            if (_errorMessage != null)
+                              _InlineBanner(text: _errorMessage!, bg: AppColors.pillRedBg, fg: AppColors.pillRedText),
+                            if (_infoMessage != null)
+                              _InlineBanner(text: _infoMessage!, bg: AppColors.pillGreenBg, fg: AppColors.pillGreenText),
+                            const SizedBox(height: 10),
+                            CliniqnovvaButton(
+                              label: 'action_sign_in'.tr(),
+                              isLoading: isLoading,
+                              onPressed: isLoading ? null : _handleSignIn,
+                            ),
+                            const SizedBox(height: 16),
+                            CliniqnovvaButton.text(
+                              label: 'action_create_account'.tr(),
+                              onPressed: () => context.go('/register'),
+                            ),
+                          ],
                         ),
-                        onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
                       ),
                     ),
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: CliniqnovvaButton.text(
-                        label: 'action_forgot_password'.tr(),
-                        underline: true,
-                        onPressed: _handleForgotPassword,
-                      ),
-                    ),
-                    if (_errorMessage != null)
-                      _InlineBanner(text: _errorMessage!, bg: AppColors.pillRedBg, fg: AppColors.pillRedText),
-                    if (_infoMessage != null)
-                      _InlineBanner(text: _infoMessage!, bg: AppColors.pillGreenBg, fg: AppColors.pillGreenText),
-                    const SizedBox(height: 10),
-                    CliniqnovvaButton(
-                      label: 'action_sign_in'.tr(),
-                      isLoading: isLoading,
-                      onPressed: isLoading ? null : _handleSignIn,
-                    ),
-                    const SizedBox(height: 16),
-                    CliniqnovvaButton.text(
-                      label: 'action_create_account'.tr(),
-                      onPressed: () => context.go('/register'),
-                    ),
-                    const SizedBox(height: 20),
-                  ],
-                ),
+                  ),
+                  const SizedBox(height: 20),
+                ],
               ),
             ),
           ),

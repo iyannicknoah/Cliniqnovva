@@ -45,13 +45,9 @@
   "nav_chat": "Discussion",
   "nav_settings": "Paramètres",
 
-  "home_greeting": "Bonjour, {name}",
-  "home_subtitle": "Que souhaitez-vous faire aujourd'hui ?",
-  "home_book_appointment": "Prendre rendez-vous",
+  "home_services": "Services",
   "home_popular_clinics": "Cliniques populaires",
   "home_new_clinics": "Nouveau sur Cliniqnovva",
-  "home_upcoming_appointment": "Rendez-vous à venir",
-  "home_no_upcoming": "Aucun rendez-vous à venir pour le moment.",
   "action_reschedule": "Reporter",
   "action_cancel_appointment": "Annuler",
   "action_book_appointment": "Prendre rendez-vous",
@@ -63,7 +59,10 @@
   "browse_sort_name": "Nom",
   "browse_all_departments": "Toutes",
   "browse_new_badge": "Nouveau",
-  "browse_address_with_distance": "{address} · à {distance} km",
+  "browse_doctor_count": {
+    "one": "{} médecin",
+    "other": "{} médecins"
+  },
   "browse_no_results": "Aucune clinique ne correspond à votre recherche.",
   "browse_clinic_title": "Clinique",
   "browse_doctors_title": "Médecins",

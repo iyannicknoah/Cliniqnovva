@@ -14,6 +14,7 @@ import '../../features/browse/clinic_detail_screen.dart';
 import '../../features/browse/doctor_detail_screen.dart';
 import '../../features/chat/chat_list_screen.dart';
 import '../../features/chat/chat_thread_screen.dart';
+import '../../features/home/dev/home_preview_screen.dart';
 import '../../features/home/home_screen.dart';
 import '../../features/records/medical_record_detail_screen.dart';
 import '../../features/records/medical_records_screen.dart';
@@ -55,10 +56,15 @@ String? _redirect(Ref ref, GoRouterState state) {
   // after an interactive sign-in.
   final loggedIn = FirebaseService.auth.currentUser != null;
   final onAuthScreen = state.matchedLocation == '/login' || state.matchedLocation == '/register';
+  // Dev-only design preview (see /dev/home-preview below) — deliberately
+  // reachable without a real login, since live login is blocked by the
+  // known Firebase project mismatch (docs/known-issues.md) and this is the
+  // only way to see Home's design at all right now.
+  final isDevPreview = state.matchedLocation.startsWith('/dev/');
   debugPrint('[router] redirect at ${state.matchedLocation} (loggedIn=$loggedIn)');
 
   if (!loggedIn) {
-    return onAuthScreen ? null : '/login';
+    return (onAuthScreen || isDevPreview) ? null : '/login';
   }
   if (onAuthScreen) return '/home';
   return null;
@@ -127,6 +133,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(path: '/notifications', builder: (context, state) => const NotificationsScreen()),
 
+      // Dev-only — see the redirect note above. Not linked from anywhere in
+      // the real app UI.
+      GoRoute(path: '/dev/home-preview', builder: (context, state) => const HomePreviewScreen()),
+
       // Task 6: bottom navigation shows on exactly these 5 — not on any
       // detail/booking flow above, which is why they're outside this shell.
       ShellRoute(
@@ -134,7 +144,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             PatientAppShell(currentRoute: state.matchedLocation, child: child),
         routes: [
           GoRoute(path: '/home', builder: (context, state) => const HomeScreen()),
-          GoRoute(path: '/browse', builder: (context, state) => const BrowseScreen()),
+          GoRoute(
+            path: '/browse',
+            builder: (context, state) =>
+                BrowseScreen(initialDepartment: state.uri.queryParameters['department']),
+          ),
           GoRoute(path: '/my-bookings', builder: (context, state) => const MyBookingsScreen()),
           GoRoute(path: '/chat', builder: (context, state) => const ChatListScreen()),
           GoRoute(path: '/settings', builder: (context, state) => const SettingsScreen()),

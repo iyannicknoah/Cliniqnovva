@@ -9,7 +9,7 @@ import '../../core/theme/theme_ext.dart';
 class CliniqnovvaTextField extends StatelessWidget {
   const CliniqnovvaTextField({
     super.key,
-    required this.label,
+    this.label,
     this.controller,
     this.hint,
     this.errorText,
@@ -22,7 +22,7 @@ class CliniqnovvaTextField extends StatelessWidget {
     this.maxLines = 1,
   });
 
-  final String label;
+  final String? label;
   final TextEditingController? controller;
   final String? hint;
   final String? errorText;
@@ -47,15 +47,17 @@ class CliniqnovvaTextField extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: TextStyle(
-            color: context.appText,
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
+        if (label != null) ...[
+          Text(
+            label!,
+            style: TextStyle(
+              color: context.appText,
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+            ),
           ),
-        ),
-        const SizedBox(height: 8),
+          const SizedBox(height: 8),
+        ],
         TextField(
           controller: controller,
           obscureText: obscureText,

@@ -1,6 +1,7 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:heroicons/heroicons.dart';
 
 import '../../core/theme/app_icons.dart';
 import '../../core/theme/theme_ext.dart';
@@ -8,15 +9,16 @@ import 'app_icon.dart';
 
 /// One bottom-nav tab (Task 6: home/browse/bookings/chat/settings).
 class _NavTab {
-  const _NavTab({required this.label, required this.icon, required this.route});
+  const _NavTab({required this.label, required this.icon, required this.route, this.style = HeroIconStyle.solid});
 
   final String label;
   final IconRef icon;
   final String route;
+  final HeroIconStyle style;
 }
 
 const _tabs = [
-  _NavTab(label: 'nav_home', icon: AppIcons.navHome, route: '/home'),
+  _NavTab(label: 'nav_home', icon: AppIcons.navHome, route: '/home', style: HeroIconStyle.mini),
   _NavTab(label: 'nav_browse', icon: AppIcons.navBrowse, route: '/browse'),
   _NavTab(label: 'nav_bookings', icon: AppIcons.navBookings, route: '/my-bookings'),
   _NavTab(label: 'nav_chat', icon: AppIcons.navChat, route: '/chat'),
@@ -90,7 +92,7 @@ class _NavButton extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          AppIcon(tab.icon, size: 24, color: color),
+          AppIcon(tab.icon, size: 24, color: color, style: tab.style),
           const SizedBox(height: 4),
           Text(
             tab.label.tr(),

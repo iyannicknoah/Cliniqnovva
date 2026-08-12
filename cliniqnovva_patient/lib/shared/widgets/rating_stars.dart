@@ -5,6 +5,40 @@ import '../../core/theme/app_icons.dart';
 import '../../core/theme/theme_ext.dart';
 import 'app_icon.dart';
 
+/// A compact "★ 4.8" pill — the Home/Browse card's overlay badge on the
+/// clinic image (distinct from [RatingStars]' 5-star row, which is too busy
+/// for a small image overlay). Hidden entirely when there's nothing to
+/// show yet (no reviews).
+class RatingBadge extends StatelessWidget {
+  const RatingBadge({super.key, required this.rating, required this.reviewCount});
+
+  final double rating;
+  final int reviewCount;
+
+  @override
+  Widget build(BuildContext context) {
+    if (reviewCount == 0) return const SizedBox.shrink();
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.55),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const AppIcon(AppIcons.star, size: 12, color: AppColors.skyBlue),
+          const SizedBox(width: 4),
+          Text(
+            rating.toStringAsFixed(1),
+            style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 /// A 1-5 star row for an average rating — rounds to the nearest whole star
 /// (no half-star rendering; the underlying rating is still shown as a
 /// decimal via [showValue] for precision). Used anywhere a branch's or

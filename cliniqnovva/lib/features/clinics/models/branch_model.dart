@@ -98,6 +98,12 @@ class BranchModel {
     this.averageRating = 0,
     this.reviewCount = 0,
     this.popularityScore = 0,
+    this.isPublic = false,
+    this.publicDisplayName,
+    this.publicPhone,
+    this.publicEmail,
+    this.publicAddress,
+    this.publicImageKey,
   });
 
   final String id;
@@ -131,6 +137,20 @@ class BranchModel {
   /// recalculated daily (node-cron) — a different number from
   /// [averageRating], not a duplicate of it.
   final double popularityScore;
+
+  /// Patient App visibility (onboarding Step 4 / "public profile"). Opt-out,
+  /// not opt-in on the backend (see browse.service.js#isVisibleToPatients) —
+  /// but a NEW branch created through this app always sets it explicitly,
+  /// so it defaults false here rather than mirroring that leniency.
+  final bool isPublic;
+  final String? publicDisplayName;
+  final String? publicPhone;
+  final String? publicEmail;
+  final String? publicAddress;
+
+  /// R2 object key, never a URL — same convention as every other file this
+  /// backend stores (see storage.service.js doc comment).
+  final String? publicImageKey;
 
   factory BranchModel.fromFirestore(String id, Map<String, dynamic> data) {
     return BranchModel(
@@ -169,6 +189,12 @@ class BranchModel {
       averageRating: (data['averageRating'] as num?)?.toDouble() ?? 0,
       reviewCount: (data['reviewCount'] as num?)?.toInt() ?? 0,
       popularityScore: (data['popularityScore'] as num?)?.toDouble() ?? 0,
+      isPublic: data['isPublic'] as bool? ?? false,
+      publicDisplayName: data['publicDisplayName'] as String?,
+      publicPhone: data['publicPhone'] as String?,
+      publicEmail: data['publicEmail'] as String?,
+      publicAddress: data['publicAddress'] as String?,
+      publicImageKey: data['publicImageKey'] as String?,
     );
   }
 
@@ -185,6 +211,12 @@ class BranchModel {
     'holidayOverrides': holidayOverrides,
     'isActive': isActive,
     'createdAt': createdAt?.toIso8601String(),
+    'isPublic': isPublic,
+    'publicDisplayName': publicDisplayName,
+    'publicPhone': publicPhone,
+    'publicEmail': publicEmail,
+    'publicAddress': publicAddress,
+    'publicImageKey': publicImageKey,
   };
 
   factory BranchModel.fromJson(Map<String, dynamic> json) =>

@@ -94,11 +94,21 @@ class _ProfileSectionState extends ConsumerState<ProfileSection> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          CliniqnovvaTextField(label: 'field_full_name'.tr(), controller: _nameController),
+          CliniqnovvaTextField(label: 'field_full_name'.tr(), controller: _nameController, hint: 'e.g. Jean Uwimana'),
           const SizedBox(height: 14),
-          CliniqnovvaTextField(label: 'field_phone'.tr(), controller: _phoneController, keyboardType: TextInputType.phone),
+          CliniqnovvaTextField(
+            label: 'field_phone'.tr(),
+            controller: _phoneController,
+            hint: '0788123456',
+            keyboardType: TextInputType.phone,
+          ),
           const SizedBox(height: 14),
-          CliniqnovvaTextField(label: 'field_email_optional'.tr(), controller: _emailController, keyboardType: TextInputType.emailAddress),
+          CliniqnovvaTextField(
+            label: 'field_email_optional'.tr(),
+            controller: _emailController,
+            hint: 'you@example.com',
+            keyboardType: TextInputType.emailAddress,
+          ),
           const SizedBox(height: 14),
           Text('settings_date_of_birth'.tr(), style: TextStyle(color: context.appText, fontSize: 14, fontWeight: FontWeight.w500)),
           const SizedBox(height: 8),
@@ -115,7 +125,12 @@ class _ProfileSectionState extends ConsumerState<ProfileSection> {
             ),
           ),
           const SizedBox(height: 14),
-          CliniqnovvaTextField(label: 'settings_national_id'.tr(), controller: _nationalIdController, keyboardType: TextInputType.number),
+          CliniqnovvaTextField(
+            label: 'settings_national_id'.tr(),
+            controller: _nationalIdController,
+            hint: 'e.g. 1198812345678901',
+            keyboardType: TextInputType.number,
+          ),
           if (_error != null) ...[
             const SizedBox(height: 12),
             Text(_error!, style: const TextStyle(color: AppColors.errorRed, fontSize: 13)),

@@ -133,6 +133,7 @@ class _LeaveReviewScreenState extends ConsumerState<LeaveReviewScreen> {
                       CliniqnovvaTextField(
                         label: 'review_comment_optional'.tr(),
                         controller: _branchCommentController,
+                        hint: 'Share your experience',
                         maxLines: 3,
                       ),
                     ],
@@ -153,6 +154,7 @@ class _LeaveReviewScreenState extends ConsumerState<LeaveReviewScreen> {
                       CliniqnovvaTextField(
                         label: 'review_comment_optional'.tr(),
                         controller: _doctorCommentController,
+                        hint: 'Share your experience',
                         maxLines: 3,
                       ),
                     ],

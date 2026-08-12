@@ -109,4 +109,15 @@ async function searchBranchIdsByNameOrSpecialty(term) {
   return branchIds;
 }
 
-module.exports = { list, getById, searchBranchIdsByNameOrSpecialty };
+/**
+ * Just the count of active doctors at a branch (Browse/Home card display —
+ * "N doctors"). Reuses [fetchDoctorUsers]'s isActive filter rather than a
+ * raw Firestore .count() aggregate, so this stays correct if that filter
+ * ever changes, at the cost of a full query instead of a count-only read.
+ */
+async function countActiveDoctors(branchId) {
+  const users = await fetchDoctorUsers({ branchId });
+  return users.length;
+}
+
+module.exports = { list, getById, searchBranchIdsByNameOrSpecialty, countActiveDoctors };

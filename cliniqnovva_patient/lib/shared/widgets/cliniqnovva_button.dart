@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 
+import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
 
 enum _ButtonVariant { filled, text }
 
-/// The single button component used everywhere in the app — identical to
-/// cliniqnovva/lib/shared/widgets/cliniqnovva_button.dart: 45px height,
-/// fully-rounded pill radius, theme-inverted fill (black in light mode,
-/// white in dark mode). Never use ElevatedButton/TextButton directly.
+/// The single button component used everywhere in the app — 45px height,
+/// fully-rounded pill radius, sky-blue fill by default (fixed brand color,
+/// same in both themes — diverges here from
+/// cliniqnovva/lib/shared/widgets/cliniqnovva_button.dart's theme-inverted
+/// black/white fill; see DESIGN_LANGUAGE.md). Never use ElevatedButton/
+/// TextButton directly.
 class CliniqnovvaButton extends StatelessWidget {
   const CliniqnovvaButton({
     super.key,
@@ -43,13 +46,8 @@ class CliniqnovvaButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final disabled = onPressed == null || isLoading;
 
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final color = this.color ?? (isDark ? Colors.white : Colors.black);
-
-    final onColor =
-        ThemeData.estimateBrightnessForColor(color) == Brightness.light
-        ? Colors.black
-        : Colors.white;
+    final color = this.color ?? AppColors.skyBlue;
+    const onColor = Colors.white;
 
     final Widget button = switch (_variant) {
       _ButtonVariant.filled => SizedBox(

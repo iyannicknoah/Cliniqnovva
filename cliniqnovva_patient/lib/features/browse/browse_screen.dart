@@ -20,7 +20,11 @@ const _sortOptions = ['popular', 'rating', 'name'];
 /// search bar (clinic/branch/doctor/specialty), department + sort filter
 /// chips, and the resulting branch list.
 class BrowseScreen extends ConsumerStatefulWidget {
-  const BrowseScreen({super.key});
+  const BrowseScreen({super.key, this.initialDepartment});
+
+  /// Pre-selects a department filter — used when arriving from the Home
+  /// screen's "Services" row (`/browse?department=X`, see app_router.dart).
+  final String? initialDepartment;
 
   @override
   ConsumerState<BrowseScreen> createState() => _BrowseScreenState();
@@ -29,7 +33,7 @@ class BrowseScreen extends ConsumerStatefulWidget {
 class _BrowseScreenState extends ConsumerState<BrowseScreen> {
   final _searchController = TextEditingController();
   Timer? _debounce;
-  BrowseFilters _filters = const BrowseFilters();
+  late BrowseFilters _filters = BrowseFilters(department: widget.initialDepartment);
 
   @override
   void dispose() {

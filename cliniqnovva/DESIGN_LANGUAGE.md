@@ -175,6 +175,17 @@ retired along with the sidebar's — see "No mixing colors" above).
 `.text()` is the transparent link-style secondary variant ("Forgot password?"),
 with an optional underline.
 
+**Patient App diverges from this as of 2026-08-11**: `cliniqnovva_patient`'s
+`CliniqnovvaButton` (both `filled` and `.text()`) defaults `color` to
+`AppColors.skyBlue` instead of the theme-inverted black/white above — a
+fixed brand color, same in both light and dark mode. Filled-variant text is
+hardcoded white (`onColor`) rather than auto-picked via
+`estimateBrightnessForColor` — skyBlue's estimated brightness is `light`,
+which would otherwise auto-pick black text; white was the explicit ask. The
+web dashboard's `CliniqnovvaButton` is unchanged (still theme-inverted
+black/white per the rule above, with the auto-picked contrast text); the
+two components are no longer byte-for-byte identical. See Change log.
+
 ## Backgrounds
 
 Pure white (`AppColors.pageBackground`) in light mode, pure black
@@ -347,6 +358,210 @@ fill, interval-capped month labels, curve-clamping) for any future
 growth/trend chart rather than introducing a new chart style or color.
 
 ## Change log
+
+- **2026-08-12 (Patient App: Home restructure — appointment block removed,
+  Services-before-clinics, bottom-nav Home icon → mini, follow-up to the
+  two entries directly below)** — Explicit correction after the first pass
+  kept the upcoming-appointment status row + "Book an Appointment" button:
+  both are gone entirely now. Booking only ever starts from a clinic's own
+  detail screen (tap a clinic card -> Clinic Detail -> "Book" on a
+  doctor there) — Home doesn't need a separate CTA or an appointment
+  status card duplicating that path. `_UpcomingAppointmentSection` (widget)
+  and `upcomingAppointmentProvider` (was always a stub returning `null`,
+  see Part 20/22 history below) are both deleted, along with their
+  now-orphaned `home_book_appointment`/`home_upcoming_appointment`/
+  `home_no_upcoming` translation keys (en/fr). Layout is now: top bar,
+  Services, Popular Clinics, New on Cliniqnovva — Services moved directly
+  under the top bar (was sandwiched between the appointment block and the
+  carousels). `HomeScreen`'s body also got a light refactor in the same
+  pass: the old `_ServicesSection`/`_BranchCarouselSection` (each its own
+  `ConsumerWidget` independently watching `homeBrowseProvider`) became
+  plain presentational `ServicesRow`/`ClinicCarousel` (data passed in
+  directly, no provider watching) — `HomeScreen` itself now watches
+  `homeBrowseProvider` ONCE and passes the resolved data down. This wasn't
+  just tidying: the `/dev/home-preview` route (previous entry below) fed
+  its sample data through a nested `ProviderScope` override, which turned
+  out to render blank sections in practice — a `ProviderScope` override is
+  easy to get subtly wrong invisibly; passing plain sample data straight
+  into these same presentational widgets (new `HomePreviewScreen`,
+  `features/home/dev/home_preview_screen.dart`) can't silently no-op the
+  same way. `notification_bell.dart`'s unread-count fetch failing while
+  logged out (expected in this preview) is already handled harmlessly via
+  `.valueOrNull ?? 0`, confirmed by reading it — no override needed there
+  either.
+  Separately: the bottom nav's Home tab icon now renders at
+  `HeroIconStyle.mini` (was `.solid`, like every other nav icon) — `AppIcon`
+  gained an optional `style` param (defaults to `.solid`, every other call
+  site unaffected) and `_NavTab` gained a matching `style` field, set only
+  on the `nav_home` entry in `patient_app_shell.dart`.
+
+- **2026-08-12 (Patient App: Home top bar → logo/wordmark + dev preview
+  route, `cliniqnovva_patient` only, follow-up to the entry directly
+  below)** — `HomeScreen`'s top `Row` (was `"Hello, {name}"` + a subtitle,
+  left-aligned, `NotificationBell` trailing) replaced with the SAME
+  logo-mark pattern the Login/Register screens already use
+  (`CliniqnovvaLogo(size: 32, radius: 10)` + `AppConstants.appName` in
+  `AppColors.skyBlue`, `fontSize: 18, fontWeight: w600` — slightly larger
+  than the auth screens' 16px version since it now anchors a whole page
+  rather than sitting above other text) on the left, `Spacer()`, then the
+  unchanged `NotificationBell` on the right. `home_greeting`/`home_subtitle`
+  translation keys deleted (en/fr) — no longer referenced anywhere.
+  `HomeScreen` no longer watches `patientProfileProvider` at all (its only
+  use was the greeting's first name) — the whole screen's body render no
+  longer waits on a `profile.when()` loading/error gate as a result.
+  New `/dev/home-preview` route (`app_router.dart`) — the ONLY way to see
+  Home's design without a real login while live login stays blocked by the
+  known Firebase project mismatch (`docs/known-issues.md`): a route-scoped
+  `ProviderScope` override feeds `HomeScreen` fixed sample data
+  (`features/home/dev/sample_home_data.dart` — 3 sample clinics across
+  Popular/New, `picsum.photos` placeholder photos, 5 sample services) via
+  `homeBrowseProvider`/`notificationsListProvider` overrides, reached by
+  URL directly — the router's redirect explicitly allowlists any
+  `/dev/*` path while logged out. Not linked from anywhere in the real
+  app UI; not a production feature.
+
+- **2026-08-12 (Patient App: Home redesign — clinic image cards + Services
+  row, `cliniqnovva_patient` only)** — Two related changes:
+  (1) `BranchCard` (`features/browse/widgets/branch_card.dart`) redesigned
+  from an image-less title-row layout to a banner-image-first card: a 16:10
+  `AspectRatio` image (`Image.network` with a `context.appSecondaryBg` +
+  `AppIcons.clinic` placeholder — new icon, `HeroIcons.buildingOffice2` —
+  for the common case of a branch with no public profile image yet) fills
+  the card's top, clipped to the card's own `cardRadius` (18) on just the
+  top corners; a new `RatingBadge` widget (`shared/widgets/rating_stars.dart`,
+  a compact "★ 4.8" pill, translucent black `Colors.black.withValues(alpha:
+  0.55)`, `AppColors.skyBlue` star — distinct from the existing 5-star
+  `RatingStars` row, too busy for a small image overlay) sits top-right on
+  the image, mirroring where the existing "New" badge now sits top-left
+  (moved off the title row onto the image for the same reason). Below the
+  image: name, then a "distance • N doctors" subtitle (new `doctorCount`
+  field, falls back to the branch's public/internal address when neither
+  distance nor doctor count is available), then the existing service chips
+  — unchanged. `CliniqnovvaCard`'s `padding` dropped to `EdgeInsets.zero` on
+  this card specifically (image needs to run flush to the card's edges;
+  every other `CliniqnovvaCard` call site keeps the default `all(20)`).
+  (2) New "Services" row on `HomeScreen`, placed ABOVE the Popular/New
+  clinic carousels (explicit ask: "display first before clinics") — reuses
+  the SAME deduped `availableDepartments` the Browse screen's department
+  chips already source from (`browse.service.js#distinctDepartments`, no
+  new backend endpoint), rendered as the same pill-chip style as Browse's
+  existing filter chips (`context.appSecondaryBg`, `context.appText`,
+  20-radius). Tapping one navigates to `/browse?department=X` —
+  `BrowseScreen` gained an `initialDepartment` constructor param (seeds its
+  local `_filters` state) and the router passes through
+  `state.uri.queryParameters['department']`.
+  Backend companion changes (not a design-system concern but load-bearing
+  for both of the above): `browse.service.js#toPublicBranch` now resolves
+  `doctorCount` (via a new `doctors.service.js#countActiveDoctors`) and a
+  signed `imageUrl` from a new opt-in `publicImageKey`/`isPublic` branch
+  field (set via a new onboarding wizard step — see the entry directly
+  below); visibility is opt-OUT (`isPublic !== false`), so no pre-existing
+  branch disappears from Browse/Home just because this shipped.
+
+- **2026-08-12 (web dashboard: onboarding wizard 4th step, `cliniqnovva` only)**
+  — `onboarding_screen.dart`'s `_stepCount` went from 3 to 4: a new "Public
+  visibility" step (index 2, between departments and confirm) asks whether
+  the branch should be public on the Patient App or private, via a `Switch`
+  inside a `context.cardDeco()` card (same pattern as `BranchForm`'s
+  24-hours/Umuganda-override switches). Choosing public reveals a profile/
+  banner image picker (`file_picker`, `FileType.image`, `Image`-preview via
+  `MemoryImage` — same `pickFiles(withData: true)` pattern as
+  `patient_profile_screen.dart`'s document upload) plus 4 new
+  `CliniqnovvaTextField`s (public display name/phone/email/address) —
+  deliberately separate fields from the branch form's own internal name/
+  phone/address, not reused, since a clinic's public-facing identity can
+  differ from its internal admin record. New icon:
+  `AppIcons.image` (`HeroIcons.photo`) for the picker's empty state — first
+  use of that Heroicon in this app. `_SummaryStep` (confirm step) gained a
+  "Patient App: Public — as "..."/Private" row. No new color tokens; reuses
+  `context.cardDeco()`/`context.appPrimary`/existing `CliniqnovvaTextField`/
+  `CliniqnovvaButton` throughout, consistent with every other onboarding
+  step.
+
+- **2026-08-11 (Patient App: sky-blue buttons + login layout, `cliniqnovva_patient`
+  only, no new tokens)** — Two user-requested changes while debugging the
+  Register screen crash (see `docs/known-issues.md`): (1)
+  `cliniqnovva_patient/lib/shared/widgets/cliniqnovva_button.dart`'s default
+  `color` changed from theme-inverted black/white to `AppColors.skyBlue`
+  (fixed, same in both themes) — see the new "Patient App diverges" note
+  under "Buttons" above; the web dashboard's `CliniqnovvaButton` is
+  untouched. (2) `login_screen.dart`'s body layout changed from one
+  top-anchored scrolling column to the logo pinned `SizedBox(height: 40)`
+  below the safe area, with everything else (welcome text, fields, buttons)
+  wrapped in `Expanded(child: Center(child: SingleChildScrollView(...)))`
+  below it — the logo stays fixed at the top of the screen while the rest
+  of the content is vertically centered in the remaining space (still
+  scrolls if a small screen + open keyboard doesn't fit it). (3) Follow-up
+  same day: filled-button text color hardcoded to white (was auto-picked
+  black on skyBlue, see "Buttons" above), and the Login screen's "Forgot
+  password?" link no longer renders `underline: true`. (4) Second
+  follow-up same day: `register_screen.dart`'s language-picker step
+  (`_Step.language`, first thing a new user sees) got the same top-pinned-
+  logo/centered-content treatment as (2) above — the outer `Align(topCenter)`
+  became `Center`, and the language step's own `_LogoMark` + its leading
+  `SizedBox` were pulled out into the screen-level `Column` (logo pinned
+  under a 40px gap, `Expanded(child: Center(...))` wrapping the language
+  list below it); the form/duplicate-prompt steps were not touched, still
+  under the same outer wrapper. `_LanguageOption` (the per-language
+  `OutlinedButton` row) gained a leading country flag (plain emoji text,
+  no new icon/image asset — 🇷🇼 Kinyarwanda, 🇬🇧 English, 🇫🇷 Français) and its
+  padding changed from vertical-only (`EdgeInsets.symmetric(vertical: 16)`)
+  to `EdgeInsets.all(16)` per explicit ask. (5) Bug fix, same day: selecting
+  Kinyarwanda crashed both auth screens wherever a `TextField`/
+  `OutlinedButton`/`IconButton` appeared — Flutter's built-in
+  `flutter_localizations` package ships no Material/Widgets/Cupertino
+  translations for `rw` at all, so `MaterialApp.locale: context.locale`
+  being `rw` made `MaterialLocalizations.of(context)` null, and framework
+  widgets that unwrap it with `!` threw "Null check operator used on a null
+  value". Fixed in `main.dart` with a `_materialLocale(context)` helper —
+  falls the FRAMEWORK-facing locale back to `en` for any language Flutter's
+  own package doesn't cover, while `easy_localization`'s own delegate keeps
+  serving Kinyarwanda `.tr()` text regardless (it reads its controller's
+  already-loaded translations, not the locale the framework hands it) — so
+  app text stays in Kinyarwanda, only invisible framework chrome (e.g. the
+  text-selection toolbar) silently falls back to English. Also: the Login
+  screen's phone/email field no longer has a label above it — the prompt
+  text moved into the field's placeholder (`hint`) instead, and
+  `CliniqnovvaTextField.label` is now optional (`String?`) with the
+  label row conditionally omitted — every other call site is unaffected.
+  (6) Same day, superseding (5): the `_materialLocale` workaround turned out
+  not to be worth the ongoing risk (any other framework widget touching
+  `MaterialLocalizations`/`WidgetsLocalizations`/`CupertinoLocalizations`
+  directly, rather than through `context.locale`, could still hit the same
+  null-check crash under `rw`) — removed per explicit ask ("remove
+  Kinyarwanda completely") instead of keeping the patch. Kinyarwanda is now
+  gone everywhere in `cliniqnovva_patient`: dropped from `main.dart`'s
+  `EasyLocalization(supportedLocales: ...)` (now just `en`/`fr`, and
+  `_materialLocale`/its now-redundant `MaterialApp.locale` override were
+  both removed too), dropped as a `_LanguageOption` on the register
+  screen's language-picker step, dropped from the Settings screen's
+  language `RadioGroup` + its `_languageLabel` switch, dropped from
+  `AppConstants.supportedLanguages`/`langKinyarwanda` (deleted), and
+  `assets/translations/rw.json` deleted outright. **This is a deliberate,
+  documented divergence from the web dashboard** (`cliniqnovva`'s own
+  `AppConstants.supportedLanguages` still lists Kinyarwanda first per the
+  original three-language spec) — a patient with a pre-existing or
+  web-written `preferredLanguage: 'rw'` now has no matching Patient App UI
+  language; easy_localization's `fallbackLocale: en` (in `main.dart`)
+  degrades this safely to English rather than crashing, confirmed via its
+  own `selectLocaleFrom`/`_getFallbackLocale` resolution — no code changes
+  needed there, that fallback already existed. Whether to also bring
+  Kinyarwanda support back later (properly, e.g. via a custom
+  `LocalizationsDelegate` that serves it a supported locale's Material/
+  Cupertino strings) or remove it from the web dashboard too for
+  consistency is an open, unresolved question — flagged to the user, not
+  decided here. (7) Same day: every `CliniqnovvaTextField` in the Patient
+  App now has a `hint` — several fields had a label but an empty box below
+  it (Full name, Password, Confirm password on Register; Password on
+  Login; Full name/Phone/Email/National ID on the Settings profile form;
+  all 4 review comment fields on Leave/Edit Review) while others already
+  had both label + hint (Phone/Email on Register) — inconsistent at a
+  glance. New hints are plain literal strings (`'e.g. Jean Uwimana'`, `'At
+  least 6 characters'`, `'Re-enter your password'`, `'Enter your
+  password'`, `'e.g. 1198812345678901'`, `'Share your experience'`), not
+  `.tr()` keys — matching the existing convention this file's Phone/Email
+  hints (`'0788123456'`/`'you@example.com'`) already used, so this stays
+  untranslated in French same as those did.
 
 - **2026-08-09 (Patient App: empty states, offline banner, app icon/splash —
   Part 27 Tasks 2-4, `cliniqnovva_patient` only, no new tokens)** —

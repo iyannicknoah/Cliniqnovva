@@ -14,10 +14,12 @@
 // run from this app's root once a real project exists.
 
 import 'package:firebase_core/firebase_core.dart' show FirebaseOptions;
-import 'package:flutter/foundation.dart' show defaultTargetPlatform, TargetPlatform;
+import 'package:flutter/foundation.dart'
+    show defaultTargetPlatform, kIsWeb, TargetPlatform;
 
 class DefaultFirebaseOptions {
   static FirebaseOptions get currentPlatform {
+    if (kIsWeb) return web;
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
         return android;
@@ -29,6 +31,18 @@ class DefaultFirebaseOptions {
         );
     }
   }
+
+  // Reuses the web dashboard's registered web app (same temporary project —
+  // see file header) purely so this app can boot in a browser for local
+  // testing; the patient app has no web app of its own registered.
+  static const FirebaseOptions web = FirebaseOptions(
+    apiKey: 'AIzaSyCx6cmzmoDf4UxspM5lfDCIo3gAjP6Shuw',
+    appId: '1:943939108409:web:82c3ee4b54b6daf16797e8',
+    messagingSenderId: '943939108409',
+    projectId: 'risingacademy-801eb',
+    authDomain: 'risingacademy-801eb.firebaseapp.com',
+    storageBucket: 'risingacademy-801eb.firebasestorage.app',
+  );
 
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyCESs1B01TmZ1jl6Ggd4BticYmrBY-LgRw',

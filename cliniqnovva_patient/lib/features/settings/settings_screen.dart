@@ -123,7 +123,7 @@ class SettingsScreen extends ConsumerWidget {
                 },
                 child: Column(
                   children: [
-                    for (final locale in const [Locale('rw'), Locale('en'), Locale('fr')])
+                    for (final locale in const [Locale('en'), Locale('fr')])
                       RadioListTile<Locale>(
                         contentPadding: EdgeInsets.zero,
                         value: locale,
@@ -169,7 +169,6 @@ class SettingsScreen extends ConsumerWidget {
   }
 
   String _languageLabel(Locale locale) => switch (locale.languageCode) {
-    'rw' => 'Kinyarwanda',
     'fr' => 'Français',
     _ => 'English',
   };

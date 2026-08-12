@@ -1,9 +1,12 @@
 const express = require('express');
 const router = express.Router();
+const multer = require('multer');
 const { verifyToken } = require('../middleware/verifyToken');
 const { requireRole, ROLES } = require('../middleware/requireRole');
 const { attachScope } = require('../middleware/branchScope.middleware');
 const controller = require('../controllers/branches.controller');
+
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 8 * 1024 * 1024 } });
 
 // Every route below is scoped by req.scope (branch/org isolation, spec section 10/11).
 router.use(verifyToken, attachScope);
@@ -19,6 +22,15 @@ router.get('/detail/:branchId', requireRole(...READ_ROLES), controller.getById);
 router.get('/:clinicId', requireRole(...READ_ROLES), controller.listByClinic);
 
 router.post('/', requireRole(ROLES.CLINIC_ADMIN, ROLES.SUPER_ADMIN), controller.create);
+
+// Public-profile banner/logo image (Patient App browse visibility, onboarding
+// Step 4). Same roles as create/update — Branch Admin doesn't manage this.
+router.post(
+  '/:branchId/image',
+  requireRole(ROLES.CLINIC_ADMIN, ROLES.SUPER_ADMIN),
+  upload.single('file'),
+  controller.uploadPublicImage
+);
 
 // Branch Admin is allowed on plain update but the service restricts them to
 // working-hours fields on their own branch only (Part 6 Task 3).

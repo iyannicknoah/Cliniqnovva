@@ -41,7 +41,7 @@ class ClinicDetailScreen extends ConsumerWidget {
           onPressed: () => context.canPop() ? context.pop() : context.go('/browse'),
         ),
         title: Text(
-          async.valueOrNull?.branch.name ?? 'browse_clinic_title'.tr(),
+          async.valueOrNull?.branch.displayName ?? 'browse_clinic_title'.tr(),
           style: TextStyle(color: context.appText, fontSize: 16, fontWeight: FontWeight.w600),
         ),
       ),
@@ -93,18 +93,45 @@ class _BranchInfoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final address = branch.contactAddress;
+    final phone = branch.contactPhone;
+
     return CliniqnovvaCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if (branch.imageUrl != null) ...[
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: AspectRatio(
+                aspectRatio: 16 / 9,
+                child: Image.network(
+                  branch.imageUrl!,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) => const SizedBox.shrink(),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+          ],
           RatingStars(rating: branch.averageRating, reviewCount: branch.reviewCount),
-          if (branch.address != null && branch.address!.isNotEmpty) ...[
+          if (address != null && address.isNotEmpty) ...[
             const SizedBox(height: 12),
             Row(
               children: [
                 AppIcon(AppIcons.mapPin, size: 15, color: context.appSubtext),
                 const SizedBox(width: 6),
-                Expanded(child: Text(branch.address!, style: TextStyle(color: context.appText, fontSize: 13))),
+                Expanded(child: Text(address, style: TextStyle(color: context.appText, fontSize: 13))),
+              ],
+            ),
+          ],
+          if (phone != null && phone.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                AppIcon(AppIcons.phone, size: 15, color: context.appSubtext),
+                const SizedBox(width: 6),
+                Text(phone, style: TextStyle(color: context.appText, fontSize: 13)),
               ],
             ),
           ],

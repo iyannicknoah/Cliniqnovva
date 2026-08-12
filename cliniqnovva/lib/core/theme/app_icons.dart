@@ -53,4 +53,7 @@ class AppIcons {
   // 2026-07-29 — Laboratorian role / lab orders + audit log viewer.
   static const labOrders = IconRef.hero(HeroIcons.beaker);
   static const auditLog = IconRef.hero(HeroIcons.clipboardDocumentList);
+
+  // Onboarding Step 4 — public profile image picker placeholder.
+  static const image = IconRef.hero(HeroIcons.photo);
 }

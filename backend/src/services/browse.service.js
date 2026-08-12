@@ -13,9 +13,15 @@
 const { db } = require('../config/firebase-admin');
 const doctorsService = require('./doctors.service');
 const reviewsService = require('./reviews.service');
+const storageService = require('./storage.service');
 
 const DEFAULT_REVIEWS_LIMIT = 10;
 const MAX_REVIEWS_LIMIT = 50;
+
+// A public clinic photo isn't sensitive the way a patient document is (the
+// clinic explicitly opted to show it) — a longer TTL than storage.service's
+// 15-minute default avoids images silently breaking mid-browse.
+const PUBLIC_IMAGE_URL_TTL_SECONDS = 60 * 60 * 6;
 
 function httpError(status, message) {
   const err = new Error(message);
@@ -23,14 +29,41 @@ function httpError(status, message) {
   return err;
 }
 
+/**
+ * Visibility toggle is opt-OUT, not opt-in: a branch created before this
+ * field existed (every branch prior to the onboarding "public visibility"
+ * step) has no `isPublic` key at all and stays visible — only an explicit
+ * `isPublic: false` hides it. Avoids every pre-existing clinic silently
+ * disappearing from the Patient App the day this filter ships, with no
+ * backfill/migration needed.
+ */
+function isVisibleToPatients(branch) {
+  return branch.isPublic !== false;
+}
+
 /** Explicit allowlist — the ONLY place a branch doc's fields reach a patient. */
-function toPublicBranch(doc) {
+async function toPublicBranch(doc) {
+  const [imageUrl, doctorCount] = await Promise.all([
+    doc.publicImageKey
+      ? storageService.getSignedDownloadUrl(doc.publicImageKey, PUBLIC_IMAGE_URL_TTL_SECONDS).catch(() => null)
+      : Promise.resolve(null),
+    doctorsService.countActiveDoctors(doc.id),
+  ]);
+
   return {
     id: doc.id,
     clinicId: doc.clinicId,
     name: doc.name || null,
+    // Falls back to the internal name for a branch that hasn't set up a
+    // public profile yet — never blank on the card.
+    displayName: doc.publicDisplayName || doc.name || null,
     address: doc.address || null,
+    publicAddress: doc.publicAddress || null,
     phone: doc.phone || null,
+    publicPhone: doc.publicPhone || null,
+    publicEmail: doc.publicEmail || null,
+    imageUrl,
+    doctorCount,
     location: doc.location || null,
     workingHours: doc.workingHours || null,
     umugandaSaturdayHours: doc.umugandaSaturdayHours || null,
@@ -43,7 +76,7 @@ function toPublicBranch(doc) {
 
 async function fetchActiveBranches() {
   const snap = await db.collection('branches').where('isActive', '==', true).get();
-  return snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+  return snap.docs.map((doc) => ({ id: doc.id, ...doc.data() })).filter(isVisibleToPatients);
 }
 
 function distinctDepartments(branches) {
@@ -87,19 +120,26 @@ async function listBranches({ search, sortBy, department }) {
   });
 
   return {
-    branches: sorted.map(toPublicBranch),
+    branches: await Promise.all(sorted.map(toPublicBranch)),
     availableDepartments,
     reviewCountThreshold: reviewsService.REVIEW_COUNT_THRESHOLD,
   };
 }
 
-/** Branch detail + its doctor list (Task 3). 404s on missing/inactive branch — nothing to browse there. */
+/**
+ * Branch detail + its doctor list (Task 3). 404s on missing/inactive/private
+ * branch — a direct/deep link to a branch that opted out of public
+ * visibility must 404 the same as one that was never public at all.
+ */
 async function getBranchDetail(branchId) {
   const doc = await db.collection('branches').doc(branchId).get();
-  if (!doc.exists || doc.data().isActive !== true) throw httpError(404, 'Branch not found');
+  if (!doc.exists || doc.data().isActive !== true || !isVisibleToPatients(doc.data())) {
+    throw httpError(404, 'Branch not found');
+  }
 
   const doctors = await doctorsService.list({ branchId });
-  return { branch: toPublicBranch({ id: doc.id, ...doc.data() }), doctors };
+  const branch = await toPublicBranch({ id: doc.id, ...doc.data() });
+  return { branch, doctors };
 }
 
 /**

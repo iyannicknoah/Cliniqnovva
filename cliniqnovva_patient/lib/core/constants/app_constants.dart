@@ -15,13 +15,18 @@ abstract final class AppConstants {
 
   static const String rolePatient = 'patient';
 
-  // Languages — must match cliniqnovva's AppConstants.supportedLanguages
-  // exactly (same three, same order: Kinyarwanda, English, French).
-  static const String langKinyarwanda = 'rw';
+  // Languages. Deliberately DIVERGES from cliniqnovva's (web dashboard)
+  // AppConstants.supportedLanguages, which still lists Kinyarwanda — removed
+  // here only, because Flutter's built-in flutter_localizations package
+  // ships no Material/Widgets/Cupertino translations for 'rw' at all, which
+  // crashed every screen with a TextField/OutlinedButton/IconButton whenever
+  // a patient picked it. A stored `preferredLanguage: 'rw'` from before this
+  // change (or written by the web dashboard) has no matching Patient App UI
+  // language anymore — falls back to English via `fallbackLocale` in
+  // main.dart's EasyLocalization setup.
   static const String langEnglish = 'en';
   static const String langFrench = 'fr';
   static const List<String> supportedLanguages = [
-    langKinyarwanda,
     langEnglish,
     langFrench,
   ];

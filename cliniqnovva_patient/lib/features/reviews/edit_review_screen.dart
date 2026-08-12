@@ -117,6 +117,7 @@ class _EditReviewScreenState extends ConsumerState<EditReviewScreen> {
                       CliniqnovvaTextField(
                         label: 'review_comment_optional'.tr(),
                         controller: _branchCommentController,
+                        hint: 'Share your experience',
                         maxLines: 3,
                       ),
                     ],
@@ -134,6 +135,7 @@ class _EditReviewScreenState extends ConsumerState<EditReviewScreen> {
                       CliniqnovvaTextField(
                         label: 'review_comment_optional'.tr(),
                         controller: _doctorCommentController,
+                        hint: 'Share your experience',
                         maxLines: 3,
                       ),
                     ],

@@ -152,14 +152,24 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     return Scaffold(
       backgroundColor: context.appBg,
       body: SafeArea(
-        child: Align(
-          alignment: Alignment.topCenter,
+        child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 400),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: switch (_step) {
-                _Step.language => _LanguageStep(onPicked: _pickLanguage),
+                _Step.language => Column(
+                  children: [
+                    const SizedBox(height: 40),
+                    const _LogoMark(),
+                    Expanded(
+                      child: Center(
+                        child: _LanguageStep(onPicked: _pickLanguage),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                  ],
+                ),
                 _Step.form => _buildFormStep(),
                 _Step.duplicatePrompt => _buildDuplicatePrompt(),
               },
@@ -184,7 +194,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           ),
           Text('register_subtitle'.tr(), style: TextStyle(color: context.appSubtext)),
           const SizedBox(height: 24),
-          CliniqnovvaTextField(label: 'field_full_name'.tr(), controller: _nameController),
+          CliniqnovvaTextField(
+            label: 'field_full_name'.tr(),
+            controller: _nameController,
+            hint: 'e.g. Jean Uwimana',
+          ),
           const SizedBox(height: 14),
           CliniqnovvaTextField(
             label: 'field_phone'.tr(),
@@ -203,6 +217,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           CliniqnovvaTextField(
             label: 'field_password'.tr(),
             controller: _passwordController,
+            hint: 'At least 6 characters',
             obscureText: _obscurePassword,
             suffixIcon: IconButton(
               icon: AppIcon(_obscurePassword ? AppIcons.view : AppIcons.eyeSlash, color: context.appSubtext, size: 20),
@@ -213,6 +228,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           CliniqnovvaTextField(
             label: 'field_confirm_password'.tr(),
             controller: _confirmController,
+            hint: 'Re-enter your password',
             obscureText: _obscureConfirm,
             onFieldSubmitted: (_) => _submit(),
             suffixIcon: IconButton(
@@ -306,30 +322,27 @@ class _LanguageStep extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
+      mainAxisSize: MainAxisSize.min,
       children: [
-        const _LogoMark(),
-        const SizedBox(height: 40),
         Text(
           'choose_language'.tr(),
           textAlign: TextAlign.center,
           style: TextStyle(color: context.appText, fontSize: 18, fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 24),
-        _LanguageOption(label: 'Kinyarwanda', onTap: () => onPicked(const Locale('rw'))),
+        _LanguageOption(label: 'English', flag: '🇬🇧', onTap: () => onPicked(const Locale('en'))),
         const SizedBox(height: 12),
-        _LanguageOption(label: 'English', onTap: () => onPicked(const Locale('en'))),
-        const SizedBox(height: 12),
-        _LanguageOption(label: 'Français', onTap: () => onPicked(const Locale('fr'))),
+        _LanguageOption(label: 'Français', flag: '🇫🇷', onTap: () => onPicked(const Locale('fr'))),
       ],
     );
   }
 }
 
 class _LanguageOption extends StatelessWidget {
-  const _LanguageOption({required this.label, required this.onTap});
+  const _LanguageOption({required this.label, required this.flag, required this.onTap});
 
   final String label;
+  final String flag;
   final VoidCallback onTap;
 
   @override
@@ -339,14 +352,20 @@ class _LanguageOption extends StatelessWidget {
       child: OutlinedButton(
         onPressed: onTap,
         style: OutlinedButton.styleFrom(
-          padding: const EdgeInsets.symmetric(vertical: 16),
+          padding: const EdgeInsets.all(16),
           side: BorderSide(color: context.appBorder),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.inputRadius)),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(label, style: TextStyle(color: context.appText, fontSize: 15, fontWeight: FontWeight.w500)),
+            Row(
+              children: [
+                Text(flag, style: const TextStyle(fontSize: 20)),
+                const SizedBox(width: 10),
+                Text(label, style: TextStyle(color: context.appText, fontSize: 15, fontWeight: FontWeight.w500)),
+              ],
+            ),
             AppIcon(AppIcons.chevronRight, size: 18, color: context.appSubtext),
           ],
         ),

@@ -114,4 +114,18 @@ async function remove(req, res) {
   res.status(501).json({ error: 'Not implemented: branches are deactivated, not deleted' });
 }
 
-module.exports = { list, listByClinic, getById, create, update, setStatus, remove };
+async function uploadPublicImage(req, res, next) {
+  try {
+    if (!req.file) return res.status(400).json({ error: 'No file provided (field name must be "file")' });
+    const branch = await branchesService.setPublicImage(
+      req.params.branchId,
+      { buffer: req.file.buffer, contentType: req.file.mimetype },
+      { actorId: req.user?.uid, actorRole: req.user?.role, scope: req.scope }
+    );
+    res.json({ branch });
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { list, listByClinic, getById, create, update, setStatus, remove, uploadPublicImage };

@@ -5,6 +5,7 @@
 // still has active staff or appointments).
 const { db } = require('../config/firebase-admin');
 const { ROLES } = require('../middleware/requireRole');
+const storageService = require('./storage.service');
 
 // Appointment statuses that count as "active" for the deactivation guard —
 // completed/cancelled appointments never block a deactivation.
@@ -21,7 +22,27 @@ const WRITABLE_FIELDS = [
   'umugandaSaturdayHours',
   'servicesOffered',
   'holidayOverrides',
+  // Patient App public-profile fields (visibility toggle, set at onboarding
+  // — see the "public visibility" wizard step). Deliberately separate from
+  // the internal name/phone/address above: a clinic may want a different
+  // public-facing display name/contact than its internal admin record.
+  'isPublic',
+  'publicDisplayName',
+  'publicPhone',
+  'publicEmail',
+  'publicAddress',
+  'publicImageKey',
 ];
+
+const PUBLIC_PROFILE_REQUIRED_FIELDS = [
+  'publicDisplayName',
+  'publicPhone',
+  'publicEmail',
+  'publicAddress',
+  'publicImageKey',
+];
+
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 // Working-hours only — the subset a Branch Admin may edit on their own
 // branch (Part 6 Task 3: "editable working hours only"). holidayOverrides
@@ -192,6 +213,21 @@ async function update(id, fields, { actorId, actorRole, scope }) {
   if ('holidayOverrides' in fields && fields.holidayOverrides !== null && !Array.isArray(fields.holidayOverrides)) {
     throw httpError(400, 'holidayOverrides must be an array of holiday ids');
   }
+  if (fields.isPublic === true) {
+    // Checked against the MERGED view (existing doc + this call's fields),
+    // not just this call's body — a public-profile field set in an earlier
+    // request still counts, so the caller isn't forced to resend everything
+    // every time. All 5 are required together: a public toggle with a
+    // half-filled profile is worse than not being public at all.
+    const merged = { ...branch, ...fields };
+    const missing = PUBLIC_PROFILE_REQUIRED_FIELDS.filter((f) => !merged[f]);
+    if (missing.length > 0) {
+      throw httpError(400, `To go public, set: ${missing.join(', ')}`);
+    }
+    if (!EMAIL_PATTERN.test(merged.publicEmail)) {
+      throw httpError(400, 'publicEmail must be a valid email address');
+    }
+  }
 
   const updates = {};
   requestedFields.forEach((f) => {
@@ -243,4 +279,22 @@ async function setStatus(id, isActive, { actorId, actorRole, scope }) {
   return { ...branch, isActive };
 }
 
-module.exports = { list, listWithPlan, getById, create, update, setStatus };
+/**
+ * Uploads/replaces a branch's public profile image (Patient App browse
+ * card/detail). A FIXED key path (not a subcollection like patient
+ * documents) — re-uploading simply overwrites the R2 object, so there's
+ * never an orphaned old image to clean up.
+ */
+async function setPublicImage(id, { buffer, contentType }, { scope }) {
+  const branch = await getById(id);
+  if (!branch) throw httpError(404, 'Branch not found');
+  assertBranchAccess(branch, scope);
+
+  const key = `branches/${id}/public-image`;
+  await storageService.uploadFile(buffer, key, contentType);
+  await db.collection('branches').doc(id).update({ publicImageKey: key });
+
+  return { ...branch, publicImageKey: key };
+}
+
+module.exports = { list, listWithPlan, getById, create, update, setStatus, setPublicImage };

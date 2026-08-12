@@ -1,4 +1,8 @@
+import 'dart:typed_data';
+
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:http_parser/http_parser.dart';
 
 import '../../../core/services/api_service.dart';
 import '../../auth/providers/access_control_provider.dart';
@@ -96,6 +100,35 @@ class BranchesNotifier extends AsyncNotifier<void> {
     );
     ref.invalidate(branchesProvider);
     ref.invalidate(branchDetailProvider(branchId));
+  }
+
+  /// Onboarding Step 4 ("public visibility") — uploads/replaces the
+  /// branch's public profile image and returns the updated branch (with
+  /// `publicImageKey` set). Mirrors patients_provider.dart's
+  /// `uploadDocument()` multipart pattern.
+  Future<BranchModel> uploadBranchPublicImage(
+    String branchId, {
+    required Uint8List bytes,
+    required String filename,
+    required String contentType,
+  }) async {
+    final parts = contentType.split('/');
+    final formData = FormData.fromMap({
+      'file': MultipartFile.fromBytes(
+        bytes,
+        filename: filename,
+        contentType: parts.length == 2
+            ? MediaType(parts[0], parts[1])
+            : MediaType('application', 'octet-stream'),
+      ),
+    });
+    final response = await ApiService.instance.client.post<Map<String, dynamic>>(
+      '/api/v1/branches/$branchId/image',
+      data: formData,
+    );
+    ref.invalidate(branchesProvider);
+    ref.invalidate(branchDetailProvider(branchId));
+    return BranchModel.fromJson(response.data!['branch'] as Map<String, dynamic>);
   }
 
   /// Part 6 Task 1 Step 2 — the onboarding wizard's department creation.

@@ -65,20 +65,28 @@ final branchListProvider = FutureProvider.autoDispose.family<BranchListResult, B
 });
 
 class HomeBrowseData {
-  const HomeBrowseData({required this.popular, required this.newOnes});
+  const HomeBrowseData({required this.popular, required this.newOnes, required this.services});
 
   final List<BranchSummary> popular;
   final List<BranchSummary> newOnes;
+
+  /// Every distinct service offered across all public branches — already
+  /// deduped + sorted server-side (browse.service.js#distinctDepartments),
+  /// not recomputed here. Backs the Home screen's "Services" row, above
+  /// the clinic carousels.
+  final List<String> services;
 }
 
-/// Home screen's "Popular Clinics"/"New on Cliniqnovva" sections (Task 1) —
-/// one unfiltered fetch, split client-side on the server-provided
-/// reviewCountThreshold (reviews.service.js's REVIEW_COUNT_THRESHOLD).
+/// Home screen's Services row + "Popular Clinics"/"New on Cliniqnovva"
+/// sections (Task 1) — one unfiltered fetch, split client-side on the
+/// server-provided reviewCountThreshold (reviews.service.js's
+/// REVIEW_COUNT_THRESHOLD).
 final homeBrowseProvider = FutureProvider.autoDispose<HomeBrowseData>((ref) async {
   final result = await ref.watch(branchListProvider(const BrowseFilters()).future);
   return HomeBrowseData(
     popular: result.branches.where((b) => b.reviewCount >= result.reviewCountThreshold).toList(),
     newOnes: result.branches.where((b) => b.reviewCount < result.reviewCountThreshold).toList(),
+    services: result.availableDepartments,
   );
 });
 
@@ -171,9 +179,3 @@ final branchReviewsProvider =
 final userLocationProvider = FutureProvider.autoDispose<Position?>((ref) {
   return LocationService.getCurrentPositionIfPermitted();
 });
-
-/// Home screen's upcoming-appointment card (Task 1) is UI-ready but has no
-/// data source yet — the Patient App has no bookings until Part 21 wires a
-/// real "my appointments" endpoint. Returns null (card stays hidden) until
-/// then; swap this provider's body for the real fetch when that lands.
-final upcomingAppointmentProvider = FutureProvider.autoDispose<Map<String, dynamic>?>((ref) async => null);
