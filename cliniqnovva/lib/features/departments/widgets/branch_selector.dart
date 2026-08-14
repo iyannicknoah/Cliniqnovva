@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/theme_ext.dart';
+import '../../../shared/widgets/app_select.dart';
 import '../../clinics/providers/branches_provider.dart';
 
 /// Sentinel dropdown value for "All branches" — never a real Firestore
@@ -45,38 +45,15 @@ class BranchSelector extends ConsumerWidget {
 
         return SizedBox(
           width: 240,
-          child: DropdownButtonFormField<String>(
-            initialValue: currentValue,
-            isExpanded: true,
-            style: TextStyle(color: context.appText, fontSize: 14),
-            dropdownColor: context.appCard,
-            decoration: InputDecoration(
-              isDense: true,
-              filled: true,
-              fillColor: context.appCard,
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 14,
-                vertical: 12,
-              ),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(AppTheme.inputRadius),
-                borderSide: BorderSide(color: context.appBorder),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(AppTheme.inputRadius),
-                borderSide: BorderSide(color: context.appBorder),
-              ),
-            ),
-            items: [
-              const DropdownMenuItem(
+          child: AppSelect(
+            value: currentValue,
+            options: [
+              const AppSelectOption(
                 value: _kAllBranchesValue,
-                child: Text('All branches', overflow: TextOverflow.ellipsis),
+                label: 'All branches',
               ),
               ...branches.map(
-                (b) => DropdownMenuItem(
-                  value: b.id,
-                  child: Text(b.name, overflow: TextOverflow.ellipsis),
-                ),
+                (b) => AppSelectOption(value: b.id, label: b.name),
               ),
             ],
             onChanged: (id) {

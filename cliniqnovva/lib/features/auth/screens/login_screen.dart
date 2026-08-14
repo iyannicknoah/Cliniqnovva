@@ -205,21 +205,9 @@ class _LogoMark extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        const CliniqnovvaLogo(size: 32, radius: 10),
-        const SizedBox(width: 5),
-        Text(
-          AppConstants.appName,
-          style: TextStyle(
-            color: AppColors.skyBlue,
-            fontSize: 16,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      ],
-    );
+    // 2026-08-14, explicit user instruction — logo image only, wordmark
+    // text removed.
+    return const CliniqnovvaLogo(size: 32, radius: 10);
   }
 }
 

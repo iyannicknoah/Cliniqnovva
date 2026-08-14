@@ -171,17 +171,27 @@ class _SearchableDropdownState extends State<SearchableDropdown> {
                 return Align(
                   alignment: Alignment.topLeft,
                   child: Material(
-                    color: context.appCard,
-                    elevation: 4,
-                    borderRadius: BorderRadius.circular(AppTheme.inputRadius),
+                    color: Colors.transparent,
                     child: Container(
                       width: constraints.maxWidth,
                       constraints: const BoxConstraints(maxHeight: 240),
                       decoration: BoxDecoration(
+                        color: context.appCard,
+                        // 2026-08-14, explicit user instruction — dropdown
+                        // popups use the same card radius + floating-shadow
+                        // convention as the new AppSelect (was inputRadius,
+                        // no shadow).
                         borderRadius: BorderRadius.circular(
-                          AppTheme.inputRadius,
+                          AppTheme.cardRadius,
                         ),
                         border: Border.all(color: context.appBorder),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.16),
+                            blurRadius: 28,
+                            offset: const Offset(0, 12),
+                          ),
+                        ],
                       ),
                       child: list.isEmpty
                           ? Padding(

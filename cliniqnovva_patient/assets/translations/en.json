@@ -1,5 +1,5 @@
 {
-  "app_name": "Cliniqnovva",
+  "app_name": "Clisante",
   "app_tagline": "Run your clinic. We handle the rest.",
 
   "choose_language": "Choose your language",
@@ -40,14 +40,17 @@
   "login_subtitle": "Sign in to your account",
 
   "nav_home": "Home",
-  "nav_browse": "Browse",
+  "nav_browse": "Explore",
   "nav_bookings": "Bookings",
   "nav_chat": "Chat",
-  "nav_settings": "Settings",
+  "nav_settings": "Account",
 
-  "home_services": "Services",
-  "home_popular_clinics": "Popular Clinics",
-  "home_new_clinics": "New on Cliniqnovva",
+  "home_services": "Explore Services",
+  "home_service_clinic_count": {
+    "one": "{} Clinic",
+    "other": "{} Clinics"
+  },
+  "home_popular_clinics": "Popular",
   "action_reschedule": "Reschedule",
   "action_cancel_appointment": "Cancel",
   "action_book_appointment": "Book an appointment",
@@ -60,8 +63,8 @@
   "browse_all_departments": "All",
   "browse_new_badge": "New",
   "browse_doctor_count": {
-    "one": "{} doctor",
-    "other": "{} doctors"
+    "one": "{} Doctor",
+    "other": "{} Doctors"
   },
   "browse_no_results": "No clinics match your search.",
   "browse_clinic_title": "Clinic",
@@ -217,6 +220,7 @@
   "settings_logout_confirm_title": "Log out?",
   "settings_logout_confirm_body": "You'll need to sign in again to book appointments or view your records.",
   "action_cancel": "Cancel",
+  "action_view_all": "View all",
 
   "chat_message_a_clinic": "Message a Clinic",
   "chat_message_this_clinic": "Message this Clinic",

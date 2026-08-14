@@ -26,6 +26,9 @@ class AppIcons {
   static const logout = IconRef.hero(HeroIcons.arrowRightStartOnRectangle);
   static const moreHoriz = IconRef.hero(HeroIcons.ellipsisHorizontal);
   static const chevronRight = IconRef.hero(HeroIcons.chevronRight);
+  static const chevronLeft = IconRef.hero(HeroIcons.chevronLeft);
+  static const chevronDown = IconRef.hero(HeroIcons.chevronDown);
+  static const check = IconRef.hero(HeroIcons.check);
   static const back = IconRef.hero(HeroIcons.arrowLeft);
   static const chat = IconRef.hero(HeroIcons.chatBubbleOvalLeftEllipsis);
   static const send = IconRef.hero(HeroIcons.paperAirplane);

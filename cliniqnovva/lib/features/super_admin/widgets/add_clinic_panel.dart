@@ -8,6 +8,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/theme_ext.dart';
 import '../../../shared/utils/async_feedback.dart';
 import '../../../shared/widgets/app_icon.dart';
+import '../../../shared/widgets/app_select.dart';
 import '../../../shared/widgets/cliniqnovva_button.dart';
 import '../../../shared/widgets/cliniqnovva_text_field.dart';
 import '../../clinics/providers/clinics_provider.dart';
@@ -198,28 +199,13 @@ class _AddClinicPanelState extends ConsumerState<_AddClinicPanel> {
                   ),
                 ),
                 const SizedBox(height: 8),
-                DropdownButtonFormField<String>(
-                  initialValue: _plan,
-                  decoration: InputDecoration(
-                    isDense: true,
-                    filled: true,
-                    fillColor: context.appCard,
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 12,
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppTheme.inputRadius),
-                      borderSide: BorderSide(color: context.appBorder),
-                    ),
-                  ),
-                  items: AppConstants.subscriptionPlans
+                AppSelect(
+                  value: _plan,
+                  options: AppConstants.subscriptionPlans
                       .map(
-                        (plan) => DropdownMenuItem(
+                        (plan) => AppSelectOption(
                           value: plan,
-                          child: Text(
-                            '${plan[0].toUpperCase()}${plan.substring(1)} — ${_planBranchLimitLabels[plan]}',
-                          ),
+                          label: '${plan[0].toUpperCase()}${plan.substring(1)} — ${_planBranchLimitLabels[plan]}',
                         ),
                       )
                       .toList(),

@@ -5,7 +5,7 @@ import '../home_screen.dart';
 import 'sample_home_data.dart';
 
 /// `/dev/home-preview` (see app_router.dart) — renders Home's real layout
-/// ([HomeTopBar]/[ServicesRow]/[ClinicCarousel], same widgets the real
+/// ([HomeTopBar]/[ServicesGrid]/[ClinicList], same widgets the real
 /// [HomeScreen] uses) fed [sampleHomeBrowseData] directly, with no
 /// Riverpod provider involved at all — deliberately NOT a
 /// `homeBrowseProvider` override (a nested `ProviderScope` override is
@@ -28,12 +28,11 @@ class HomePreviewScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const HomeTopBar(),
-              const SizedBox(height: 28),
-              ServicesRow(services: sampleHomeBrowseData.services),
-              const SizedBox(height: 24),
-              ClinicCarousel(title: 'Popular Clinics', branches: sampleHomeBrowseData.popular),
-              const SizedBox(height: 24),
-              ClinicCarousel(title: 'New on Cliniqnovva', branches: sampleHomeBrowseData.newOnes, isNew: true),
+              const SizedBox(height: 20),
+              ServicesGrid(services: sampleHomeBrowseData.services),
+              const SizedBox(height: 20),
+              // Same take(6) cap as the real HomeScreen.
+              ClinicList(title: 'Popular', branches: sampleHomeBrowseData.popular.take(6).toList()),
             ],
           ),
         ),

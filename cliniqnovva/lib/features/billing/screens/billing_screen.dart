@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/theme_ext.dart';
+import '../../../shared/widgets/app_select.dart';
 import '../../../shared/widgets/cliniqnovva_table.dart';
 import '../../../shared/widgets/empty_state.dart';
 import '../../../shared/widgets/loading_widget.dart';
@@ -118,43 +119,20 @@ class _BillingScreenState extends ConsumerState<BillingScreen> {
                   children: [
                     SizedBox(
                       width: 180,
-                      child: DropdownButtonFormField<String?>(
-                        initialValue: _statusFilter,
-                        isExpanded: true,
-                        hint: Text(
-                          'All statuses',
-                          style: TextStyle(color: context.appSubtext, fontSize: 14),
-                        ),
-                        style: TextStyle(color: context.appText, fontSize: 14),
-                        dropdownColor: context.appCard,
-                        decoration: InputDecoration(
-                          isDense: true,
-                          filled: true,
-                          fillColor: context.appCard,
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 12,
-                          ),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(
-                              AppTheme.inputRadius,
-                            ),
-                            borderSide: BorderSide(color: context.appBorder),
-                          ),
-                        ),
-                        items: [
-                          const DropdownMenuItem(
-                            value: null,
-                            child: Text('All statuses'),
-                          ),
+                      child: AppSelect(
+                        // '' is a sentinel for "All statuses" — AppSelect's
+                        // options require a non-null value, unlike
+                        // DropdownMenuItem which allowed a literal `null`.
+                        value: _statusFilter ?? '',
+                        hint: 'All statuses',
+                        options: [
+                          const AppSelectOption(value: '', label: 'All statuses'),
                           ...AppConstants.invoiceStatuses.map(
-                            (s) => DropdownMenuItem(
-                              value: s,
-                              child: Text(_statusLabels[s] ?? s),
-                            ),
+                            (s) => AppSelectOption(value: s, label: _statusLabels[s] ?? s),
                           ),
                         ],
-                        onChanged: (v) => setState(() => _statusFilter = v),
+                        onChanged: (v) =>
+                            setState(() => _statusFilter = (v == null || v.isEmpty) ? null : v),
                       ),
                     ),
                     _DateFilterButton(

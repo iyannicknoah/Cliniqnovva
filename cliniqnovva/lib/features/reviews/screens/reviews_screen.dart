@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/theme_ext.dart';
+import '../../../shared/widgets/app_select.dart';
 import '../../../shared/widgets/avatar_widget.dart';
 import '../../../shared/widgets/cliniqnovva_button.dart';
 import '../../../shared/widgets/cliniqnovva_card.dart';
@@ -207,24 +208,20 @@ class _RatingFilterDropdown extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: context.appBorder),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<int?>(
-          value: value,
-          hint: Text('Rating', style: TextStyle(color: context.appText)),
-          icon: const Icon(Icons.keyboard_arrow_down, size: 18),
-          items: [
-            DropdownMenuItem(value: null, child: Text('Rating', style: TextStyle(color: context.appText))),
-            for (final stars in [5, 4, 3, 2, 1])
-              DropdownMenuItem(value: stars, child: Text('$stars stars')),
-          ],
-          onChanged: onChanged,
-        ),
+    return SizedBox(
+      width: 160,
+      // '' is a sentinel for "no rating filter" — AppSelect's options
+      // require a non-null String value, unlike DropdownMenuItem<int?>
+      // which allowed a literal `null` entry.
+      child: AppSelect(
+        value: value?.toString() ?? '',
+        hint: 'Rating',
+        options: [
+          const AppSelectOption(value: '', label: 'Rating'),
+          for (final stars in [5, 4, 3, 2, 1])
+            AppSelectOption(value: '$stars', label: '$stars stars'),
+        ],
+        onChanged: (v) => onChanged(v == null || v.isEmpty ? null : int.parse(v)),
       ),
     );
   }
@@ -240,42 +237,27 @@ class _PatientFilterDropdown extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final patientIds = reviews.map((r) => r.patientId).toSet().toList();
+    // AppSelect's options need a plain String label up front — resolved
+    // here the same way `_PatientOptionLabel` used to per-item (was a
+    // small `ConsumerWidget` rendered as a `DropdownMenuItem.child`, not
+    // possible with AppSelect's plain-string option labels).
+    String labelFor(String patientId) =>
+        ref.watch(patientDetailProvider(patientId)).valueOrNull?.name ?? '…';
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: context.appBorder),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<String?>(
-          value: value,
-          hint: Text('Filter by patient', style: TextStyle(color: context.appText)),
-          icon: const Icon(Icons.keyboard_arrow_down, size: 18),
-          items: [
-            DropdownMenuItem(value: null, child: Text('Filter by patient', style: TextStyle(color: context.appText))),
-            for (final patientId in patientIds)
-              DropdownMenuItem(
-                value: patientId,
-                child: _PatientOptionLabel(patientId: patientId),
-              ),
-          ],
-          onChanged: onChanged,
-        ),
+    return SizedBox(
+      width: 220,
+      // '' is a sentinel for "no patient filter".
+      child: AppSelect(
+        value: value ?? '',
+        hint: 'Filter by patient',
+        options: [
+          const AppSelectOption(value: '', label: 'Filter by patient'),
+          for (final patientId in patientIds)
+            AppSelectOption(value: patientId, label: labelFor(patientId)),
+        ],
+        onChanged: (v) => onChanged(v == null || v.isEmpty ? null : v),
       ),
     );
-  }
-}
-
-class _PatientOptionLabel extends ConsumerWidget {
-  const _PatientOptionLabel({required this.patientId});
-
-  final String patientId;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final patientAsync = ref.watch(patientDetailProvider(patientId));
-    return Text(patientAsync.valueOrNull?.name ?? '…');
   }
 }
 

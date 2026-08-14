@@ -1,5 +1,5 @@
 {
-  "app_name": "Cliniqnovva",
+  "app_name": "Clisante",
   "app_tagline": "Gérez votre clinique. On s'occupe du reste.",
 
   "choose_language": "Choisissez votre langue",
@@ -43,11 +43,14 @@
   "nav_browse": "Explorer",
   "nav_bookings": "Rendez-vous",
   "nav_chat": "Discussion",
-  "nav_settings": "Paramètres",
+  "nav_settings": "Compte",
 
-  "home_services": "Services",
-  "home_popular_clinics": "Cliniques populaires",
-  "home_new_clinics": "Nouveau sur Cliniqnovva",
+  "home_services": "Découvrir les services",
+  "home_service_clinic_count": {
+    "one": "{} clinique",
+    "other": "{} cliniques"
+  },
+  "home_popular_clinics": "Populaire",
   "action_reschedule": "Reporter",
   "action_cancel_appointment": "Annuler",
   "action_book_appointment": "Prendre rendez-vous",
@@ -217,6 +220,7 @@
   "settings_logout_confirm_title": "Se déconnecter ?",
   "settings_logout_confirm_body": "Vous devrez vous reconnecter pour prendre rendez-vous ou consulter vos dossiers.",
   "action_cancel": "Annuler",
+  "action_view_all": "Voir tout",
 
   "chat_message_a_clinic": "Écrire à une clinique",
   "chat_message_this_clinic": "Écrire à cette clinique",

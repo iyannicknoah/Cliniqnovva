@@ -11,22 +11,41 @@ import 'package:flutter/material.dart';
 ///
 /// Use this everywhere the logo appears — never `Image.asset` a logo
 /// file directly, so a future asset swap stays a one-file change.
+///
+/// [background] (2026-08-14, explicit user instruction — "make it have
+/// white background again", sidebar only) wraps the mark in a fixed WHITE
+/// square (not theme-aware — deliberately fixed in both light/dark, same
+/// as the sidebar's own solid-blue background it sits on) with a small
+/// internal inset so the white actually reads as a visible mat around the
+/// mark rather than being fully covered by it.
 class CliniqnovvaLogo extends StatelessWidget {
-  const CliniqnovvaLogo({super.key, this.size = 24, this.radius = 8});
+  const CliniqnovvaLogo({
+    super.key,
+    this.size = 24,
+    this.radius = 8,
+    this.background = false,
+  });
 
   final double size;
   final double radius;
+  final bool background;
 
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(radius),
-      child: Image.asset(
-        'assets/images/logo.png',
-        width: size,
-        height: size,
-        fit: BoxFit.cover,
+    final image = Image.asset(
+      'assets/images/logo.png',
+      fit: background ? BoxFit.contain : BoxFit.cover,
+    );
+    return Container(
+      width: size,
+      height: size,
+      padding: background ? EdgeInsets.all(size * 0.12) : EdgeInsets.zero,
+      decoration: BoxDecoration(
+        color: background ? Colors.white : null,
+        borderRadius: BorderRadius.circular(radius),
       ),
+      clipBehavior: Clip.antiAlias,
+      child: image,
     );
   }
 }

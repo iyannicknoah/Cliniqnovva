@@ -6,6 +6,7 @@ import '../../../core/services/location_service.dart';
 import '../models/branch_review_summary.dart';
 import '../models/branch_summary.dart';
 import '../models/doctor_summary.dart';
+import '../models/service_summary.dart';
 
 /// Browse screen's search/sort/department state — deliberately a plain
 /// value type (not a free-floating set of provider args) so
@@ -37,11 +38,17 @@ class BranchListResult {
   const BranchListResult({
     required this.branches,
     required this.availableDepartments,
+    required this.departmentCounts,
     required this.reviewCountThreshold,
   });
 
   final List<BranchSummary> branches;
   final List<String> availableDepartments;
+
+  /// Service name -> how many public branches offer it. Used only by
+  /// [homeBrowseProvider] for the Home screen's service cards — Browse's
+  /// own filter chips still just use [availableDepartments].
+  final Map<String, int> departmentCounts;
   final int reviewCountThreshold;
 }
 
@@ -60,6 +67,9 @@ final branchListProvider = FutureProvider.autoDispose.family<BranchListResult, B
   return BranchListResult(
     branches: (data['branches'] as List).map((e) => BranchSummary.fromJson(e as Map<String, dynamic>)).toList(),
     availableDepartments: (data['availableDepartments'] as List).map((e) => e.toString()).toList(),
+    departmentCounts: (data['departmentCounts'] as Map<String, dynamic>? ?? {}).map(
+      (key, value) => MapEntry(key, (value as num?)?.toInt() ?? 0),
+    ),
     reviewCountThreshold: (data['reviewCountThreshold'] as num?)?.toInt() ?? 5,
   );
 });
@@ -70,14 +80,14 @@ class HomeBrowseData {
   final List<BranchSummary> popular;
   final List<BranchSummary> newOnes;
 
-  /// Every distinct service offered across all public branches — already
-  /// deduped + sorted server-side (browse.service.js#distinctDepartments),
-  /// not recomputed here. Backs the Home screen's "Services" row, above
-  /// the clinic carousels.
-  final List<String> services;
+  /// Every distinct service offered across all public branches, each with
+  /// its clinic count — already deduped/counted server-side
+  /// (browse.service.js#distinctDepartments/#departmentCounts), not
+  /// recomputed here. Backs the Home screen's service cards.
+  final List<ServiceSummary> services;
 }
 
-/// Home screen's Services row + "Popular Clinics"/"New on Cliniqnovva"
+/// Home screen's service cards + "Popular Clinics"/"New on Clisante"
 /// sections (Task 1) — one unfiltered fetch, split client-side on the
 /// server-provided reviewCountThreshold (reviews.service.js's
 /// REVIEW_COUNT_THRESHOLD).
@@ -86,8 +96,25 @@ final homeBrowseProvider = FutureProvider.autoDispose<HomeBrowseData>((ref) asyn
   return HomeBrowseData(
     popular: result.branches.where((b) => b.reviewCount >= result.reviewCountThreshold).toList(),
     newOnes: result.branches.where((b) => b.reviewCount < result.reviewCountThreshold).toList(),
-    services: result.availableDepartments,
+    services: result.availableDepartments
+        .map((name) => ServiceSummary(name: name, clinicCount: result.departmentCounts[name] ?? 0))
+        .toList(),
   );
+});
+
+/// Every distinct service across every public branch, alphabetically —
+/// backs `ExploreServicesScreen` (Home's service "View all"), as opposed
+/// to [homeBrowseProvider]'s top-3-by-count subset. Deliberately a
+/// separate provider rather than reusing `homeBrowseProvider` — this
+/// needs the FULL list, unfiltered/untrimmed, and sorted for scanning
+/// rather than by popularity.
+final allServicesProvider = FutureProvider.autoDispose<List<ServiceSummary>>((ref) async {
+  final result = await ref.watch(branchListProvider(const BrowseFilters()).future);
+  final services = result.availableDepartments
+      .map((name) => ServiceSummary(name: name, clinicCount: result.departmentCounts[name] ?? 0))
+      .toList();
+  services.sort((a, b) => a.name.compareTo(b.name));
+  return services;
 });
 
 class BranchDetailResult {

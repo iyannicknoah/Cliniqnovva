@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../core/constants/rwanda_locations.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/theme_ext.dart';
+import '../../../shared/widgets/app_select.dart';
 import '../models/patient_model.dart';
 
 /// Shared by the Register and Profile-edit forms (Part 9 Tasks 2-3) — same
@@ -193,56 +194,14 @@ class LabeledDropdown extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            color: context.appText,
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-        const SizedBox(height: 8),
-        DropdownButtonFormField<String>(
-          initialValue: items.contains(value) ? value : null,
-          isExpanded: true,
-          hint: Text(
-            hint,
-            style: TextStyle(color: context.appSubtext, fontSize: 14),
-            overflow: TextOverflow.ellipsis,
-          ),
-          style: TextStyle(color: context.appText, fontSize: 15),
-          dropdownColor: context.appCard,
-          decoration: InputDecoration(
-            isDense: true,
-            filled: true,
-            fillColor: context.appCard,
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 14,
-              vertical: 12,
-            ),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppTheme.inputRadius),
-              borderSide: BorderSide(color: context.appBorder),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppTheme.inputRadius),
-              borderSide: BorderSide(color: context.appBorder),
-            ),
-          ),
-          items: items
-              .map(
-                (item) => DropdownMenuItem(
-                  value: item,
-                  child: Text(itemLabels?[item] ?? item),
-                ),
-              )
-              .toList(),
-          onChanged: onChanged,
-        ),
-      ],
+    return AppSelect(
+      label: label,
+      value: items.contains(value) ? value : null,
+      hint: hint,
+      options: items
+          .map((item) => AppSelectOption(value: item, label: itemLabels?[item] ?? item))
+          .toList(),
+      onChanged: onChanged,
     );
   }
 }

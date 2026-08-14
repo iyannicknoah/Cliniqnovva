@@ -10,6 +10,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/theme_ext.dart';
 import '../../../shared/utils/async_feedback.dart';
 import '../../../shared/widgets/app_icon.dart';
+import '../../../shared/widgets/app_select.dart';
 import '../../../shared/widgets/cliniqnovva_button.dart';
 import '../../../shared/widgets/cliniqnovva_text_field.dart';
 import '../../departments/models/department_model.dart';
@@ -267,46 +268,20 @@ class _StaffPanelState extends ConsumerState<_StaffPanel> {
                   ),
                 ),
                 const SizedBox(height: 8),
-                DropdownButtonFormField<String>(
-                  initialValue: _role,
-                  isExpanded: true,
-                  style: TextStyle(color: context.appText, fontSize: 15),
-                  dropdownColor: context.appCard,
-                  decoration: InputDecoration(
-                    isDense: true,
-                    filled: true,
-                    fillColor: context.appCard,
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 12,
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppTheme.inputRadius),
-                      borderSide: BorderSide(color: context.appBorder),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppTheme.inputRadius),
-                      borderSide: BorderSide(color: context.appBorder),
-                    ),
-                  ),
+                AppSelect(
+                  value: _role,
                   // Role is fixed once the account exists — changing it is a
                   // distinct capability the spec reserves for
                   // Clinic Admin/Super Admin elsewhere, not this form. Same
                   // for the locked-role mode (step 2 of "+ Add Branch") —
                   // this panel only ever creates that one role then.
-                  items: (_isLockedRole
+                  enabled: !(_isEdit || _isLockedRole),
+                  options: (_isLockedRole
                           ? [widget.lockedRole!]
                           : AppConstants.staffRoles)
-                      .map(
-                        (role) => DropdownMenuItem(
-                          value: role,
-                          child: Text(roleLabel(role)),
-                        ),
-                      )
+                      .map((role) => AppSelectOption(value: role, label: roleLabel(role)))
                       .toList(),
-                  onChanged: _isEdit || _isLockedRole
-                      ? null
-                      : (value) => setState(() => _role = value ?? _role),
+                  onChanged: (value) => setState(() => _role = value ?? _role),
                 ),
                 if (_isDoctor) ...[
                   const SizedBox(height: 16),
@@ -456,39 +431,11 @@ class _DepartmentDropdown extends StatelessWidget {
               ),
           ];
 
-    return DropdownButtonFormField<String>(
-      initialValue: value,
-      isExpanded: true,
-      hint: Text(
-        'Select department (optional)',
-        style: TextStyle(color: context.appSubtext, fontSize: 14),
-      ),
-      style: TextStyle(color: context.appText, fontSize: 15),
-      dropdownColor: context.appCard,
-      decoration: InputDecoration(
-        isDense: true,
-        filled: true,
-        fillColor: context.appCard,
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 14,
-          vertical: 12,
-        ),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppTheme.inputRadius),
-          borderSide: BorderSide(color: context.appBorder),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppTheme.inputRadius),
-          borderSide: BorderSide(color: context.appBorder),
-        ),
-      ),
-      items: options
-          .map(
-            (d) => DropdownMenuItem(
-              value: d.id,
-              child: Text(d.name, overflow: TextOverflow.ellipsis),
-            ),
-          )
+    return AppSelect(
+      value: value,
+      hint: 'Select department (optional)',
+      options: options
+          .map((d) => AppSelectOption(value: d.id, label: d.name))
           .toList(),
       onChanged: onChanged,
     );

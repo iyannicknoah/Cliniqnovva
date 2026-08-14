@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 
 import '../../core/theme/app_colors.dart';
@@ -8,9 +10,16 @@ import 'app_icon.dart';
 /// A compact "★ 4.8" pill — the Home/Browse card's overlay badge on the
 /// clinic image (distinct from [RatingStars]' 5-star row, which is too busy
 /// for a small image overlay). Hidden entirely when there's nothing to
-/// show yet (no reviews).
+/// show yet (no reviews). Translucent-white blurred pill + amber star +
+/// dark text — matches the reference design exactly (not the app's usual
+/// skyBlue accent: this badge sits on a photo, not a themed surface, so it
+/// intentionally uses its own fixed light/dark pair rather than
+/// `context.appXxx` tokens).
 class RatingBadge extends StatelessWidget {
   const RatingBadge({super.key, required this.rating, required this.reviewCount});
+
+  static const _amberStar = Color(0xFFFFBF09);
+  static const _darkText = Color(0xFF14181B);
 
   final double rating;
   final int reviewCount;
@@ -18,22 +27,28 @@ class RatingBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (reviewCount == 0) return const SizedBox.shrink();
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.55),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const AppIcon(AppIcons.star, size: 12, color: AppColors.skyBlue),
-          const SizedBox(width: 4),
-          Text(
-            rating.toStringAsFixed(1),
-            style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(100),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 2, sigmaY: 2),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: BoxDecoration(
+            color: const Color(0xA2FFFFFF),
+            borderRadius: BorderRadius.circular(100),
           ),
-        ],
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const AppIcon(AppIcons.star, size: 18, color: _amberStar),
+              const SizedBox(width: 4),
+              Text(
+                rating.toStringAsFixed(1),
+                style: const TextStyle(color: _darkText, fontSize: 14, fontWeight: FontWeight.w600),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

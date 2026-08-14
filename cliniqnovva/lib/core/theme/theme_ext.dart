@@ -21,7 +21,7 @@ extension AppThemeX on BuildContext {
       isDark ? const Color(0xFF8A9BBC) : AppColors.textSecondary;
 
   Color get appBorder =>
-      isDark ? const Color(0xFF2A2A2A) : AppColors.cardBorder;
+      isDark ? AppColors.cardBorderDark : AppColors.cardBorder;
 
   /// A subtle neutral fill, distinct from [appBg]/[appCard] — used for
   /// interactive-state highlights (active nav item, theme-toggle track,
@@ -29,11 +29,14 @@ extension AppThemeX on BuildContext {
   Color get appSecondaryBg =>
       isDark ? Colors.white.withValues(alpha: 0.08) : const Color(0xFFF3F4F6);
 
-  /// The system "primary" color (rule 2026-07-24): black in light mode,
-  /// white in dark mode — retired the brand lime entirely. Use this for
-  /// anything that used to reach for `AppColors.primary` (focus borders,
-  /// avatar rings, spinners) — never reintroduce a colored accent here.
-  Color get appPrimary => isDark ? Colors.white : Colors.black;
+  /// The system "primary" color — brand blue (`AppColors.primary`), ported
+  /// 2026-08-13 from the Smart Feed Rwanda reference (explicit user
+  /// instruction: "copy primary color"). Fixed, NOT theme-inverted — same
+  /// blue in both themes, replacing the retired black(light)/white(dark)
+  /// inversion rule (2026-07-24 - 2026-08-13). Use this for anything that
+  /// reaches for the app's primary/brand accent (buttons, focus borders,
+  /// avatar rings, spinners, sidebar background).
+  Color get appPrimary => AppColors.primary;
 
   BoxDecoration cardDeco([double radius = 18]) => BoxDecoration(
     color: appCard,

@@ -8,6 +8,7 @@ import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/theme_ext.dart';
 import '../../../shared/widgets/app_icon.dart';
+import '../../../shared/widgets/app_select.dart';
 import '../../../shared/widgets/cliniqnovva_button.dart';
 import '../../../shared/widgets/cliniqnovva_text_field.dart';
 import '../../../shared/widgets/empty_state.dart';
@@ -470,39 +471,12 @@ class _WeeklyScheduleSectionState
                           flex: 2,
                           child: IgnorePointer(
                             ignoring: !widget.canEdit,
-                            child: DropdownButtonFormField<String>(
-                              initialValue: entry.day,
-                              isExpanded: true,
-                              style: TextStyle(
-                                color: context.appText,
-                                fontSize: 14,
-                              ),
-                              dropdownColor: context.appCard,
-                              decoration: InputDecoration(
-                                isDense: true,
-                                filled: true,
-                                fillColor: context.appCard,
-                                contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 10,
-                                ),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(
-                                    AppTheme.inputRadius,
-                                  ),
-                                  borderSide: BorderSide(
-                                    color: context.appBorder,
-                                  ),
-                                ),
-                              ),
-                              items: _days
-                                  .map(
-                                    (d) => DropdownMenuItem(
-                                      value: d,
-                                      child: Text(_dayLabels[d]!),
-                                    ),
-                                  )
-                                  .toList(),
+                            child: AppSelect(
+                              value: entry.day,
+                              options: [
+                                for (final d in _days)
+                                  AppSelectOption(value: d, label: _dayLabels[d]!),
+                              ],
                               onChanged: (value) => setState(
                                 () => entry.day = value ?? entry.day,
                               ),

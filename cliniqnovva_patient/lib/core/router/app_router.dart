@@ -12,6 +12,8 @@ import '../../features/bookings/my_bookings_screen.dart';
 import '../../features/browse/browse_screen.dart';
 import '../../features/browse/clinic_detail_screen.dart';
 import '../../features/browse/doctor_detail_screen.dart';
+import '../../features/browse/explore_services_screen.dart';
+import '../../features/browse/service_clinics_screen.dart';
 import '../../features/chat/chat_list_screen.dart';
 import '../../features/chat/chat_thread_screen.dart';
 import '../../features/home/dev/home_preview_screen.dart';
@@ -132,6 +134,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => ChatThreadScreen(chatId: state.pathParameters['chatId']!),
       ),
       GoRoute(path: '/notifications', builder: (context, state) => const NotificationsScreen()),
+      GoRoute(path: '/explore-services', builder: (context, state) => const ExploreServicesScreen()),
+      GoRoute(
+        path: '/service-clinics',
+        builder: (context, state) => ServiceClinicsScreen(service: state.uri.queryParameters['service'] ?? ''),
+      ),
 
       // Dev-only — see the redirect note above. Not linked from anywhere in
       // the real app UI.

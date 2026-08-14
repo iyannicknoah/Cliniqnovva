@@ -1,6 +1,7 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:heroicons/heroicons.dart';
 
 import '../../core/constants/app_constants.dart';
 import '../../core/theme/app_colors.dart';
@@ -8,9 +9,14 @@ import '../../core/theme/app_icons.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/theme/theme_ext.dart';
 import '../../features/auth/providers/auth_provider.dart';
+import '../providers/sidebar_provider.dart';
 import 'app_icon.dart';
 import 'avatar_widget.dart';
 import 'cliniqnovva_logo.dart';
+
+/// Collapsed-state rail width (2026-08-14) — icon-only, centered, no
+/// wordmark/labels. Expanded width stays `AppTheme.sidebarWidth`.
+const _collapsedSidebarWidth = 76.0;
 
 /// One entry in [CliniqnovvaSidebar]'s nav list. [allowedRoles] controls
 /// role-based visibility — an item is hidden entirely for a role not in
@@ -52,7 +58,7 @@ class SidebarNavItem {
 /// profile chip at bottom (border-only, with a "more" menu for
 /// theme/language/logout — that floating popup was already theme-reactive
 /// and needed no change here).
-class CliniqnovvaSidebar extends StatelessWidget {
+class CliniqnovvaSidebar extends ConsumerWidget {
   const CliniqnovvaSidebar({
     super.key,
     required this.items,
@@ -73,13 +79,48 @@ class CliniqnovvaSidebar extends StatelessWidget {
   final ValueChanged<String> onNavTap;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final visibleItems = items
         .where((item) => item.allowedRoles.contains(currentRole))
         .toList();
+    // 2026-08-14, explicit user instruction — "navbar that expands and
+    // de-expands". Lives in `sidebarCollapsedProvider`, not local state,
+    // since this whole widget is rebuilt fresh by the caller's shell on
+    // every route change (see the provider's own doc comment).
+    final collapsed = ref.watch(sidebarCollapsedProvider);
 
-    return Container(
-      width: AppTheme.sidebarWidth,
+    // 2026-08-14 — collapse toggle color/style shared by both the row
+    // (expanded) and column (collapsed) layouts below.
+    final toggle = InkWell(
+      borderRadius: BorderRadius.circular(9),
+      onTap: () =>
+          ref.read(sidebarCollapsedProvider.notifier).state = !collapsed,
+      child: Container(
+        padding: const EdgeInsets.all(7),
+        decoration: BoxDecoration(
+          // "our secondary background color" / "our primary text color"
+          // (explicit user instruction) — `context.appSecondaryBg`/`appText`,
+          // not the brand blue this used before. Both theme-aware, so this
+          // also fixes the toggle staying visible in dark mode.
+          color: context.appSecondaryBg,
+          borderRadius: BorderRadius.circular(9),
+        ),
+        child: AppIcon(
+          collapsed ? AppIcons.chevronRight : AppIcons.chevronLeft,
+          size: 17,
+          color: context.appText,
+        ),
+      ),
+    );
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      curve: Curves.easeInOut,
+      width: collapsed ? _collapsedSidebarWidth : AppTheme.sidebarWidth,
+      // Theme-aware background (2026-08-14 — fixes dark mode: a hardcoded
+      // `Colors.white` never switched with the rest of the app). White in
+      // light mode / black in dark mode, same as the page itself
+      // (`context.appBg`) — a right-edge border marks the seam between them.
       decoration: BoxDecoration(
         color: context.appBg,
         border: Border(right: BorderSide(color: context.appBorder)),
@@ -89,35 +130,63 @@ class CliniqnovvaSidebar extends StatelessWidget {
         children: [
           const SizedBox(height: 24),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Row(
-              children: [
-                const CliniqnovvaLogo(size: 28, radius: 8),
-                const SizedBox(width: 4),
-                Flexible(
-                  child: Text(
-                    'Cliniqnovva',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: AppColors.skyBlue,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                    ),
+            padding: EdgeInsets.symmetric(horizontal: collapsed ? 18 : 20),
+            // Collapsed: logo above toggle, stacked (a Row didn't fit both
+            // side by side in the 76px rail — the toggle button was
+            // rendering off past the sidebar's own bounds, which is why
+            // tapping it to re-expand never worked). Expanded: logo +
+            // wordmark + toggle in one row, toggle pinned right via the
+            // wordmark's `Expanded`.
+            child: collapsed
+                ? Column(
+                    children: [
+                      const CliniqnovvaLogo(size: 35, radius: 17.5),
+                      const SizedBox(height: 10),
+                      toggle,
+                    ],
+                  )
+                : Row(
+                    children: [
+                      // 2026-08-14, explicit user instruction: 35px (was
+                      // 28), radius kept at exactly half. `background: true`
+                      // (a synthetic white mat behind the mark) stays off —
+                      // the logo source is natively transparent with no
+                      // backing shape of its own.
+                      const CliniqnovvaLogo(size: 35, radius: 17.5),
+                      // 5px gap (explicit user instruction — was 0, briefly
+                      // removed entirely earlier the same day).
+                      const SizedBox(width: 5),
+                      Expanded(
+                        child: Text(
+                          'Cliniqnovva',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: AppColors.primary,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      toggle,
+                    ],
                   ),
-                ),
-              ],
-            ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 18),
+          // 2026-08-14, explicit user instruction — 1px divider between the
+          // logo/toggle header and the nav list.
+          Divider(height: 1, thickness: 1, color: context.appBorder),
+          const SizedBox(height: 10),
           Expanded(
             child: ListView(
-              padding: const EdgeInsets.symmetric(horizontal: 10),
+              padding: EdgeInsets.symmetric(horizontal: collapsed ? 8 : 10),
               children: visibleItems.map((item) {
                 final active = item.route == currentRoute;
                 return _SidebarNavTile(
                   item: item,
                   active: active,
+                  collapsed: collapsed,
                   onTap: () => onNavTap(item.route),
                 );
               }).toList(),
@@ -127,6 +196,7 @@ class CliniqnovvaSidebar extends StatelessWidget {
             userName: userName,
             userRoleLabel: userRoleLabel,
             userPhotoUrl: userPhotoUrl,
+            collapsed: collapsed,
           ),
         ],
       ),
@@ -138,84 +208,102 @@ class _SidebarNavTile extends StatelessWidget {
   const _SidebarNavTile({
     required this.item,
     required this.active,
+    required this.collapsed,
     required this.onTap,
   });
 
   final SidebarNavItem item;
   final bool active;
+  final bool collapsed;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final activeColor = context.appText;
+    // 2026-08-14 — active stays the fixed brand blue in both themes;
+    // inactive/hover use theme-aware tokens (was hardcoded light-mode-only
+    // `AppColors.textSecondary`, invisible-ish against a dark-mode sidebar
+    // now that the background itself is theme-aware too).
+    final activeColor = AppColors.primary;
     final inactiveColor = context.appSubtext;
-    final hoverColor = (context.isDark ? Colors.white : Colors.black)
-        .withValues(alpha: 0.04);
+    final hoverColor = AppColors.primary.withValues(alpha: 0.06);
     final badgeCount = item.badgeCount ?? 0;
+    final icon = AppIcon(
+      item.icon,
+      size: 19,
+      color: active ? activeColor : inactiveColor,
+      style: HeroIconStyle.outline,
+    );
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(14),
-        child: InkWell(
+      child: Tooltip(
+        // Collapsed rail has no visible label — a hover tooltip keeps the
+        // item identifiable (2026-08-14). Empty/no-op in expanded mode.
+        message: collapsed ? item.label.tr() : '',
+        waitDuration: const Duration(milliseconds: 400),
+        child: Material(
+          color: Colors.transparent,
           borderRadius: BorderRadius.circular(14),
-          onTap: onTap,
-          hoverColor: hoverColor,
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-            decoration: BoxDecoration(
-              // Active state: soft neutral pill, no left border (design
-              // rule 2026-07-23, reaffirmed 2026-07-24 for the white/black
-              // sidebar — same fill `appSecondaryBg` uses for any other
-              // interactive-state highlight in the app).
-              color: active ? context.appSecondaryBg : Colors.transparent,
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: Row(
-              children: [
-                AppIcon(
-                  item.icon,
-                  size: 16,
-                  color: active ? activeColor : inactiveColor,
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    item.label.tr(),
-                    style: TextStyle(
-                      color: active ? activeColor : inactiveColor,
-                      fontSize: 13,
-                      fontWeight: active ? FontWeight.w600 : FontWeight.w500,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(14),
+            onTap: onTap,
+            hoverColor: hoverColor,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              padding: collapsed
+                  ? const EdgeInsets.symmetric(vertical: 11)
+                  : const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+              decoration: BoxDecoration(
+                // Active state: light blue tint pill (2026-08-14, follows
+                // the white-sidebar flip — was a translucent-white pill
+                // when the sidebar itself was solid blue).
+                color: active ? AppColors.primaryTint : Colors.transparent,
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: collapsed
+                  ? Center(child: icon)
+                  : Row(
+                      children: [
+                        icon,
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            item.label.tr(),
+                            style: TextStyle(
+                              color: active ? activeColor : inactiveColor,
+                              fontSize: 13,
+                              fontWeight: active
+                                  ? FontWeight.w600
+                                  : FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                        if (badgeCount > 0) ...[
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 1,
+                            ),
+                            constraints: const BoxConstraints(minWidth: 18),
+                            decoration: BoxDecoration(
+                              color: AppColors.brightRed,
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              badgeCount > 99 ? '99+' : '$badgeCount',
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.w700,
+                                height: 1.3,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
-                  ),
-                ),
-                if (badgeCount > 0) ...[
-                  const SizedBox(width: 6),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 6,
-                      vertical: 1,
-                    ),
-                    constraints: const BoxConstraints(minWidth: 18),
-                    decoration: BoxDecoration(
-                      color: AppColors.brightRed,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      badgeCount > 99 ? '99+' : '$badgeCount',
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 10.5,
-                        fontWeight: FontWeight.w700,
-                        height: 1.3,
-                      ),
-                    ),
-                  ),
-                ],
-              ],
             ),
           ),
         ),
@@ -234,11 +322,13 @@ class _ProfileChip extends ConsumerStatefulWidget {
     required this.userName,
     required this.userRoleLabel,
     this.userPhotoUrl,
+    required this.collapsed,
   });
 
   final String userName;
   final String userRoleLabel;
   final String? userPhotoUrl;
+  final bool collapsed;
 
   @override
   ConsumerState<_ProfileChip> createState() => _ProfileChipState();
@@ -295,58 +385,83 @@ class _ProfileChipState extends ConsumerState<_ProfileChip> {
   Widget build(BuildContext context) {
     return CompositedTransformTarget(
       link: _layerLink,
+      // 2026-08-13 — no boxed/bordered chip, just a top border separating
+      // it from the nav list. 2026-08-14: theme-aware tokens throughout
+      // (was hardcoded light-mode-only `AppColors.cardBorder`/`textPrimary`/
+      // `textSecondary`, invisible-ish in dark mode now the sidebar itself
+      // switches with the theme).
+      // `AvatarWidget`'s own colorful gradient-initials look is left
+      // untouched here — that's a distinct shared component used
+      // consistently across the whole app, not a sidebar-specific style.
       child: Container(
-        margin: const EdgeInsets.fromLTRB(10, 0, 10, 8),
-        padding: const EdgeInsets.all(12),
+        margin: const EdgeInsets.fromLTRB(10, 8, 10, 0),
+        padding: EdgeInsets.all(widget.collapsed ? 8 : 12),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: context.appBorder, width: 1),
+          border: Border(top: BorderSide(color: context.appBorder)),
         ),
-        child: Row(
-          children: [
-            AvatarWidget(
-              firstName: widget.userName,
-              photoUrl: widget.userPhotoUrl,
-              size: 36,
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+        // Collapsed rail (2026-08-14): just the avatar, centered, tapping it
+        // opens the SAME theme/language/logout menu the "more" button opens
+        // when expanded — the menu itself isn't collapsed-specific.
+        child: widget.collapsed
+            ? Center(
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(20),
+                  onTap: _toggleMenu,
+                  child: AvatarWidget(
+                    firstName: widget.userName,
+                    photoUrl: widget.userPhotoUrl,
+                    size: 36,
+                  ),
+                ),
+              )
+            : Row(
                 children: [
-                  Text(
-                    widget.userName,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: context.appText,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
+                  AvatarWidget(
+                    firstName: widget.userName,
+                    photoUrl: widget.userPhotoUrl,
+                    size: 36,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          widget.userName,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: context.appText,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        Text(
+                          widget.userRoleLabel,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: context.appSubtext,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  Text(
-                    widget.userRoleLabel,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(color: context.appSubtext, fontSize: 12),
+                  InkWell(
+                    borderRadius: BorderRadius.circular(8),
+                    onTap: _toggleMenu,
+                    child: Padding(
+                      padding: const EdgeInsets.all(4),
+                      child: AppIcon(
+                        AppIcons.moreHoriz,
+                        size: 18,
+                        color: context.appSubtext,
+                      ),
+                    ),
                   ),
                 ],
               ),
-            ),
-            InkWell(
-              borderRadius: BorderRadius.circular(8),
-              onTap: _toggleMenu,
-              child: Padding(
-                padding: const EdgeInsets.all(4),
-                child: AppIcon(
-                  AppIcons.moreHoriz,
-                  size: 18,
-                  color: context.appSubtext,
-                ),
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -443,6 +558,13 @@ class _ProfileMenuContentState extends ConsumerState<_ProfileMenuContent> {
             color: context.appCard,
             borderRadius: BorderRadius.circular(14),
             border: Border.all(color: context.appBorder, width: 1),
+            // Floating popover shadow (2026-08-13) — ported from the
+            // reference's Select `.panel` (`0 12px 28px rgba(20,24,27,0.16)`);
+            // flat page cards stay shadow-free, only portaled/floating
+            // surfaces like this menu get one.
+            boxShadow: [
+              BoxShadow(color: Colors.black.withValues(alpha: 0.16), blurRadius: 28, offset: const Offset(0, 12)),
+            ],
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -588,6 +710,9 @@ class _LanguageSubmenu extends StatelessWidget {
           color: context.appCard,
           borderRadius: BorderRadius.circular(13),
           border: Border.all(color: context.appBorder, width: 1),
+          boxShadow: [
+            BoxShadow(color: Colors.black.withValues(alpha: 0.16), blurRadius: 28, offset: const Offset(0, 12)),
+          ],
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,

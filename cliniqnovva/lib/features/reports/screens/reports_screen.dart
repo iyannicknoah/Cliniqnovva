@@ -7,6 +7,7 @@ import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/theme_ext.dart';
 import '../../../shared/utils/csv_export.dart';
+import '../../../shared/widgets/app_select.dart';
 import '../../../shared/widgets/cliniqnovva_button.dart';
 import '../../../shared/widgets/cliniqnovva_card.dart';
 import '../../../shared/widgets/loading_widget.dart';
@@ -138,38 +139,13 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                     ),
                     if (_tab != 2)
                       SizedBox(
-                        width: 140,
-                        child: DropdownButtonFormField<String>(
-                          initialValue: _groupBy,
-                          isExpanded: true,
-                          style: TextStyle(
-                            color: context.appText,
-                            fontSize: 14,
-                          ),
-                          dropdownColor: context.appCard,
-                          decoration: InputDecoration(
-                            isDense: true,
-                            filled: true,
-                            fillColor: context.appCard,
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 14,
-                              vertical: 12,
-                            ),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(
-                                AppTheme.inputRadius,
-                              ),
-                              borderSide: BorderSide(color: context.appBorder),
-                            ),
-                          ),
-                          items: _groupByLabels.entries
-                              .map(
-                                (e) => DropdownMenuItem(
-                                  value: e.key,
-                                  child: Text(e.value),
-                                ),
-                              )
-                              .toList(),
+                        width: 160,
+                        child: AppSelect(
+                          value: _groupBy,
+                          options: [
+                            for (final e in _groupByLabels.entries)
+                              AppSelectOption(value: e.key, label: e.value),
+                          ],
                           onChanged: (v) =>
                               setState(() => _groupBy = v ?? 'day'),
                         ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/theme/app_theme.dart';
+import '../../core/theme/theme_ext.dart';
 
 enum _ButtonVariant { filled, text }
 
@@ -8,10 +9,13 @@ enum _ButtonVariant { filled, text }
 /// fully-rounded pill radius. Never use ElevatedButton/TextButton directly
 /// in a screen.
 ///
-/// Both variants are theme-inverted by design (explicit instruction,
-/// 2026-07-19): black in light mode, white in dark mode. Leave `color` null
-/// to get that behavior — only pass `color` for a deliberate semantic
-/// override (e.g. a destructive action's warning color).
+/// Filled buttons default to the brand blue `context.appPrimary` with fixed
+/// white text (2026-08-13, "copy primary color" — ported from the Smart
+/// Feed Rwanda reference's `Button` primary variant, replacing the retired
+/// black(light)/white(dark) theme-inversion rule). Leave `color` null to get
+/// that behavior — only pass `color` for a deliberate semantic override
+/// (e.g. a destructive action's warning color), in which case the
+/// foreground is still auto-picked for contrast.
 ///
 /// `.text()` is the transparent, underline-capable secondary style (e.g.
 /// "Forgot password?", "Sign up").
@@ -50,15 +54,17 @@ class CliniqnovvaButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final disabled = onPressed == null || isLoading;
 
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final color = this.color ?? (isDark ? Colors.white : Colors.black);
+    final isDefaultPrimary = this.color == null;
+    final color = this.color ?? context.appPrimary;
 
-    // Auto-pick a readable foreground for whatever the background resolves
-    // to: black text on light fills, white text on dark fills.
-    final onColor =
-        ThemeData.estimateBrightnessForColor(color) == Brightness.light
-        ? Colors.black
-        : Colors.white;
+    // The default brand-blue fill always gets fixed white text (reference:
+    // `--color-primary-contrast: #ffffff`, never auto-estimated) — only an
+    // explicit custom `color` override falls back to auto-picked contrast.
+    final onColor = isDefaultPrimary
+        ? Colors.white
+        : (ThemeData.estimateBrightnessForColor(color) == Brightness.light
+              ? Colors.black
+              : Colors.white);
 
     final Widget button = switch (_variant) {
       _ButtonVariant.filled => SizedBox(

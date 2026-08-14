@@ -16,33 +16,42 @@ components, never raw Material widgets (`ElevatedButton`, `TextField`, etc.).
 
 ## Colors (`AppColors`)
 
-**The brand lime (`#CFFF04`) is retired as of 2026-07-24 — `AppColors.primary`
-no longer exists.** The system "primary" is now `context.appPrimary`
-(`theme_ext.dart`): **black in light mode, white in dark mode.** This also
-seeds the app's `ColorScheme` (`ColorScheme.fromSeed(seedColor: Colors.black`
-/`Colors.white)`), so any default-Material-styled control (dialog action
-buttons, etc.) that reads `colorScheme.primary` automatically follows suit —
-don't reintroduce a colored accent as "primary" anywhere.
+**As of 2026-08-13, the system primary is brand blue — `context.appPrimary`
+(`theme_ext.dart`) resolves to `AppColors.primary` (`#1E8CFF`), FIXED in both
+light and dark mode (not theme-inverted).** Ported wholesale from a separate
+reference project, Smart Feed Rwanda (`C:\WhiteZebra\Smart Feed
+Rwanda\web`), per explicit user instruction ("copy primary color... look of
+everything"). This retires the black(light)/white(dark) theme-inversion
+"primary" rule that had been in place 2026-07-24 – 2026-08-13 — that
+generation's `AppColors.primary`/brand-lime removal is superseded by this
+entry, not additive to it. `appPrimary` also seeds the app's `ColorScheme`
+(`ColorScheme.fromSeed(seedColor: AppColors.primary)`), so any
+default-Material-styled control (dialog action buttons, etc.) that reads
+`colorScheme.primary` automatically follows suit.
 
-**`AppColors.skyBlue` (`#38BDF8`) is the system's second primary color
-(2026-07-23)** — the one deliberate exception to "no color accent." Used for
-the Overview revenue chart (line + a more-transparent fill beneath it),
-`AvatarWidget`'s ring (2026-07-25, was `context.appPrimary`), and every star
-rating + rating-distribution bar in the Reviews feature (2026-07-25, was
-`AppColors.pillAmberText`/amber). Reach for this before introducing any other
-accent color; it isn't a per-chart one-off.
+**`AppColors.skyBlue` (`#38BDF8`) remains the system's SECOND accent**
+(2026-07-23, unchanged by this pass) — still used for the Overview revenue
+chart, `AvatarWidget`'s ring default, and Reviews star ratings. It is a
+visually distinct, deliberately different blue from the new `primary`
+(`#1E8CFF`) — don't conflate the two or try to unify them without a separate
+explicit instruction.
 
 | Token | Value | Use |
 |---|---|---|
+| `primary` | `#1E8CFF` | System primary/brand accent (2026-08-13) — buttons, sidebar background, focus borders, selected-day/chip fills, spinners. Fixed in both themes. |
+| `primaryHover` | `#1670CC` | Hover/pressed state for `primary` |
+| `primaryTint` | `#E8F3FF` | ~10%-opacity tint of `primary`, for tinted backgrounds/selected rows |
+| `primaryContrast` | `#FFFFFF` | Fixed white text/icon color on top of a `primary` fill, in both themes |
 | `pageBackground` | `#FFFFFF` (pure white) | Every page/scaffold background, input fills, containers (light mode) |
-| `pageBackgroundDark` | `#000000` (pure black) | Same role as `pageBackground`, dark mode (rule set 2026-07-23) |
-| `textPrimary` | `#0B2545` | Headings/body text, light mode only — use `context.appText` (theme-aware) for anything that also renders in dark mode |
-| `textSecondary` | `#5B6B73` | Labels/captions, light mode only — use `context.appSubtext` for theme-aware text |
-| `successGreen` / `warningAmber` / `errorRed` | `#2ECC71` / `#F4A261` / `#E63946` | Status semantics |
-| Pill pairs (`pillGreenBg/Text` etc.) | — | Inline banners only (e.g. login error, Add Clinic error box) — no longer used for `StatusBadge` |
+| `pageBackgroundDark` | `#0D1117` (near-black navy) | Same role as `pageBackground`, dark mode — changed 2026-08-13 from pure `#000000`, ported from the same reference |
+| `textPrimary` | `#14181B` | Headings/body text, light mode only — use `context.appText` (theme-aware) for anything that also renders in dark mode. Value updated 2026-08-13 (was `#0B2545`) |
+| `textSecondary` | `#57636C` | Labels/captions, light mode only — use `context.appSubtext` for theme-aware text. Value updated 2026-08-13 (was `#5B6B73`) |
+| `cardBorder` / `cardBorderDark` | `#E0E3E7` / `#26303C` | Hairline border color, light/dark — `cardBorderDark` is new 2026-08-13, centralizing what used to be an inline `Color(0xFF2A2A2A)` hardcoded at every call site |
+| `successGreen` / `warningAmber` / `errorRed` / `infoBlue` | `#16A34A` / `#B98900` / `#D92D20` / `#00A1DE` | Status semantics — values updated 2026-08-13 to the reference's exact status palette; `infoBlue` is new |
+| Pill pairs (`pillGreenBg/Text` etc.) | — | Inline banners only (e.g. login error, Add Clinic error box) — no longer used for `StatusBadge`. Not touched by the 2026-08-13 pass. |
 | `brightGreen` / `brightRed` | `#34C759` / `#FF3B30` | `StatusBadge` success/error text (2026-07-23) — bright, no background |
-| `skyBlue` | `#38BDF8` | Second primary/accent (2026-07-23) — Overview revenue chart line + fill |
-| `avatarGradients` | 26 letter-keyed gradients | Avatar initials |
+| `skyBlue` | `#38BDF8` | Second accent (2026-07-23, see above) — Overview revenue chart line + fill |
+| `avatarGradients` | 26 letter-keyed gradients | Avatar initials — untouched by the 2026-08-13 pass, deliberately kept distinct from the sidebar's new solid-blue background |
 
 `deepNavy` was deleted entirely (2026-07-24) along with the five
 `sidebar*`-prefixed constants Part 17 added for it — see the "no mixing
@@ -94,22 +103,27 @@ AppIcon(AppIcons.view, size: 18, color: context.appSubtext)
 
 ## Sidebar / nav bar
 
-`CliniqnovvaSidebar` has no background color of its own — it uses
-`context.appBg`, the exact same white/black as the page (the earlier
-hardcoded `deepNavy` rule is retired). No divider directly under the logo;
-logo mark and wordmark sit close together (**4px gap**, tightened 2026-07-24).
-A **1px right-edge border** (`context.appBorder`) marks where the sidebar
-ends and page content begins (rule set 2026-07-24).
+**As of 2026-08-13, `CliniqnovvaSidebar` is a SOLID BRAND-BLUE panel**
+(`color: AppColors.primary`), fixed in both light and dark mode — this
+reverses the 2026-07-24 "no background of its own, matches the page" rule,
+per explicit instruction to copy the Smart Feed Rwanda reference's navbar
+exactly (`--color-sidebar-bg: var(--color-primary)`). No right-edge border
+anymore (the reference panel has none of its own). No divider directly under
+the logo; logo mark and wordmark sit close together (**4px gap**). Wordmark
+text is `AppColors.primaryContrast` (fixed white, was `skyBlue`).
 
-Nav items: **16px icons, 13px text** (tightened 2026-07-24 — was 18/14),
-**14px radius** on the tile (was 10), **6px gap** between items (was 2, so
-items read as more clearly separated rows).
+Nav items: **19px outline icons, 13px text** (2026-08-13 — icons were 16px
+solid; size/style changed per a separate explicit instruction, unrelated to
+the blue-panel change), **14px radius** on the tile, **6px gap** between
+items.
 
-Active nav items get a **soft secondary-background pill**
-(`context.appSecondaryBg` — a neutral gray wash, see the new token below) with
-bold text — **no left border** (rule updated 2026-07-24; was a primary-lime
-tint, now a neutral one). Active/inactive text and icon color is theme-aware
-(`context.appText`/`context.appSubtext`).
+**All nav-item/footer colors are now fixed white-based (not theme-aware)**,
+since the sidebar itself no longer varies by theme: active/hover text+icons
+`AppColors.primaryContrast` (full opacity), inactive `primaryContrast` at
+**75% opacity** (reference: `.navItem { opacity: 0.75 }`). Active nav items
+get a **translucent-white pill** (`primaryContrast` at **18% opacity**, was
+`context.appSecondaryBg`) with bold text — no left border. Hover uses
+`primaryContrast` at **10% opacity**.
 
 **`context.appSecondaryBg`** (`theme_ext.dart`) — a subtle neutral fill
 distinct from `appBg`/`appCard`, for interactive-state highlights (active nav
@@ -119,24 +133,31 @@ deliberate brand accents, not neutral hover/active states.
 
 ### Profile chip (bottom of sidebar)
 
-**No background, 1px border only** (`context.appBorder` — corrected
-2026-07-24; briefly had a lime fill/no border the same day, that was wrong).
-Text/icons are theme-aware (`context.appText`/`context.appSubtext`) since the
-chip no longer has a fixed-color background to contrast against.
+**As of 2026-08-13: no background, no boxed border — just a translucent-white
+TOP border** (`AppColors.primaryContrast` at 22% opacity) separating it from
+the nav list above, matching the reference's `userFooter`. Text/icons are
+fixed white-based (`primaryContrast`/`primaryContrast` at 75% opacity), not
+theme-aware, since the sidebar no longer varies by theme (see Sidebar above).
+`AvatarWidget`'s own colorful gradient-initials look is left untouched — a
+distinct shared component, not restyled for the sidebar specifically.
 
 Tapping the **"more" (⋯) icon** opens a small floating menu — implemented via
 a custom `OverlayEntry` + `CompositedTransformFollower`/`Target` (not
 `PopupMenuButton`, so each row can have independent tap handling without the
-menu closing prematurely). The menu itself: **300px wide, 10px padding
-(2026-07-24, was 16), bordered (`context.appBorder`), no shadow** (shadows are
-gone project-wide — see "No mixing colors"), positioned so its **left edge
-sits ~50px from the window's left edge** regardless of the chip's exact
+menu closing prematurely). The menu itself: **300px wide, 10px padding,
+bordered (`context.appBorder`), WITH a floating-panel drop shadow** (added
+2026-08-13 — `0 12px 28px rgba(0,0,0,0.16)`, ported from the reference's
+Select `.panel` shadow; flat page cards still get no shadow, only
+portaled/floating surfaces do — see Dialogs below), positioned so its **left
+edge sits ~50px from the window's left edge** regardless of the chip's exact
 position (`targetAnchor: topLeft`/`followerAnchor: bottomLeft` + a fixed
 `Offset(50, -8)` — the sidebar is always docked flush left, so this is
 effectively an absolute screen position, not just relative to the chip).
 Contents: a Light/Dark segmented theme toggle, a Language row, and a Logout
 row. This is the **only** sign-out entry point now — the topbar's old "Sign
-out" button is gone.
+out" button is gone. The menu's own surface (`context.appCard`/
+`context.appBorder`) is unchanged by the blue-sidebar rework — it's a
+neutral floating popover, not tinted to match the sidebar panel behind it.
 
 **Language row (2026-07-24, design-only):** tapping it opens a SECOND
 floating panel — same styling as the main menu (bordered, `appCard`, radius
@@ -160,17 +181,17 @@ sign-out lives in the sidebar profile chip's menu now.
 
 ## Buttons (`CliniqnovvaButton`)
 
-**Filled buttons are theme-inverted** (rule set 2026-07-19):
+**As of 2026-08-13, filled buttons default to the brand blue** (`AppColors.primary`,
+via `context.appPrimary`) **with fixed white text** — ported from the Smart
+Feed Rwanda reference's `Button` primary variant, superseding the
+2026-07-19 – 2026-08-13 black(light)/white(dark) theme-inversion rule. Same
+blue in both light and dark mode (not theme-inverted).
 
-- **Light mode: black background, white text.**
-- **Dark mode: white background, black text.**
-
-Leave `color` unset to get this automatically — the component resolves it from
-the active theme. Text color is auto-picked for contrast
-(`estimateBrightnessForColor`): black text on light fills, white on dark fills —
-never hardcode a foreground. As of 2026-07-23 no screen needs an explicit
-override anymore (the suspended screen's old always-navy exception was
-retired along with the sidebar's — see "No mixing colors" above).
+Leave `color` unset to get this automatically. Foreground is **fixed white**
+for the default primary case (matches the reference's
+`--color-primary-contrast: #ffffff`, never auto-estimated) — only an
+explicit custom `color` override (e.g. a destructive action) still falls
+back to auto-picked contrast via `estimateBrightnessForColor`.
 
 `.text()` is the transparent link-style secondary variant ("Forgot password?"),
 with an optional underline.
@@ -264,30 +285,36 @@ floating, 12px radius, no color accent.
 
 ## Brand assets
 
-- Source marks at the repo root (both 2000×2000, added 2026-07-23):
-  **`Logo.png`** (black square, white circle, black medical cross) is the
-  IN-APP logo source; **`AppIcon.png`** (blue square, same mark in blue) is
-  the APP-ICON source (favicon, PWA, Android/iOS). They supersede the
-  `Light Logo.png`/`Dark Logo.png` pair.
-- **In-app logo is one single mark** (rule updated 2026-07-23, asset swapped
-  2026-07-26): `assets/images/logo.png` (256×256, from the repo-root
-  transparent-background `Cliniqnovva No BG.png`) is shown in BOTH light and
-  dark mode — transparent so it reads correctly on both a pure white and a
-  pure black page with no visible edge, which is why this specific asset
-  (not the white-background one) was chosen for on-screen use.
-  `logo_dark.png`/`logo_light.png` stay in the asset bundle but are
-  unreferenced. Always use the shared `CliniqnovvaLogo` widget (`size`,
-  `radius` params) — never `Image.asset` a logo file directly. Placements
-  (sizes reduced 2026-07-23): login screen (24px, radius 8) and sidebar
-  (20px, radius 6), each next to the bold wordmark.
-- Favicon, PWA icons, and mobile app icons all derive from **`AppIcon.png`**
-  (repo root — swapped 2026-07-26 to the white-background `Cliniqnovva
-  Logo.png`, deliberately the opposite choice from the on-screen logo: a
-  favicon/app icon needs an opaque background of its own since it's never
-  shown against the app's own page background).
-- Mobile icon source (`assets/icon/app_icon_source.png`) must stay a raw,
-  un-rounded square — the OS applies its own mask. Web favicon/PWA icons are
-  pre-rounded (browsers don't mask); maskable PWA variants stay full-bleed.
+**As of 2026-08-14, there is ONE source mark for everything** — `Logo.png`
+(2000×2000, repo root) — superseding the entire earlier multi-file split
+(`Cliniqnovva No BG.png`/`AppIcon.png`/`Cliniqnovva Logo.png`/`Light
+Logo.png`/`Dark Logo.png`, none of which exist in the repo anymore). Every
+derived asset below is regenerated from this one file (Pillow, since
+ImageMagick isn't available in this environment) — if the mark ever changes
+again, replace `Logo.png` and regenerate every file this section lists
+rather than editing any of them individually.
+
+- **In-app logo**: `assets/images/logo.png` (256×256, resized from `Logo.png`,
+  left as a RAW un-rounded square). Shown in BOTH light and dark mode.
+  Always use the shared `CliniqnovvaLogo` widget (`size`, `radius` params —
+  it applies the rounding itself via `ClipRRect`, per placement) — never
+  `Image.asset` a logo file directly. Placements: login screen (24px, radius
+  8) and sidebar (34px, radius 9, see Sidebar above), each next to the bold
+  wordmark.
+- **Favicon/PWA icons**: `web/favicon.png` (32px), `web/icons/Icon-192.png`/
+  `Icon-512.png` — all resized from `Logo.png` with a ~20%-radius rounded
+  corner BAKED INTO the PNG (browsers don't auto-mask favicons/regular PWA
+  icons, so this app pre-rounds them itself). `web/icons/Icon-maskable-192.png`/
+  `-512.png` stay full-bleed/un-rounded — a maskable icon must fill its whole
+  canvas for the OS's own safe-zone mask to work correctly; a pre-rounded
+  source there would show as a smaller icon with visible padding.
+- **Mobile app icon** (Android/iOS): `assets/icon/app_icon_source.png`
+  (1024×1024, resized from `Logo.png`, un-rounded — same full-bleed
+  rationale as the maskable PWA icons, both platforms apply their own mask).
+  Regenerate the actual platform icon files with `dart run
+  flutter_launcher_icons` (config: `pubspec.yaml`'s `flutter_launcher_icons:`
+  block) any time this source changes — don't hand-edit the generated
+  `android/`/`ios/` icon files directly.
 
 ## Dialogs
 
@@ -297,10 +324,22 @@ Every `AlertDialog`/`SimpleDialog` in the app is themed globally via
 background directly**; that's exactly what produced the inconsistent-looking
 dialogs this rule fixes (2026-07-24). One title style (18px, w600) and one
 content style (14px, `appSubtext`-equivalent) used everywhere, background
-matches the page (white/black, no shadow, border only — same "no mixing
-colors" + `surfaceTintColor: Colors.transparent` treatment as cards and the
-date picker), so a plain `AlertDialog(title: Text(...), content: Text(...))`
-with no manual styling is always correct.
+matches the page (white/black, border only — same "no mixing colors" +
+`surfaceTintColor: Colors.transparent` treatment as cards and the date
+picker).
+
+**As of 2026-08-13, dialogs get a real drop shadow** (`elevation: 12`,
+`shadowColor: Colors.black.withValues(alpha: 0.24)` — was `elevation: 0`,
+"no shadow anywhere"). Ported from the Smart Feed Rwanda reference's Modal
+(`box-shadow: 0 12px 32px rgba(0,0,0,0.24)`): that reference draws a clear
+distinction between flat page cards (border only, no shadow — `CliniqnovvaCard`
+is untouched, still matches) and floating/portaled surfaces like modals and
+dropdown panels (border AND shadow). The sidebar's own floating profile/
+language menus got the same treatment — see Sidebar above.
+
+Confirm-button color also changed 2026-08-13: `_datePickerTheme`'s selected-day
+circle and confirm button now use `AppColors.primary`/`primaryContrast`
+(was theme-inverted black/white) — see Colors above.
 
 ## Date pickers
 
@@ -358,6 +397,696 @@ fill, interval-capped month labels, curve-clamping) for any future
 growth/trend chart rather than introducing a new chart style or color.
 
 ## Change log
+
+- **2026-08-14 (Favicon source switched to Logo.png, sidebar logo shrunk +
+  gap restored)** — Follow-up correction to the immediately-preceding
+  entry. Checked the repo root again for a genuinely new file per the
+  instruction's wording ("the new Logo image... they are different") —
+  timestamps confirmed `Logo.png`/`AppFavIcon.png` are unchanged since the
+  prior pass (no third file was actually added); read as clarifying which
+  of the two EXISTING sources to use where, not a new asset.
+  - **Favicon**: `web/favicon.png` now generated from `Logo.png` (the
+    transparent heart/pulse mark, already used for the in-app logo) instead
+    of `AppFavIcon.png` — explicit ask: "use logo image as favicon." Same
+    18px absolute corner radius treatment as before. `AppFavIcon.png`
+    stays the source for the PWA/mobile icons only (`web/icons/Icon-192`/
+    `512`/`maskable-*`, `assets/icon/app_icon_source.png`) — the
+    instruction named "favicon" specifically, not those.
+  - **Sidebar logo**: 35px -> 28px, radius kept at exactly half (14). The
+    `background: true` white mat (added two entries ago, before this
+    transparent mark existed) is dropped — explicit ask: "this new has no
+    background," read as "stop adding a synthetic one behind it." A 5px
+    gap is back between the logo and "Cliniqnovva" wordmark (was removed
+    entirely in an earlier same-day pass, now explicitly restored at a
+    specific value rather than the original unspecified 8px).
+- **2026-08-14 (Brand mark swapped again — new heart/pulse-line mark, new
+  favicon/app-icon source)** — Explicit user instruction: two new source
+  files added at the repo root (`C:\WhiteZebra\Cliniqnovva\`, one level
+  above this Flutter project — same location as the previous brand-mark
+  pass) — `Logo.png` (500×500, RGBA, TRUE alpha transparency confirmed via
+  Pillow — corner pixel `(0,0,0,0)`, heart fill `(30,140,255,255)` = exactly
+  `AppColors.primary` `#1E8CFF`) supersedes the previous `Logo.png` (same
+  filename, new artwork — a blue heart with a white heartbeat/pulse line,
+  not the old medical-cross mark) for every IN-APP placement, and a new
+  `AppFavIcon.png` (2000×2000, opaque RGB, same heart/pulse design) is the
+  dedicated favicon/app-icon source — same one-source-per-purpose split
+  established in the earlier brand-mark pass, just with new artwork on
+  both sides of it.
+  - **In-app logo**: `assets/images/logo.png` regenerated (256px, resized
+    from the new `Logo.png`, transparency preserved) — every screen using
+    `CliniqnovvaLogo` (confirmed the only `Image.asset('assets/images/
+    logo...')` call site in `lib/`) picks this up automatically, no Dart
+    code changed.
+  - **Favicon**: `web/favicon.png` regenerated from the new `AppFavIcon.png`
+    — first pass used a full circle (that day's earlier instruction), a
+    same-turn correction changed it to an 18px absolute corner radius
+    instead (not a percentage of the 32px canvas — a fixed 18px, which at
+    this size reads close to fully rounded but isn't a true circle).
+  - **PWA/mobile icons**, also regenerated from `AppFavIcon.png`:
+    `web/icons/Icon-192.png`/`Icon-512.png` (~20%-radius rounded corners
+    baked in, unchanged convention from the earlier pass — the "favicon
+    only" 18px-radius correction above doesn't apply to these), `web/icons/
+    Icon-maskable-192.png`/`-512.png` and `assets/icon/app_icon_source.png`
+    (all three full-bleed/unrounded — OS/browser applies its own mask).
+    `dart run flutter_launcher_icons` regenerated the actual Android/iOS
+    icon files from the new `app_icon_source.png`.
+- **2026-08-14 (Sidebar: defaults to collapsed)** — `sidebarCollapsedProvider`
+  (`shared/providers/sidebar_provider.dart`) initial value `false` -> `true`,
+  explicit user instruction. One-line change, no other code affected.
+- **2026-08-14 (Sidebar: dark mode fix, collapse-toggle bug fix, divider,
+  toggle restyle)** — Fifth same-day batch; corrects the previous entry's
+  "fixed white" sidebar background, which was a real regression (see the
+  bug below).
+  - **Real bug found and fixed: the collapse toggle stopped working once
+    collapsed.** Root cause — at the 76px collapsed rail width minus its
+    18px×2 padding (40px available), the header `Row`'s children (35px
+    logo + 10px gap + ~29px toggle button = ~74px) didn't fit, so the
+    toggle rendered outside/clipped past the sidebar's own bounds and its
+    tap target was unreachable. Fixed by switching the collapsed header to
+    a `Column` (logo above toggle, both centered) instead of a `Row` —
+    both now comfortably fit within the 40px available width, and nothing
+    in either layout overflows.
+  - **Dark mode fix**: the sidebar background was `Colors.white`, a hardcoded
+    literal from the earlier 2026-08-14 white-bg-flip entry that never
+    switched with the rest of the app — now `context.appBg` (white light /
+    black dark, same as the page). Every color introduced in that same
+    white-bg-flip pass that was ALSO a hardcoded light-mode-only literal
+    (nav item inactive `AppColors.textSecondary`, profile chip's top
+    border `AppColors.cardBorder`, name/role/more-icon
+    `AppColors.textPrimary`/`textSecondary`) is now theme-aware
+    (`context.appSubtext`/`appBorder`/`appText`/`appSubtext` respectively).
+    The brand-blue accents (`AppColors.primary` for the wordmark/active nav
+    item/active pill tint) stay fixed in both themes — unaffected, that's
+    intentional (see the Colors section above).
+  - **Divider**: a 1px `Divider` (`context.appBorder`) between the logo/
+    toggle header and the nav list — explicit ask.
+  - **Header spacing**: the 8px gap between the logo and "Cliniqnovva"
+    wordmark is gone — explicit ask ("remove space").
+  - **Collapse toggle restyle**: icon 15px -> 17px, button padding 6px ->
+    7px (explicit "increase width and height a little"); background
+    `AppColors.primaryTint` -> `context.appSecondaryBg` ("our secondary
+    background color"); icon color `AppColors.primary` (blue) ->
+    `context.appText` ("our primary text color" — the app's main text
+    color token, not the brand-blue "primary" color, a naming collision
+    worth flagging for future instructions using "primary" ambiguously).
+- **2026-08-14 (Sidebar background flipped back to white, header row
+  merged, logo/favicon follow-ups, login wordmark removed)** — Fourth
+  same-day batch of explicit user instructions; the sidebar's brand-blue
+  background from earlier the same day (2026-08-13 entry below) is
+  REVERSED here — read this entry, not that one, for the sidebar's current
+  color state.
+  - **Sidebar background**: solid blue -> fixed white (`Colors.white`, not
+    theme-aware — same "literal fixed color" pattern this session has used
+    throughout). A right-edge border (`context.appBorder`) is back too —
+    the ORIGINAL pre-2026-08-13 rule, needed again now that the sidebar and
+    a light-mode page are both white and would otherwise have no visible
+    seam. Every color that was "white-on-blue" flipped to "blue/gray-on-
+    white": wordmark text `primaryContrast` -> `AppColors.primary`; nav
+    item active `primaryContrast` -> `AppColors.primary` with the active
+    pill `primaryContrast@18%` -> `AppColors.primaryTint`; nav item
+    inactive `primaryContrast@75%` -> `AppColors.textSecondary`; hover tint
+    `primaryContrast@10%` -> `AppColors.primary@6%`; the collapse-toggle
+    button `primaryContrast@14%` bg/`primaryContrast` icon ->
+    `AppColors.primaryTint` bg/`AppColors.primary` icon; profile chip's
+    top border `primaryContrast@22%` -> `AppColors.cardBorder`, name/role/
+    more-icon text -> `AppColors.textPrimary`/`textSecondary`/
+    `textSecondary`.
+  - **Header row merged**: logo + wordmark + collapse toggle are now ONE
+    `Row` (was two separate rows/`Padding` blocks) — the wordmark's
+    `Expanded` pushes the toggle to the right edge when expanded; when
+    collapsed (no wordmark), the row is just `[logo, toggle]`, centered.
+  - **Logo**: sidebar instance 40px/radius 20 -> 35px/radius 17.5 (kept at
+    exactly half — full circle — per the earlier 2026-08-13 "make it
+    circular" intent, just at the new smaller size).
+  - **Favicon**: `web/favicon.png` regenerated as a FULL circle (was a
+    ~20%-radius rounded square from the 2026-08-13 pass) — a fresh Pillow
+    ellipse-mask crop from the same `Logo.png` source at the repo root
+    (`C:\WhiteZebra\Cliniqnovva\Logo.png`, one level above this Flutter
+    project — the earlier "repo root" note in Brand Assets meant that
+    directory, not `cliniqnovva/`). `web/icons/Icon-192.png`/`-512.png`
+    were NOT touched — the instruction named "favicon" specifically, and a
+    PWA icon fully circular (rather than lightly rounded) risks a
+    double-mask look once the OS applies its own maskable treatment on top.
+  - **Login screen**: `_LogoMark` (`login_screen.dart`) now renders just
+    `CliniqnovvaLogo(size: 32, radius: 10)` — the "Cliniqnovva" wordmark
+    `Text` next to it (sky-blue, 16px/w500) is deleted outright, not
+    hidden. `AppConstants` import removed from the file (no longer
+    referenced anywhere in it once `AppConstants.appName` was the only use).
+- **2026-08-14 (Sidebar collapse/expand, new AppSelect dropdown design
+  system-wide, logo/table follow-ups)** — Third same-day batch of explicit
+  user instructions.
+  - **Sidebar collapse/expand** ("navbar that expands and de-expands").
+    New `sidebarCollapsedProvider` (`shared/providers/sidebar_provider.dart`,
+    a plain `StateProvider<bool>`) — lives in a provider rather than local
+    widget state because `CliniqnovvaSidebar` is rebuilt fresh by
+    `AppShell`/`SuperAdminScaffold` on every route change. `CliniqnovvaSidebar`
+    is now `ConsumerWidget` (was `StatelessWidget`), wrapped in an
+    `AnimatedContainer` animating between `AppTheme.sidebarWidth` (250,
+    expanded) and a new `_collapsedSidebarWidth` (76, icon-only rail).
+    Collapsed state: wordmark hidden (logo only), a new toggle button
+    (chevron icon, translucent-white circular background) below the
+    header, nav tiles center their icon with the label/badge hidden
+    (gains a `Tooltip` showing the label on hover, since there's no
+    visible text to identify the item otherwise), profile chip collapses
+    to just the avatar (centered, still opens the same theme/language/
+    logout menu on tap — the menu itself isn't collapsed-specific). No
+    changes needed in `AppShell`/`SuperAdminScaffold` — both already wrap
+    the sidebar in a `Row` with the content pane `Expanded`, so the
+    animated width reflows automatically.
+  - **New `AppSelect` component** (`shared/widgets/app_select.dart`) —
+    explicit ask: "look how the dropdowns in smart feed are designed and
+    apply that... they are the dialog that pops up with search on top and
+    have radius on their border... other dropdowns also must have search."
+    Ported from the Smart Feed Rwanda reference's `Select.tsx`: a CLOSED
+    trigger field (selected label + a chevron that rotates open) rather
+    than an always-editable text field — tapping it opens a floating panel
+    (`AppTheme.cardRadius`, bordered, same floating-popover shadow
+    convention as the sidebar's own profile menu) with a dedicated search
+    box at the TOP and a scrollable, checkmark-annotated option list below.
+    Built on the same `OverlayEntry` + `CompositedTransformFollower`/
+    `Target` mechanism `cliniqnovva_sidebar.dart`'s profile menu already
+    used — not `DropdownButtonFormField` (no search, no border-radius on
+    its native popup) and not the pre-existing `SearchableDropdown` (an
+    always-editable type-to-filter text field, a different interaction
+    model). New `AppIcons.check`/`AppIcons.chevronLeft` catalog entries.
+    Has an `enabled` bool (defaults true) for the one call site
+    (`add_edit_staff_panel.dart`'s role picker) that needs a disabled
+    state — not directly possible via `onChanged: null` since
+    [AppSelect.onChanged] is non-nullable, unlike `DropdownButtonFormField`.
+  - **Rolled out to every dropdown in the system EXCEPT the Dashboard's
+    Revenue period filter** (explicit exclusion — stays a plain
+    `DropdownButtonFormField`, no search): `branch_selector.dart`,
+    `patient_form_fields.dart`'s `LabeledDropdown` (used by province/
+    district and, via `GenderDropdown`, gender — both get the new design
+    for free), `branch_form.dart`'s `_LabeledDropdown`, `reports_screen.dart`
+    (groupBy), `billing_screen.dart` (status filter), `invoice_detail_screen.dart`
+    (insurance scheme), `doctor_schedule_screen.dart` (day-of-week),
+    `clinic_detail_screen.dart` (plan + billing cycle), `add_edit_staff_panel.dart`
+    (role + department), `add_clinic_panel.dart` (plan),
+    `add_edit_service_panel.dart` (department), and `reviews_screen.dart`'s
+    two `DropdownButton`s (rating + patient filter — the only two that
+    weren't already `DropdownButtonFormField`). A `DropdownMenuItem<T>`
+    with a literal `null`/non-`String` value (billing's "All statuses",
+    reviews' "Rating"/patient filter) has no `AppSelectOption` equivalent
+    (its `value` is a non-nullable `String`) — each of those sites now uses
+    an explicit `''` sentinel option instead, translated back to
+    `null`/`int` in `onChanged`. `reviews_screen.dart`'s patient filter
+    used to render each option via a small `_PatientOptionLabel`
+    `ConsumerWidget` (resolves a name from `patientId` asynchronously,
+    per-`DropdownMenuItem.child`) — not possible with `AppSelect`'s
+    plain-`String` option labels, so the name resolution moved into the
+    parent `_PatientFilterDropdown.build()` (already a `ConsumerWidget`)
+    via a `labelFor()` helper watching the same `patientDetailProvider`;
+    `_PatientOptionLabel` deleted as dead code. The pre-existing
+    `SearchableDropdown` (doctor pickers, `doctor_schedule_screen.dart`/
+    `booking_screen.dart`) was NOT migrated to `AppSelect` — it already had
+    search — but its floating panel got the same radius/shadow treatment
+    (`AppTheme.inputRadius` -> `cardRadius`, added the floating-popover
+    shadow) for visual consistency with every `AppSelect` popup.
+  - **Logo**: `CliniqnovvaLogo` gained a `background` bool (default false,
+    every other call site unaffected) — when true, wraps the mark in a
+    fixed WHITE square (not theme-aware, same rationale as the sidebar's
+    own fixed blue) with a small inset so the white reads as a visible mat
+    around the mark. Sidebar's instance: 34px/radius 9/no background ->
+    40px/radius 20/`background: true` (explicit ask: "reduce... to be like
+    40px... white background again... radius... 20px").
+  - **Table headings walked back to semi-bold** (`w600`, was `w700` from
+    earlier the same day — explicit correction: "not that hard bold they
+    have now").
+  - `CliniqnovvaCard` continues wrapping every call site above via each
+    screen's OWN `CliniqnovvaTextField`/label pattern — no change to that
+    component in this pass.
+- **2026-08-14 (Brand mark replaced app-wide + Dashboard refinement pass —
+  KPI/table/nav polish, sample-data preview route)** — Two batches of
+  explicit user instructions, same day.
+  - **New brand mark.** The user added a single `Logo.png` (2000×2000) at
+    the repo root, superseding the whole prior multi-file split (`Cliniqnovva
+    No BG.png`/`AppIcon.png`/`Cliniqnovva Logo.png`/`Light Logo.png`/`Dark
+    Logo.png` — none of those files exist in the repo anymore). Regenerated
+    from this ONE source via Pillow (no ImageMagick in this environment):
+    `assets/images/logo.png` (256px, raw square — `CliniqnovvaLogo` widget's
+    own `ClipRRect` still applies rounding per call site, unchanged) and
+    `assets/icon/app_icon_source.png` (1024px, raw square — Android/iOS
+    apply their own mask) stay UN-rounded; `web/favicon.png` (32px),
+    `web/icons/Icon-192.png`/`Icon-512.png` get rounded corners BAKED IN
+    (~20% radius — browsers don't auto-mask favicons/regular PWA icons, per
+    the existing rule); `web/icons/Icon-maskable-192.png`/`-512.png` stay
+    full-bleed/un-rounded (maskable icons need the OS's own safe-zone mask,
+    per the existing rule). `dart run flutter_launcher_icons` regenerated
+    the actual Android/iOS icon files from the new source; `pubspec.yaml`
+    gained `remove_alpha_ios: true` (the source has an alpha channel, which
+    the tool flagged as an App Store submission blocker — preempted since
+    it's a one-line safe default, not because a submission is imminent).
+  - **Sidebar width**: `AppTheme.sidebarWidth` 220 -> 250.
+  - **`MetricCard`**: value now renders FIRST, label underneath (was
+    label-above-value, the original HRNova reference order) — applies to
+    every KPI tile app-wide, not just the Dashboard.
+  - **`CliniqnovvaTableHeader`**: column labels are now bold (`w700`, was
+    regular-weight `appSubtext`) — a shared component, so this applies to
+    every table in the app, not just Dashboard's Today's Appointments.
+  - **Today's Appointments card**: gained a "View all" trailing link (reuses
+    `CliniqnovvaButton.text()`) navigating to `/appointments`, on the same
+    row as the card title.
+  - **Revenue chart Y-axis**: replaced the previous pass's uniform 50,000
+    RWF step with a FIXED, non-uniform tick set — `[0, 10000, 100000,
+    200000, 300000]`, extending further in 100,000 steps only if real
+    revenue actually clears 300k (with headroom). Implemented via
+    `FlGridData.checkToShowHorizontalLine` + a `getTitlesWidget` filter
+    against the same fixed set (both driven off a finer `interval: 10000`
+    so the odd 10k tick is reachable, with everything else suppressed) —
+    `fl_chart` 1.2.0 confirmed to support `checkToShowHorizontalLine` by
+    reading its source directly (pub cache), not assumed from memory.
+  - **New `/dev/dashboard-preview` route** (`dashboard_screen.dart`'s new
+    `DashboardPreviewScreen`, registered in `app_router.dart`, `/dev/*`
+    allowlisted before the auth check — same pattern as the Patient App's
+    `/dev/home-preview`) — explicit ask: "add sample data on dashboard so I
+    get a way to see how this looks with data." A route-scoped
+    `ProviderScope` override feeds fixed sample appointments/patients/
+    doctors/invoices/a 6-month revenue trend into the SAME private
+    `_DashboardBody`/`_MetricsRow`/`_RevenueTrendCard`/
+    `_TodayAppointmentsCard` widgets the real `/dashboard` route uses (kept
+    in the same file specifically so the preview screen can reach those
+    library-private classes directly, rather than making them public just
+    for this). Never writes to real Firestore/backend state — every
+    provider `_DashboardBody` and its children read
+    (`appointmentsListProvider`, `patientDetailProvider`,
+    `staffDetailProvider`, `invoicesListProvider`, `revenueReportProvider`)
+    is overridden with constant sample data instead. Not linked from
+    anywhere in the real app UI. Necessary because the known Firebase
+    project mismatch (see "Explicitly NOT built" in the master-context
+    memory / `docs/known-issues.md`) still blocks a real logged-in session
+    in this environment, and the real Firestore data is currently empty
+    (every dashboard number reads as 0/zero-state).
+- **2026-08-13 (Design system ported from a separate reference project,
+  Smart Feed Rwanda — primary color, navbar, buttons, dropdowns, dialogs)**
+  — Explicit user instruction: "copy every design and look of everything...
+  primary color and also navbars be the same... even buttons change look of
+  everything." Read from `C:\WhiteZebra\Smart Feed Rwanda\web\src` (a React/
+  TypeScript app, itself "adapted from the Flexra design language" per its
+  own `tokens.css` header — the same lineage this app's 2026-07-23 Flexra
+  adoption came from, which is why the two systems mapped onto each other
+  cleanly: same font (General Sans), same card radius (18), same Heroicons
+  icon set). This is a wholesale supersession of the 2026-07-24 –
+  2026-08-13 "black/white theme-inversion, no colored accent" generation of
+  the design system, not an addition to it — see the updated Colors/
+  Buttons/Sidebar/Dialogs sections above for the current state.
+  - **`AppColors`**: new `primary`/`primaryHover`/`primaryTint`/
+    `primaryContrast` tokens (`#1E8CFF`/`#1670CC`/`#E8F3FF`/`#FFFFFF`); new
+    `cardBorderDark` (`#26303C`, centralizes an inline hex repeated at every
+    call site); `pageBackgroundDark` `#000000` -> `#0D1117`; `textPrimary`
+    `#0B2545` -> `#14181B`; `textSecondary` `#5B6B73` -> `#57636C`;
+    `cardBorder` `#E1EDEC` -> `#E0E3E7`; `successGreen`/`warningAmber`/
+    `errorRed` values updated to the reference's status palette, new
+    `infoBlue`. `skyBlue` and the letter-keyed `avatarGradients` are
+    UNCHANGED — deliberately not folded into this pass (see Colors above).
+  - **`theme_ext.dart`**: `context.appPrimary` now always returns
+    `AppColors.primary` (was `isDark ? Colors.white : Colors.black`) — fixed
+    across both themes, not inverted. `context.appBorder`'s dark branch now
+    reads `AppColors.cardBorderDark` instead of an inline hex.
+  - **`app_theme.dart`**: both `lightTheme()`/`darkTheme()`'s
+    `ColorScheme.fromSeed` and `primaryColor` now seed from
+    `AppColors.primary` (was `Colors.black`/`Colors.white` per theme) — this
+    also cascades to any default-Material control reading
+    `colorScheme.primary`. `_datePickerTheme`'s selected-day circle and
+    confirm-button color -> `primary`/`primaryContrast` (was theme-inverted
+    black/white); today's border and header/weekday text stay theme-aware
+    page-text-color, unchanged. `_dialogTheme` gained a real shadow
+    (`elevation: 12`, `shadowColor` 24%-black) — was `elevation: 0`; see
+    Dialogs above. `cardBorderSide`/`_inputDecorationTheme`'s dark-mode
+    border hex both now read the new `AppColors.cardBorderDark` constant
+    instead of repeating the inline hex. `_snackBarTheme` and
+    `CliniqnovvaCard` are UNCHANGED — the reference has no toast/snackbar
+    component to port, and its own Card component has no shadow either
+    (confirmed by reading `Card.module.css`), so "no shadow on flat cards"
+    stays true even after this pass.
+  - **`CliniqnovvaButton`**: filled variant's default color source changed
+    from an inline `isDark ? Colors.white : Colors.black` check to
+    `context.appPrimary` (now blue); default-primary case gets fixed white
+    text (was auto-estimated) — see Buttons above. `.text()` variant
+    untouched (still `context.appText` by default, still supports
+    `underline`) — the reference's own "text" button variant is
+    transparent/text-primary-colored too, so no change was needed there.
+  - **`CliniqnovvaSidebar`**: solid `AppColors.primary` background (was
+    `context.appBg`, page-matching), fixed in both themes; no right-edge
+    border. Wordmark -> `primaryContrast` (was `skyBlue`). Nav-item
+    active/inactive/hover colors and the active pill fill all switched from
+    theme-aware neutrals to fixed white-based opacities (100%/75%/10%/18%)
+    — see Sidebar above for exact values. Profile chip: boxed border ->
+    top-border-only, text/icons -> fixed white-based, floating "more" menu
+    and its language submenu both gained a drop shadow — see Sidebar/
+    Profile chip above. `AvatarWidget`'s gradient-initials look and the
+    sidebar's own nav-icon outline/size (from the entry directly below)
+    are both UNCHANGED by this pass.
+  - **Dropdowns**: deliberately did NOT adopt the reference Select's
+    `.triggerOpen { border-color: primary }` behavior (a blue border while
+    open) on `DropdownButtonFormField`'s global `focusedBorder` — Flutter's
+    dropdown focus state doesn't cleanly revert on close the way the
+    reference's React `open` boolean does, and a colored `focusedBorder`
+    here would reintroduce the exact "stuck bold border after selection"
+    bug fixed in the entry directly below. `CliniqnovvaTextField`/
+    `searchable_dropdown.dart`'s own focus-border overrides (real text
+    inputs, not dropdowns) DO now render blue automatically, since they
+    already read `context.appPrimary` — no code change needed there, just
+    a color cascade.
+  - **Not ported** (out of scope for this pass, noted so a future pass
+    doesn't assume otherwise): the reference Sidebar's animated CSS
+    dot-grid texture (`::before` pseudo-element, not portable to Flutter
+    without a custom painter); `Button`'s `secondary`/`success`/`danger`
+    variants (this app's `CliniqnovvaButton` only has `filled`/`.text()`,
+    and nothing currently needs a third); the reference's 8-hue chart
+    categorical palette, `Table`/`Tabs`/`Menu`/`PageShell`/`ThemeToggle`/
+    `Typography` components, and its `Select`'s portal-positioned
+    searchable-panel pattern (this app already has an analogous
+    `searchable_dropdown.dart`, left as-is).
+- **2026-08-13 (Sidebar: outline nav icons at a larger size, bolder
+  wordmark/logo; global dropdown fixes — no more stuck focus border,
+  Heroicon chevron-down everywhere; Revenue chart fixed 50k RWF Y-axis
+  steps)** — Explicit user instructions, several in one pass.
+  - **`AppIcon`** (`shared/widgets/app_icon.dart`) gained an optional
+    `style` param (default `HeroIconStyle.solid`, unchanged everywhere else
+    in the app) so a single call site can opt into outline icons without
+    a second global icon-style rule. Sidebar nav tile icons
+    (`cliniqnovva_sidebar.dart#_SidebarNavTile`) now pass
+    `style: HeroIconStyle.outline`, size 16 -> 19.
+  - Sidebar wordmark "Cliniqnovva": `FontWeight.w500` -> `w700` — the
+    heaviest weight actually registered in `pubspec.yaml` (Regular/
+    Medium/Semibold/Bold only), so `w700` is the real ceiling for "extra
+    bold" on this font without Flutter synthetically fake-bolding an
+    unregistered weight. Logo mark (`CliniqnovvaLogo`) 28px -> 34px,
+    radius 8 -> 9 — a static PNG has no font-weight lever, so "bolder" here
+    means larger/more prominent.
+  - **Global dropdown focus-border fix**: new `AppTheme._inputDecorationTheme`
+    wired into both `lightTheme()`/`darkTheme()`'s `inputDecorationTheme`.
+    Root cause: ~15 `DropdownButtonFormField`/`DropdownButton` call sites
+    across the app each build their own `border`/`enabledBorder` but NONE
+    set `focusedBorder` — and a `DropdownButtonFormField` keeps focus after
+    you pick an option (doesn't return it), so Material 3's default thick
+    `colorScheme.primary` focus ring stayed stuck on the field permanently
+    after any selection. The new theme-level `focusedBorder` (identical to
+    the normal subtle border every dropdown already draws) fixes every one
+    of them in one change. `CliniqnovvaTextField`/`searchable_dropdown.dart`
+    already set their own intentional focused-border highlight per-widget
+    and are unaffected (explicit override beats the theme default).
+  - **Chevron-down icon on every dropdown**: no `ThemeData` hook exists for
+    a `DropdownButton`'s trailing icon (unlike border theming), so this
+    needed a real per-call-site edit — added
+    `icon: const AppIcon(AppIcons.chevronDown, size: 18)` (new
+    `AppIcons.chevronDown` catalog entry, `HeroIcons.chevronDown`, solid
+    style — the default) to all ~15 sites: `dashboard_screen.dart` (Revenue
+    period filter, size 16), `reports_screen.dart`, `billing_screen.dart`,
+    `branch_selector.dart`, `patient_form_fields.dart`, `branch_form.dart`,
+    `invoice_detail_screen.dart`, `doctor_schedule_screen.dart`,
+    `clinic_detail_screen.dart` (×2), `add_edit_staff_panel.dart` (×2),
+    `add_clinic_panel.dart`, `add_edit_service_panel.dart`. `reviews_screen.dart`'s
+    two `DropdownButton`s previously used a raw Material
+    `Icon(Icons.keyboard_arrow_down)` (the one place in the dropdown set
+    that wasn't even using the default) — replaced with the same Heroicon
+    for consistency. 6 of these files needed new `app_icons.dart`/
+    `app_icon.dart` imports added; the rest already had them.
+  - **Revenue chart Y-axis** (`_RevenueTrendCard`): gridline interval fixed
+    at 50,000 RWF (was `maxY / 4`, a quarter of whatever the real max
+    happened to be — with little/no revenue yet this produced a nonsense
+    "0/3/5/8/10 RWF" scale, not a real currency scale). `maxY` is now the
+    smallest multiple of 50,000 that clears the tallest bar with one full
+    step of headroom, floored at 50,000 so the axis never shows a smaller
+    top value even at zero data.
+- **2026-08-13 (Admin Dashboard: Revenue rebuilt as a Stripe-style bar
+  chart, borders added back to Revenue/Today's Appointments, Revenue is
+  now Admin/Branch Admin only)** — Explicit user instruction, second pass
+  on the same day's Revenue rework (see the entry directly below). The
+  first pass's rotated Y-axis "Amount (RWF)" title text rendered as
+  illegible wrapped/mirrored text at the card's default width — scrapped
+  entirely rather than patched. `_RevenueTrendCard` is now
+  `ConsumerStatefulWidget` (was stateless) holding a local `_monthsBack`
+  filter (3/6/12, default 6) driven by a compact `DropdownButtonFormField`
+  in the card's `trailing` slot (same `OutlineInputBorder`/
+  `AppTheme.inputRadius`/`context.appBorder` styling convention as
+  `branch_selector.dart`/the Reports screen's groupBy dropdown, just
+  narrower/denser) — changing it re-queries `revenueReportProvider` with a
+  new date range. A big total (`formatRwf(revenue.totalCollectedRwf)`,
+  28px/w700) sits above the chart, matching Stripe's "Recent earnings"
+  layout. Chart itself: `LineChart` → `BarChart` (rounded-top bars, one per
+  month), Y-axis now shows real `formatRwf(value)` tick labels + gridlines
+  instead of a hidden scale, X-axis keeps the month-abbreviation labels
+  from the first pass with no title text underneath. Bar color changed to
+  `context.appPrimary` (black light / white dark) — matches
+  `reports_screen.dart`'s own revenue bar chart (`_TrendBars`), a closer
+  precedent than the sky-blue line-chart convention used elsewhere on this
+  dashboard, which doesn't carry over to a bar chart. `dashboard_revenue_trend`
+  copy shortened "Monthly Revenue Trend" -> "Revenue" (en/fr/rw) to match
+  Stripe's compact card-title style; `dashboard_revenue_amount_axis`/
+  `dashboard_revenue_months_axis` keys deleted (no longer used), replaced
+  by three `dashboard_revenue_period_{3,6,12}` dropdown-option keys.
+  **Both** `_RevenueTrendCard` and `_TodayAppointmentsCard`'s
+  `CliniqnovvaCard` calls had explicit `showBorder: false` — both removed
+  (reverts to `CliniqnovvaCard`'s own default `true`), per explicit user
+  instruction to add borders back to both container cards. **Revenue
+  visibility narrowed to Clinic Admin/Branch Admin only** (new
+  `canSeeRevenue` bool in `DashboardScreen`, threaded through
+  `_DashboardBody`) — Receptionist, the only other role that ever renders
+  `/dashboard` (`app_shell.dart`'s nav matrix), no longer sees the Revenue
+  card at all, not just a stripped-down version of it. Accountant was
+  named in the same instruction but never actually lands on this route (has
+  its own `/accountant-overview`), so no dashboard-specific gate was needed
+  for that role — noted here so a future pass doesn't assume Accountant is
+  reachable from `/dashboard`. **General Sans font-family audit**: checked
+  whether "use General Sans everywhere" needed any fix — it didn't.
+  `AppTheme.fontFamily = 'General Sans'` is already set on both
+  `ThemeData.fontFamily` and `TextTheme.apply(fontFamily: ...)` for
+  light/dark (see the 2026-07-18 Flexra entry below), the four weight
+  files are correctly registered in `pubspec.yaml`, and a repo-wide grep
+  for `fontFamily:` found zero call sites overriding it to anything else.
+  No code changed for this part of the request.
+- **2026-08-13 (Admin Dashboard: Quick Actions removed, Revenue is now a
+  taller full-width monthly trend)** — Explicit user instruction. The
+  Revenue/Quick Actions two-card row is gone; `_QuickActionsCard` (and its
+  three `dashboard_register_patient`/`dashboard_book_appointment`/
+  `dashboard_run_reports` buttons/translation keys) is deleted outright, not
+  just hidden. Revenue by Department (`_RevenueByDepartmentCard`, same-day
+  by-department breakdown) is replaced by `_RevenueTrendCard` — a real
+  6-calendar-month `groupBy: 'month'` trend (was `groupBy: 'day'`/today
+  only), full width, chart height 220px -> 320px. Same curved/no-dots/
+  filled-area sky-blue line style as before (and as the Pharmacist/
+  Accountant overview trend charts) — only the data axis changed, not the
+  line style. Axis titles added: "Amount (RWF)" on the Y-axis (rotated
+  `axisNameWidget`, left-side tick numbers stay hidden — this app's line
+  charts have never printed Y-axis scale numbers, value is tooltip-only on
+  hover, so "Amount" is a static label not a scale) and "Months" on the
+  X-axis, sitting below the existing per-point month-abbreviation labels
+  (Jan/Feb/... — new local `_monthAbbr` const, same 1-indexed-with-blank-0th
+  convention already used in `patients_screen.dart`). Translation key
+  renamed `dashboard_revenue_by_department` ("Revenue by Department
+  (Today)") -> `dashboard_revenue_trend` ("Monthly Revenue Trend"), plus two
+  new axis-label keys, across en/fr/rw.
+- **2026-08-13 (Patient App: navbar switched to Migambi, two new
+  dedicated screens, clinic-card corners, fourth pass)**
+  - **Bottom nav is now Migambi font icons, not Heroicons** — explicit
+    exact-name requests ("home 49", "book09", "messages34", "profile
+    Circle", a compass for Explore) superseded the earlier same-day
+    "navbar stays Heroicons" rule (see the "new icon system" entry
+    below). `_NavTab`'s `HeroIconStyle style` field (added for the
+    Home-tab-only "mini" request) is now dead code and removed along
+    with it — Migambi has one weight, no style variants to select.
+    Labels: `nav_browse` "Browse" -> "Explore",
+    `nav_settings` "Settings" -> "Account" (en/fr) — `nav_chat`
+    stays "Chat" (read as a typo of "Chart" in the request, given the
+    requested icon is a messages glyph and the tab is the existing chat
+    feature).
+  - **Two new dedicated screens**, neither reusing `BrowseScreen`
+    (explicit ask: "must not be Explore page"): `ExploreServicesScreen`
+    (`/explore-services`) lists every distinct service across every
+    public clinic, alphabetically, via a new `allServicesProvider`
+    (separate from `homeBrowseProvider`'s top-3-by-count subset) — reused
+    the SAME `home_services` ("Explore Services") translation key as its
+    title, now that the Home grid itself dropped that heading text (see
+    below). `ServiceClinicsScreen` (`/service-clinics?service=X`) lists
+    every clinic offering one given service — no search bar, no sort
+    chips, no department-chip row, just the service name as the title
+    and a plain list of `BranchCard`s; reuses `branchListProvider`'s data
+    fetching (already supports a `department` filter) but not Browse's
+    UI. Home's `ServicesGrid` now routes taps to these two screens
+    instead of `/browse`/`/browse?department=X`.
+  - `ServicesGrid`'s "Explore Services" heading `Text` is gone (explicit
+    ask) — the grid now starts directly with the card row.
+  - `BranchCard`: border removed (`CliniqnovvaCard(showBorder: false)`,
+    was the default `true`), and the image's `ClipRRect` rounds all 4
+    corners at 20 (was `BorderRadius.vertical(top: Radius.circular(18))`,
+    top-only) — the outer `InkWell` ripple radius bumped to 20 to match;
+    `CliniqnovvaCard`'s own background radius is unchanged at its fixed
+    18 (no override param exists, and adding one for this one card would
+    touch a shared component used at 18 everywhere else in the app) — a
+    ~2px mismatch against the now-20px image, judged not worth widening
+    that component's API for.
+
+- **2026-08-13 (Patient App: RatingBadge sizing, third correction pass)** —
+  Star icon 24px -> 18px, value text 16px -> 14px (explicit "reduce the
+  size... a little" ask), and padding changed from a tight `all(3)` to
+  `symmetric(horizontal: 8, vertical: 4)` so the star has breathing room
+  on its left and the value text has breathing room on its right, not
+  just a uniform 3px hug on every side.
+
+- **2026-08-13 (Patient App: second Home correction pass — real bug fix +
+  more exact-match tweaks, same day/reference as the two entries below)**
+  - **Real layout bug found and fixed**: `ServiceCard`'s width was
+    `MediaQuery.sizeOf(context).width * 0.45` computed INSIDE the card
+    itself — looks right in isolation, but ignores the page's own 20px
+    horizontal padding, so two 45%-of-full-device-width cards plus the
+    grid's 10px spacing no longer fit the space actually available inside
+    the padded column, and `Wrap` silently fell back to 1 card per row
+    instead of 2 (confirmed by the user's own screenshot). Fixed by moving
+    width computation OUT of the card and into the grid
+    (`ServicesGrid` in `home_screen.dart`, wrapped in a `LayoutBuilder`):
+    `cardWidth = (constraints.maxWidth - spacing) / 2`, using the real
+    available width at that point in the tree rather than the full device
+    width. `ServiceCard` now takes `width` as a required param instead of
+    computing it.
+  - Two exact icon names from the FlutterFlow reference, corrected:
+    `AppIcons.chat` was `MigambiIcons.message` (glyph "message02",
+    0xeb37, an approximation) -> now `MigambiIcons.messages233` (0xeb45),
+    literally `FFIcons.kmessages233` in the reference. `ServiceCard`'s
+    "View all" icon was `AppIcons.chevronRight` (glyph "arrow_right02")
+    -> now a new `AppIcons.arrowRight40` (glyph "arrow_right40", 0xed1c),
+    literally `FFIcons.karrowRight40`. The "Popular" row's own "View all"
+    lost its icon entirely (explicit ask) — text-only now.
+  - `HomeTopBar`: zero gap between the logo and "Clisante" wordmark (was
+    an 8px `SizedBox`, explicit ask for "no space between").
+  - `ServiceCard` gained a decorative low-opacity `AppIcons.clinic`
+    watermark (72px, 8% opacity, peeking out past the bottom-right corner
+    via a negative-offset `Positioned` + `ClipRRect`) — a "some effect
+    with low opacity" ask, interpreted as a bottom-right card watermark
+    since no specific asset/icon was named.
+  - `BranchCard` gained a THIRD line: a location row (pin icon in the
+    brand's `AppColors.skyBlue`, then the address text) below the
+    existing name/distance-doctors line — shows `branch.contactAddress`
+    whenever set, independent of whether the distance/doctor-count line
+    is also showing.
+  - Home simplified back down to ONE clinic section: the whole
+    "New on Clisante" list/section is gone (was a real, working feature
+    — explicit ask to remove it, not a bug), and "Popular" is now capped
+    to the first 6 branches (`data.popular.take(6)`) rather than showing
+    every popular branch unbounded. `home_new_clinics`'s now-orphaned
+    translation key (en/fr) was deleted along with it.
+
+- **2026-08-13 (Patient App: exact-match correction pass on the Home
+  redesign directly below — same day, same reference code)** — The first
+  pass approximated the supplied FlutterFlow reference rather than
+  matching it; this pass fixes every concrete, checkable diff the user
+  flagged:
+  - `BranchCard` was a 260px-wide horizontally-scrolling carousel tile;
+    now always full-width (`width` param removed entirely — Browse's own
+    usage already had no `width`, only Home's carousel did), matching the
+    reference's `Container(width: double.infinity, height: 304)`. Image
+    height fixed at 227px (was a responsive `AspectRatio(16/10)`). Name
+    18px/w600 (was 15px), subtitle 15px (was 12.5px), text padding
+    `all(10)` (was `all(14)`). The service-chip row under the name is
+    gone — the reference's card has nothing there. `ClinicCarousel`
+    (`home_screen.dart`) renamed `ClinicList`, rebuilt from a horizontal
+    `ListView` into a vertical `Column` of stacked full-width cards, and
+    gained a trailing "View all" link on its heading row (new
+    `action_view_all` key) — the reference's "Popular " row has one, mine
+    didn't.
+  - Card subtitle format corrected to the reference's exact string shape:
+    `"1.4km . 15 Doctors"` — no space before "km", `.` (not `•`) as the
+    separator, capital "Doctors"/"Doctor" (`browse_doctor_count` plural
+    values capitalized).
+  - `RatingBadge` enlarged to match the bigger card: star icon 24px (was
+    14px), value text 16px (was 13px), pill padding `all(3)` (was
+    `symmetric(8,4)`), corner radius bumped to 100 on both the outer clip
+    and inner pill (was 20 — mismatched against the pill's already-round
+    look). Same fixed white-blur/amber/dark-navy colors as the entry
+    below, unchanged.
+  - Section heading text corrected to the reference's literal strings:
+    `home_services` "Services" -> "Explore Services";
+    `home_popular_clinics` "Popular Clinics" -> "Popular" (English only —
+    French's "Cliniques populaires" -> "Populaire", since the reference
+    itself is English-only and this is a translation, not a literal
+    string match).
+  - Top bar icon buttons (`TopBarIconButton`) bumped to 24px icons (was
+    20px), matching the reference's `Icon(..., size: 24)`.
+  - Section-to-section gaps normalized to a uniform 20px (was a mix of
+    24/28), matching the reference's `.divide(SizedBox(height: 20))`
+    pattern across its outer Column's direct children.
+
+- **2026-08-13 (Patient App: new icon system, app renamed to "Clisante",
+  Home redesign to a supplied reference — `cliniqnovva_patient` only, the
+  web dashboard `cliniqnovva` is untouched by every point below)** — Large
+  combined change, driven by a FlutterFlow code sample the user supplied as
+  the literal design reference (`HomeClinicWidget`):
+  1. **New icon system.** A ~1900-glyph IcoMoon font pack ("Migambi VIP
+     Icons", supplied by the user from their local `Documents` folder) is
+     now used for every icon in the app EXCEPT the bottom nav (explicit
+     instruction) — the bottom nav stays Heroicons/mini per the entry
+     below. Font copied to `assets/fonts/Migambi-VIP-Icons.ttf` + a new
+     pubspec `fonts:` entry; a trimmed, semantically-renamed subset lives
+     in `lib/core/theme/migambi_icons.dart` (22 icons, not the full pack —
+     add more there if a new one is needed, codepoints copied verbatim
+     from the generator's own output, never renumber them). `IconRef`
+     (`app_icons.dart`) gained a second variant, `IconRef.font(IconData)`,
+     alongside the existing `IconRef.hero(HeroIcons)` — `AppIcon` now
+     branches on which one a ref carries. Every `AppIcons.*` constant
+     except `navHome`/`navBrowse`/`navBookings`/`navChat`/`navSettings`
+     was remapped to `IconRef.font(MigambiIcons.xxx)`. One exception:
+     `AppIcons.offline` stays Heroicons (`signalSlash`) — no wifi-slash/
+     offline glyph exists in the Migambi pack, and picking a
+     wrong-shaped substitute would be worse than the one deliberate gap.
+  2. **App renamed "Cliniqnovva" -> "Clisante"** (Patient App only — the
+     web dashboard keeps its name). `AppConstants.appName`, both
+     translation files' `app_name`/`home_new_clinics` keys, a hardcoded
+     calendar-event-title string in `booking_screen.dart`, `web/index.html`
+     (title + apple-mobile-web-app-title — both had literally never been
+     changed off Flutter's own scaffold default, `cliniqnovva_patient`),
+     `web/manifest.json` (`name`/`short_name`, plus its
+     background/theme `color` swapped from Flutter's placeholder blue
+     `#0175C2` to the app's actual brand `#38BDF8` while touching this
+     file anyway), `android/.../AndroidManifest.xml`'s `android:label`,
+     and iOS `Info.plist`'s `CFBundleDisplayName`. Internal
+     identifiers (`CliniqnovvaCard`/`CliniqnovvaButton`/
+     `CliniqnovvaTextField`/`CliniqnovvaLogo` component class names, the
+     `CliniqnovvaPatientApp` widget class) are deliberately NOT renamed —
+     never user-visible, renaming them app-wide would be pure churn.
+  3. **Home screen redesign to the supplied reference.** Top bar's wordmark
+     text bumped from 18px/w600 to 19px/w700 (matches the reference's
+     exact `fontSize: 19, fontWeight: FontWeight.bold`); gained a SECOND
+     icon button (`ChatBell`, new — `features/chat/widgets/chat_bell.dart`)
+     next to the existing notification bell. Both now share a new
+     `TopBarIconButton` (`shared/widgets/top_bar_icon_button.dart`) — a
+     circular bordered 40px button (was: `NotificationBell` rendering a
+     bare icon+badge with no circular chrome at all) with a skyBlue badge
+     pill (was red — switched to the brand's existing accent rather than
+     matching the reference's arbitrary badge color, since brand
+     consistency matters more than pixel-matching a scaffold's incidental
+     choices). New `totalChatUnreadCountProvider`
+     (`chats_provider.dart`) backs the chat badge — a one-shot sum across
+     every thread's unread count (not a live combined stream; no stream-
+     combination library like rxdart is a dependency here, and adding one
+     for a badge count wasn't worth it).
+     The Services row (yesterday's chip-list) is now a **fixed grid**,
+     matching the reference exactly: at most 4 cells (top 3 services by
+     clinic count + a trailing "View all"), each a fixed-shape card
+     (~45% width, 100px tall, `context.appSecondaryBg`, 18-radius, 20px
+     padding, bottom-aligned name + "N Clinics") via a new reusable
+     `ServiceCard` widget (`features/browse/widgets/service_card.dart`,
+     `ServiceCard`/`ServiceCard.viewAll`) — replaces the old horizontally-
+     scrolling chip row (`ServicesRow` -> `ServicesGrid`). Needed a real
+     backend change to back the "N Clinics" count: `browse.service.js`
+     gained `departmentCounts` (service name -> clinic count) alongside
+     the existing `availableDepartments`, added as a NEW parallel field
+     rather than folding into the existing one, so Browse screen's
+     existing department filter chips (which only ever needed names) stay
+     untouched. New `ServiceSummary{name, clinicCount}` model
+     (`features/browse/models/service_summary.dart`) mirrors the pairing.
+  4. **`RatingBadge` restyled** to match the reference exactly: was a
+     solid `Colors.black.withValues(alpha: 0.55)` pill with a skyBlue
+     star; now a `BackdropFilter`-blurred translucent-white pill
+     (`Color(0xA2FFFFFF)`, `ImageFilter.blur(sigmaX: 2, sigmaY: 2)`) with
+     an amber star (`Color(0xFFFFBF09)`) and dark navy text
+     (`Color(0xFF14181B)`) — a deliberate, commented exception to
+     `context.appXxx` theming (it sits on a photo, not a themed surface,
+     so it needs its own fixed light/dark-agnostic pair, not tokens that
+     flip with the app's theme).
+  DESIGN_LANGUAGE.md itself: this entry. `docs/known-issues.md` unaffected
+  — the Firebase project mismatch blocking live login is untouched by any
+  of the above.
 
 - **2026-08-12 (Patient App: Home restructure — appointment block removed,
   Services-before-clinics, bottom-nav Home icon → mini, follow-up to the

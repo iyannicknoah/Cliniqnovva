@@ -8,16 +8,43 @@ abstract final class AppColors {
   /// the whole app — pure white per explicit instruction (2026-07-19).
   static const Color pageBackground = Color(0xFFFFFFFF);
 
-  /// The dark-mode equivalent of [pageBackground] — pure black, per explicit
-  /// instruction (2026-07-23). Cards/containers use this SAME value, never a
-  /// separate "dark card" shade — see `theme_ext.dart`'s `appCard`.
-  static const Color pageBackgroundDark = Color(0xFF000000);
-  static const Color successGreen = Color(0xFF2ECC71);
-  static const Color warningAmber = Color(0xFFF4A261);
-  static const Color errorRed = Color(0xFFE63946);
-  static const Color textPrimary = Color(0xFF0B2545);
-  static const Color textSecondary = Color(0xFF5B6B73);
-  static const Color cardBorder = Color(0xFFE1EDEC);
+  /// The dark-mode equivalent of [pageBackground] — near-black navy, ported
+  /// 2026-08-13 from the Smart Feed Rwanda reference's `--color-background`
+  /// dark value (was pure black `#000000`, retired). Cards/containers use
+  /// this SAME value, never a separate "dark card" shade — see
+  /// `theme_ext.dart`'s `appCard`.
+  static const Color pageBackgroundDark = Color(0xFF0D1117);
+
+  /// System primary — brand blue, ported 2026-08-13 from the Smart Feed
+  /// Rwanda reference project's `--color-primary` (explicit user
+  /// instruction: "copy primary color"). Fixed, NOT theme-inverted — same
+  /// exact blue in light and dark mode, replacing the retired
+  /// black(light)/white(dark) inversion rule. See `context.appPrimary`.
+  static const Color primary = Color(0xFF1E8CFF);
+
+  /// Hover/pressed state for [primary] (reference `--color-primary-hover`).
+  static const Color primaryHover = Color(0xFF1670CC);
+
+  /// ~10%-opacity tint of [primary], for tinted backgrounds/selected rows
+  /// (reference `--color-primary-tint`).
+  static const Color primaryTint = Color(0xFFE8F3FF);
+
+  /// Fixed white — text/icon color on top of a [primary] fill, in BOTH
+  /// themes (reference `--color-primary-contrast`, never theme-inverted).
+  static const Color primaryContrast = Color(0xFFFFFFFF);
+
+  static const Color successGreen = Color(0xFF16A34A);
+  static const Color warningAmber = Color(0xFFB98900);
+  static const Color errorRed = Color(0xFFD92D20);
+  static const Color infoBlue = Color(0xFF00A1DE);
+  static const Color textPrimary = Color(0xFF14181B);
+  static const Color textSecondary = Color(0xFF57636C);
+  static const Color cardBorder = Color(0xFFE0E3E7);
+
+  /// Dark-mode equivalent of [cardBorder] (reference `--color-border` dark
+  /// value) — was an inline `Color(0xFF2A2A2A)` hardcoded at every call
+  /// site; centralized here 2026-08-13 during the same color-token pass.
+  static const Color cardBorderDark = Color(0xFF26303C);
 
   // Status pills: light background + a saturated/readable text color per tone.
   static const Color pillGreenBg = Color(0xFFE8F8EF);

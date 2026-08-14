@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 
 import '../../core/theme/theme_ext.dart';
 
-/// The single table-header component — a row of secondaryText column labels
-/// (one per `Expanded` cell), bracketed by hairline dividers above and
-/// below, matching the reference design language's table pattern exactly.
+/// The single table-header component — a row of semi-bold column labels
+/// (2026-08-14, explicit user instruction: "semi-bold, not that hard bold" —
+/// corrects the same day's earlier `w700` pass down to `w600`; was
+/// regular-weight `appSubtext` before that), one per `Expanded` cell,
+/// bracketed by hairline dividers above and below.
 class CliniqnovvaTableHeader extends StatelessWidget {
   const CliniqnovvaTableHeader({super.key, required this.columns});
 
@@ -23,7 +25,10 @@ class CliniqnovvaTableHeader extends StatelessWidget {
                 Expanded(
                   child: Text(
                     column,
-                    style: TextStyle(color: context.appSubtext),
+                    style: TextStyle(
+                      color: context.appSubtext,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
             ].divideWith(const SizedBox(width: 20)),

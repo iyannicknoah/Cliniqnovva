@@ -62,6 +62,29 @@ final chatUnreadCountProvider = StreamProvider.autoDispose.family<int, String>((
       .map((snap) => snap.docs.where((d) => d.data()['senderRole'] != 'patient').length);
 });
 
+/// Total unread-for-PATIENT count ACROSS every chat thread — the Home top
+/// bar's chat button badge. A one-shot sum (not a combined live stream —
+/// `chatUnreadCountProvider` is per-thread and there's no cheap way to
+/// merge N Firestore listeners into one without a new dependency) over the
+/// same per-thread query [chatUnreadCountProvider] already uses; re-runs
+/// whenever this provider is watched/invalidated, same as any other
+/// FutureProvider, rather than pushing live updates.
+final totalChatUnreadCountProvider = FutureProvider.autoDispose<int>((ref) async {
+  final chats = await ref.watch(myChatsStreamProvider.future);
+  final counts = await Future.wait(
+    chats.map((chat) async {
+      final snap = await FirebaseService.db
+          .collection('chats')
+          .doc(chat.id)
+          .collection('messages')
+          .where('isRead', isEqualTo: false)
+          .get();
+      return snap.docs.where((d) => d.data()['senderRole'] != 'patient').length;
+    }),
+  );
+  return counts.fold<int>(0, (a, b) => a + b);
+});
+
 /// Owns every chat write (Task 3) — writes go DIRECTLY to Firestore, the
 /// SAME functions/field shapes the web dashboard's `ChatsNotifier` already
 /// uses (mirrored exactly, not reimplemented), just called from the patient

@@ -92,3 +92,8 @@ flutter:
           weight: 600
         - asset: assets/fonts/GeneralSans-Bold.otf
           weight: 700
+    # 2026-08-13 — the icon set used everywhere except the bottom nav (which
+    # stays Heroicons, mini style). See lib/core/theme/migambi_icons.dart.
+    - family: Migambi-VIP-Icons
+      fonts:
+        - asset: assets/fonts/Migambi-VIP-Icons.ttf

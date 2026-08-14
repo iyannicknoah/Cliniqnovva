@@ -5,24 +5,47 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_constants.dart';
-import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_icons.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/theme_ext.dart';
+import '../../../shared/widgets/app_icon.dart';
 import '../../../shared/widgets/cliniqnovva_button.dart';
 import '../../../shared/widgets/cliniqnovva_card.dart';
 import '../../../shared/widgets/empty_state.dart';
 import '../../../shared/widgets/loading_widget.dart';
 import '../../../shared/widgets/metric_card.dart';
+import '../../appointments/models/appointment_model.dart';
 import '../../appointments/providers/appointments_provider.dart';
 import '../../appointments/screens/appointments_screen.dart' show AppointmentsList;
 import '../../auth/providers/access_control_provider.dart';
+import '../../billing/models/invoice_model.dart';
 import '../../billing/providers/invoices_provider.dart';
 import '../../clinics/providers/branches_provider.dart' show showAllBranchesProvider;
-import '../../departments/providers/departments_provider.dart';
-import '../../departments/providers/services_provider.dart';
+import '../../departments/providers/departments_provider.dart' show activeBranchIdProvider;
 import '../../departments/widgets/branch_selector.dart';
+import '../../patients/models/patient_model.dart';
+import '../../patients/providers/patients_provider.dart' show patientDetailProvider;
+import '../../reports/models/report_models.dart';
 import '../../reports/providers/reports_provider.dart';
+import '../../staff/models/staff_model.dart';
+import '../../staff/providers/staff_provider.dart' show staffDetailProvider;
 import '../../super_admin/widgets/payment_history_panel.dart' show formatRwf;
+
+const _monthAbbr = [
+  '',
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
+];
 
 String _todayIso() {
   final d = DateTime.now().toUtc().add(const Duration(hours: 2)); // Africa/Kigali, UTC+2
@@ -58,6 +81,15 @@ class DashboardScreen extends ConsumerWidget {
             AppConstants.roleBranchAdmin,
             AppConstants.roleReceptionist,
           ].contains(role);
+          // 2026-08-13, explicit user instruction — Revenue is Admin/
+          // Accountant only; Receptionist (the only other role that ever
+          // lands on /dashboard, see app_shell.dart's nav matrix — Accountant
+          // has its own /accountant-overview and never renders this screen)
+          // must not see it.
+          final canSeeRevenue = [
+            AppConstants.roleClinicAdmin,
+            AppConstants.roleBranchAdmin,
+          ].contains(role);
 
           return Padding(
             padding: const EdgeInsets.all(40),
@@ -88,6 +120,7 @@ class DashboardScreen extends ConsumerWidget {
                           child: _DashboardBody(
                             branchId: isAllBranches ? null : branchId,
                             canManage: canManage,
+                            canSeeRevenue: canSeeRevenue,
                           ),
                         ),
                 ),
@@ -101,10 +134,11 @@ class DashboardScreen extends ConsumerWidget {
 }
 
 class _DashboardBody extends ConsumerWidget {
-  const _DashboardBody({required this.branchId, required this.canManage});
+  const _DashboardBody({required this.branchId, required this.canManage, required this.canSeeRevenue});
 
   final String? branchId;
   final bool canManage;
+  final bool canSeeRevenue;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -115,29 +149,15 @@ class _DashboardBody extends ConsumerWidget {
       children: [
         _MetricsRow(branchId: branchId, today: today),
         const SizedBox(height: 20),
-        // 2026-07-30, explicit user instruction — Revenue by Department /
-        // Quick Actions row now comes BEFORE Today's Appointments (was
-        // after).
-        LayoutBuilder(
-          builder: (context, constraints) {
-            final isWide = constraints.maxWidth > 900;
-            final left = _RevenueByDepartmentCard(branchId: branchId, today: today);
-            final right = const _QuickActionsCard();
-            return isWide
-                ? IntrinsicHeight(
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Expanded(child: left),
-                        const SizedBox(width: 16),
-                        Expanded(child: right),
-                      ],
-                    ),
-                  )
-                : Column(children: [left, const SizedBox(height: 16), right]);
-          },
-        ),
-        const SizedBox(height: 16),
+        // 2026-08-13, explicit user instruction — Quick Actions removed
+        // entirely; Revenue is now full width (was sharing a row with
+        // Quick Actions) and a real monthly trend instead of a same-day
+        // by-department breakdown. Admin/Accountant only — see
+        // `canSeeRevenue` above.
+        if (canSeeRevenue) ...[
+          _RevenueTrendCard(branchId: branchId),
+          const SizedBox(height: 16),
+        ],
         _TodayAppointmentsCard(branchId: branchId, canManage: canManage),
       ],
     );
@@ -209,7 +229,12 @@ class _TodayAppointmentsCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return CliniqnovvaCard(
       title: 'dashboard_metric_appointments_today'.tr(),
-      showBorder: false,
+      // 2026-08-14, explicit user instruction — "View all" on the same row
+      // as the section title, navigating to the full Appointments page.
+      trailing: CliniqnovvaButton.text(
+        label: 'View all',
+        onPressed: () => context.go('/appointments'),
+      ),
       child: AppointmentsList(
         branchId: branchId,
         doctorId: null,
@@ -221,193 +246,415 @@ class _TodayAppointmentsCard extends StatelessWidget {
   }
 }
 
-/// Pairs with Quick Actions (2026-07-25, briefly full width for one
-/// revision, now back to sharing a row — Reviews Needing Reply is the one
-/// that's full width now) — revenue by department. Line chart (2026-07-30,
-/// explicit user instruction — was a bar chart), same sky-blue curved-line
-/// style as the Pharmacist/Accountant overview trend charts.
-class _RevenueByDepartmentCard extends ConsumerWidget {
-  const _RevenueByDepartmentCard({required this.branchId, required this.today});
+/// Full-width monthly revenue trend (2026-08-13, second pass — explicit
+/// user instruction to rebuild this like Stripe's "Recent earnings" widget:
+/// a big total for the selected period, a period-length dropdown filter,
+/// and a real bar chart with plain Y-axis value ticks + X-axis month labels
+/// instead of axis title text, which was the first pass's approach and
+/// rendered as illegible rotated/wrapped text — scrapped entirely rather
+/// than fixed in place). Bar color is `context.appPrimary` (black light /
+/// white dark) to match `reports_screen.dart`'s own revenue bar chart
+/// (`_TrendBars`) — the sky-blue line style used elsewhere on this
+/// dashboard was a line-chart convention that doesn't carry over to bars.
+/// Admin/Accountant only — see `canSeeRevenue` in `_DashboardBody`.
+const _periodOptions = [3, 6, 12];
+
+class _RevenueTrendCard extends ConsumerStatefulWidget {
+  const _RevenueTrendCard({required this.branchId});
 
   final String? branchId;
-  final String today;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_RevenueTrendCard> createState() => _RevenueTrendCardState();
+}
+
+class _RevenueTrendCardState extends ConsumerState<_RevenueTrendCard> {
+  int _monthsBack = 6;
+
+  @override
+  Widget build(BuildContext context) {
+    final now = DateTime.now();
+    final rangeStart = DateTime(now.year, now.month - (_monthsBack - 1), 1);
+    final months = [for (var i = 0; i < _monthsBack; i++) DateTime(rangeStart.year, rangeStart.month + i, 1)];
+    String isoDate(DateTime d) => '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+
     final revenueAsync = ref.watch(
-      revenueReportProvider((branchId: branchId, dateFrom: today, dateTo: today, groupBy: 'day')),
+      revenueReportProvider((
+        branchId: widget.branchId,
+        dateFrom: isoDate(rangeStart),
+        dateTo: isoDate(now),
+        groupBy: 'month',
+      )),
     );
-    final servicesAsync = ref.watch(servicesProvider(branchId));
-    final departmentsAsync = ref.watch(departmentsProvider(branchId));
 
     return CliniqnovvaCard(
-      title: 'dashboard_revenue_by_department'.tr(),
-      showBorder: false,
-      child: SizedBox(
-        height: 220,
-        child: revenueAsync.when(
-          loading: () => const LoadingWidget(),
-          error: (e, _) => Text('$e', style: TextStyle(color: context.appSubtext)),
-          data: (revenue) {
-            final services = servicesAsync.valueOrNull ?? [];
-            final departments = departmentsAsync.valueOrNull ?? [];
-            final departmentNames = {for (final d in departments) d.id: d.name};
-            final serviceDept = {for (final s in services) s.id: s.departmentId};
+      title: 'dashboard_revenue_trend'.tr(),
+      trailing: SizedBox(
+        width: 150,
+        child: DropdownButtonFormField<int>(
+          initialValue: _monthsBack,
+          isExpanded: true,
+          icon: const AppIcon(AppIcons.chevronDown, size: 16),
+          style: TextStyle(color: context.appText, fontSize: 12.5),
+          dropdownColor: context.appCard,
+          decoration: InputDecoration(
+            isDense: true,
+            filled: true,
+            fillColor: context.appCard,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppTheme.inputRadius),
+              borderSide: BorderSide(color: context.appBorder),
+            ),
+          ),
+          items: [
+            for (final n in _periodOptions)
+              DropdownMenuItem(value: n, child: Text('dashboard_revenue_period_$n'.tr())),
+          ],
+          onChanged: (v) => setState(() => _monthsBack = v ?? 6),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          revenueAsync.when(
+            loading: () => const SizedBox(height: 32),
+            error: (e, _) => const SizedBox(height: 32),
+            data: (revenue) => Text(
+              formatRwf(revenue.totalCollectedRwf),
+              style: TextStyle(color: context.appText, fontSize: 28, fontWeight: FontWeight.w700),
+            ),
+          ),
+          const SizedBox(height: 20),
+          SizedBox(
+            height: 280,
+            child: revenueAsync.when(
+              loading: () => const LoadingWidget(),
+              error: (e, _) => Text('$e', style: TextStyle(color: context.appSubtext)),
+              data: (revenue) {
+                final monthKeys = [for (final m in months) '${m.year}-${m.month.toString().padLeft(2, '0')}'];
+                final values = [for (final k in monthKeys) (revenue.trend[k] ?? 0).toDouble()];
+                // 2026-08-13, explicit user instruction — fixed 50,000 RWF
+                // gridline step (was `maxY / 4`, a fraction of whatever the
+                // real max happened to be, which produced a nonsense
+                // 0/3/5/8/10 RWF scale whenever there's little/no revenue
+                // yet). Always at least one step of headroom above the
+                // tallest bar, and always at least 50,000 at the top even
+                // with zero data.
+                final rawMax = values.reduce((a, b) => a > b ? a : b);
+                // 2026-08-14, explicit user instruction — fixed Y-axis tick
+                // set (0 / 10k / 100k / 200k / 300k RWF), replacing the
+                // uniform 50,000 step from the previous pass. Not evenly
+                // spaced by design (a fine 10k marker just above zero, then
+                // coarse 100k steps above that) — extends past 300k in
+                // further 100k steps only if real revenue actually clears
+                // it, so the fixed set is always at least these 5 values.
+                final yTicks = <int>[0, 10000, 100000, 200000, 300000];
+                while (yTicks.last < rawMax + 100000) {
+                  yTicks.add(yTicks.last + 100000);
+                }
+                final yTickSet = yTicks.toSet();
+                final maxY = yTicks.last.toDouble();
+                final barColor = context.appPrimary;
 
-            final byDepartment = <String, int>{};
-            revenue.byService.forEach((serviceId, amount) {
-              final deptId = serviceDept[serviceId];
-              final key = deptId ?? 'other';
-              byDepartment[key] = (byDepartment[key] ?? 0) + amount;
-            });
-
-            // 2026-07-30, explicit user instruction — never show a "no
-            // data" placeholder text instead of the chart. With nothing
-            // recorded yet, render a flat zero line across a handful of
-            // empty x points (0 on both axes) so the chart itself is
-            // always what's on screen; the moment there's real revenue,
-            // the real per-department values replace it.
-            final hasData = byDepartment.isNotEmpty;
-            final entries = hasData
-                ? (byDepartment.entries.toList()..sort((a, b) => b.value.compareTo(a.value)))
-                : const <MapEntry<String, int>>[];
-            final top = hasData ? entries.take(6).toList() : const <MapEntry<String, int>>[];
-            const emptyPointCount = 5;
-            final maxY = hasData
-                ? (top.map((e) => e.value).reduce((a, b) => a > b ? a : b) * 1.2)
-                      .clamp(10, double.infinity)
-                      .toDouble()
-                : 10.0;
-            final lineColor = AppColors.skyBlue;
-            final spots = hasData
-                ? [for (var i = 0; i < top.length; i++) FlSpot(i.toDouble(), top[i].value.toDouble())]
-                : [for (var i = 0; i < emptyPointCount; i++) FlSpot(i.toDouble(), 0.0)];
-
-            // 2026-07-30, explicit user instruction — same curved/no-dots/
-            // filled-area sky-blue line style as the Pharmacist/Accountant
-            // overview trend charts (see pharmacist_overview_screen.dart's
-            // _DispenseTrendChart), applied here in place of the bar chart.
-            return LineChart(
-              LineChartData(
-                minY: 0,
-                maxY: maxY,
-                clipData: const FlClipData.all(),
-                gridData: FlGridData(
-                  show: true,
-                  drawVerticalLine: false,
-                  horizontalInterval: maxY / 4,
-                  getDrawingHorizontalLine: (value) => FlLine(color: context.appBorder, strokeWidth: 1),
-                ),
-                borderData: FlBorderData(show: false),
-                titlesData: FlTitlesData(
-                  topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                  rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                  leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                  bottomTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      reservedSize: 32,
-                      interval: 1,
-                      getTitlesWidget: (value, meta) {
-                        if (!hasData) return const SizedBox.shrink();
-                        final index = value.toInt();
-                        if (index < 0 || index >= top.length) return const SizedBox.shrink();
-                        final key = top[index].key;
-                        final label = key == 'other' ? 'Other' : (departmentNames[key] ?? '—');
-                        return Padding(
-                          padding: const EdgeInsets.only(top: 8),
-                          child: Text(
-                            label,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(color: context.appSubtext, fontSize: 10.5),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ),
-                lineTouchData: LineTouchData(
-                  touchTooltipData: LineTouchTooltipData(
-                    getTooltipColor: (touchedSpot) => context.appCard,
-                    getTooltipItems: (touchedSpots) => touchedSpots.map((spot) {
-                      return LineTooltipItem(
-                        formatRwf(spot.y),
-                        TextStyle(color: context.appText, fontWeight: FontWeight.w600, fontSize: 12),
-                      );
-                    }).toList(),
-                  ),
-                ),
-                lineBarsData: [
-                  LineChartBarData(
-                    spots: spots,
-                    isCurved: true,
-                    preventCurveOverShooting: true,
-                    color: lineColor,
-                    barWidth: 2,
-                    dotData: const FlDotData(show: false),
-                    belowBarData: BarAreaData(
+                return BarChart(
+                  BarChartData(
+                    minY: 0,
+                    maxY: maxY,
+                    alignment: BarChartAlignment.spaceAround,
+                    gridData: FlGridData(
                       show: true,
-                      color: lineColor.withValues(alpha: 0.15),
+                      drawVerticalLine: false,
+                      horizontalInterval: 10000,
+                      checkToShowHorizontalLine: (value) => yTickSet.contains(value.round()),
+                      getDrawingHorizontalLine: (value) => FlLine(color: context.appBorder, strokeWidth: 1),
                     ),
+                    borderData: FlBorderData(show: false),
+                    titlesData: FlTitlesData(
+                      topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                      rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                      leftTitles: AxisTitles(
+                        sideTitles: SideTitles(
+                          showTitles: true,
+                          reservedSize: 76,
+                          interval: 10000,
+                          getTitlesWidget: (value, meta) {
+                            if (!yTickSet.contains(value.round())) return const SizedBox.shrink();
+                            return Padding(
+                              padding: const EdgeInsets.only(right: 8),
+                              child: Text(
+                                formatRwf(value),
+                                style: TextStyle(color: context.appSubtext, fontSize: 10.5),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                      bottomTitles: AxisTitles(
+                        sideTitles: SideTitles(
+                          showTitles: true,
+                          reservedSize: 28,
+                          getTitlesWidget: (value, meta) {
+                            final index = value.toInt();
+                            if (index < 0 || index >= months.length) return const SizedBox.shrink();
+                            return Padding(
+                              padding: const EdgeInsets.only(top: 8),
+                              child: Text(
+                                _monthAbbr[months[index].month],
+                                style: TextStyle(color: context.appSubtext, fontSize: 10.5),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                    barTouchData: BarTouchData(
+                      touchTooltipData: BarTouchTooltipData(
+                        getTooltipColor: (group) => context.appCard,
+                        getTooltipItem: (group, groupIndex, rod, rodIndex) => BarTooltipItem(
+                          formatRwf(rod.toY),
+                          TextStyle(color: context.appText, fontWeight: FontWeight.w600, fontSize: 12),
+                        ),
+                      ),
+                    ),
+                    barGroups: [
+                      for (var i = 0; i < values.length; i++)
+                        BarChartGroupData(
+                          x: i,
+                          barRods: [
+                            BarChartRodData(
+                              toY: values[i],
+                              color: barColor,
+                              width: 18,
+                              borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
+                            ),
+                          ],
+                        ),
+                    ],
                   ),
-                ],
-              ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Dev-only sample-data preview (2026-08-14, explicit user instruction — "add
+// sample data on dashboard so I get a way to see how this looks with data").
+// Same pattern as the Patient App's `/dev/home-preview`: a route-scoped
+// `ProviderScope` override feeds fixed sample data into the SAME widgets the
+// real screen uses, so the design can be seen fully populated without
+// needing a real logged-in session or writing anything to the real backend/
+// Firestore. Reached only via a direct `/dev/dashboard-preview` URL — not
+// linked from anywhere in the real app UI, not a production feature.
+// ---------------------------------------------------------------------------
+
+const _samplePatients = <String, PatientModel>{
+  'sample-patient-1': PatientModel(
+    id: 'sample-patient-1',
+    clinicId: 'sample-clinic',
+    branchId: 'sample-branch',
+    name: 'Aline Uwase',
+    phone: '+250788123456',
+  ),
+  'sample-patient-2': PatientModel(
+    id: 'sample-patient-2',
+    clinicId: 'sample-clinic',
+    branchId: 'sample-branch',
+    name: 'Eric Nkurunziza',
+    phone: '+250788654321',
+  ),
+  'sample-patient-3': PatientModel(
+    id: 'sample-patient-3',
+    clinicId: 'sample-clinic',
+    branchId: 'sample-branch',
+    name: 'Chantal Mukamana',
+    phone: '+250788112233',
+  ),
+};
+
+const _sampleStaff = <String, StaffModel>{
+  'sample-doctor-1': StaffModel(
+    id: 'sample-doctor-1',
+    clinicId: 'sample-clinic',
+    branchId: 'sample-branch',
+    name: 'Dr. Jean Mugisha',
+    role: AppConstants.roleDoctor,
+  ),
+  'sample-doctor-2': StaffModel(
+    id: 'sample-doctor-2',
+    clinicId: 'sample-clinic',
+    branchId: 'sample-branch',
+    name: 'Dr. Grace Umutesi',
+    role: AppConstants.roleDoctor,
+  ),
+};
+
+List<AppointmentModel> _sampleAppointments() {
+  final today = _todayIso();
+  return [
+    AppointmentModel(
+      id: 'sample-appt-1',
+      clinicId: 'sample-clinic',
+      branchId: 'sample-branch',
+      patientId: 'sample-patient-1',
+      doctorId: 'sample-doctor-1',
+      serviceId: 'sample-service-1',
+      date: today,
+      startTime: '09:00',
+      endTime: '09:30',
+      status: 'completed',
+    ),
+    AppointmentModel(
+      id: 'sample-appt-2',
+      clinicId: 'sample-clinic',
+      branchId: 'sample-branch',
+      patientId: 'sample-patient-2',
+      doctorId: 'sample-doctor-2',
+      serviceId: 'sample-service-2',
+      date: today,
+      startTime: '10:30',
+      endTime: '11:00',
+      status: 'checkedIn',
+    ),
+    AppointmentModel(
+      id: 'sample-appt-3',
+      clinicId: 'sample-clinic',
+      branchId: 'sample-branch',
+      patientId: 'sample-patient-3',
+      doctorId: 'sample-doctor-1',
+      serviceId: 'sample-service-1',
+      date: today,
+      startTime: '13:00',
+      endTime: '13:30',
+      status: 'confirmed',
+    ),
+    AppointmentModel(
+      id: 'sample-appt-4',
+      clinicId: 'sample-clinic',
+      branchId: 'sample-branch',
+      patientId: 'sample-patient-1',
+      doctorId: 'sample-doctor-2',
+      serviceId: 'sample-service-2',
+      date: today,
+      startTime: '15:00',
+      endTime: '15:30',
+      status: 'pending',
+    ),
+  ];
+}
+
+const _sampleInvoices = <InvoiceModel>[
+  InvoiceModel(
+    id: 'sample-inv-1',
+    clinicId: 'sample-clinic',
+    branchId: 'sample-branch',
+    patientId: 'sample-patient-1',
+    lineItems: [LineItem(description: 'Consultation', amountRwf: 15000)],
+    totalAmountRwf: 15000,
+    cashPaidAmountRwf: 0,
+    insuranceCoveredAmountRwf: 0,
+    insuranceScheme: 'none',
+    status: 'unpaid',
+  ),
+  InvoiceModel(
+    id: 'sample-inv-2',
+    clinicId: 'sample-clinic',
+    branchId: 'sample-branch',
+    patientId: 'sample-patient-2',
+    lineItems: [LineItem(description: 'Lab test', amountRwf: 8000)],
+    totalAmountRwf: 8000,
+    cashPaidAmountRwf: 4000,
+    insuranceCoveredAmountRwf: 0,
+    insuranceScheme: 'none',
+    status: 'partial',
+  ),
+];
+
+/// Fixed-looking monthly revenue, always ending at the CURRENT month so the
+/// bar chart's default 6-month window is fully populated whenever this
+/// preview is opened, regardless of the real date.
+Map<String, int> _sampleMonthlyTrend() {
+  final now = DateTime.now();
+  const values = [120000, 95000, 180000, 60000, 240000, 150000];
+  final map = <String, int>{};
+  for (var i = 0; i < values.length; i++) {
+    final m = DateTime(now.year, now.month - (values.length - 1 - i), 1);
+    map['${m.year}-${m.month.toString().padLeft(2, '0')}'] = values[i];
+  }
+  return map;
+}
+
+class DashboardPreviewScreen extends StatelessWidget {
+  const DashboardPreviewScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return ProviderScope(
+      overrides: [
+        appointmentsListProvider.overrideWith((ref, params) async => _sampleAppointments()),
+        patientDetailProvider.overrideWith(
+          (ref, id) async => _samplePatients[id] ?? _samplePatients.values.first,
+        ),
+        staffDetailProvider.overrideWith(
+          (ref, id) async => _sampleStaff[id] ?? _sampleStaff.values.first,
+        ),
+        invoicesListProvider.overrideWith((ref, params) async => _sampleInvoices),
+        revenueReportProvider.overrideWith((ref, params) async {
+          if (params.groupBy == 'month') {
+            final trend = _sampleMonthlyTrend();
+            return RevenueReport(
+              dateFrom: params.dateFrom,
+              dateTo: params.dateTo,
+              groupBy: 'month',
+              invoiceCount: 12,
+              totalBilledRwf: 900000,
+              totalCollectedRwf: trend.values.fold(0, (a, b) => a + b),
+              trend: trend,
+              byBranch: const {},
+              byDoctor: const {},
+              byService: const {},
             );
-          },
+          }
+          return const RevenueReport(
+            dateFrom: '',
+            dateTo: '',
+            groupBy: 'day',
+            invoiceCount: 2,
+            totalBilledRwf: 45000,
+            totalCollectedRwf: 45000,
+            trend: {},
+            byBranch: {},
+            byDoctor: {},
+            byService: {},
+          );
+        }),
+      ],
+      child: Scaffold(
+        backgroundColor: context.appBg,
+        body: Padding(
+          padding: const EdgeInsets.all(40),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Dashboard — sample data preview',
+                style: TextStyle(color: context.appText, fontSize: 22, fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 24),
+              const Expanded(
+                child: SingleChildScrollView(
+                  child: _DashboardBody(branchId: 'sample-branch', canManage: true, canSeeRevenue: true),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 }
-
-/// Quick Actions — now pairs with Revenue by Department (2026-07-25, briefly
-/// paired with Reviews Needing Reply for one revision; Reviews is full width
-/// on its own row now, with a "View all" link instead).
-class _QuickActionsCard extends StatelessWidget {
-  const _QuickActionsCard();
-
-  @override
-  Widget build(BuildContext context) {
-    return CliniqnovvaCard(
-      title: 'dashboard_quick_actions'.tr(),
-      showBorder: false,
-      child: LayoutBuilder(
-        // 2026-07-30, explicit user instruction (revises the same-day
-        // side-by-side layout back to a column) — all three actions now
-        // stack, each sized to ~45% of the card's width rather than full
-        // width, centered by the Column's default crossAxisAlignment.
-        builder: (context, constraints) {
-          final buttonWidth = constraints.maxWidth * 0.45;
-          return Column(
-            children: [
-              SizedBox(
-                width: buttonWidth,
-                child: CliniqnovvaButton(
-                  label: 'dashboard_register_patient'.tr(),
-                  onPressed: () => context.go('/patients/register'),
-                ),
-              ),
-              const SizedBox(height: 10),
-              SizedBox(
-                width: buttonWidth,
-                child: CliniqnovvaButton(
-                  label: 'dashboard_book_appointment'.tr(),
-                  onPressed: () => context.go('/appointments/book'),
-                ),
-              ),
-              const SizedBox(height: 10),
-              SizedBox(
-                width: buttonWidth,
-                child: CliniqnovvaButton.text(
-                  label: 'dashboard_run_reports'.tr(),
-                  onPressed: () => context.go('/reports'),
-                ),
-              ),
-            ],
-          );
-        },
-      ),
-    );
-  }
-}
-

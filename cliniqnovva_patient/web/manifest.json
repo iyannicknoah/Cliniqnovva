@@ -1,11 +1,11 @@
 {
-    "name": "cliniqnovva_patient",
-    "short_name": "cliniqnovva_patient",
+    "name": "Clisante",
+    "short_name": "Clisante",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#38BDF8",
+    "theme_color": "#38BDF8",
+    "description": "Clisante — book appointments and manage your care.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

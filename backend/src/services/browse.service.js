@@ -86,6 +86,19 @@ function distinctDepartments(branches) {
 }
 
 /**
+ * How many (public, active) branches offer each service — the Home
+ * screen's service cards ("N Clinics"). A separate field from
+ * `availableDepartments` rather than folding counts into it, so the
+ * Browse screen's existing department filter chips (which only need the
+ * names) are untouched by this.
+ */
+function departmentCounts(branches) {
+  const counts = {};
+  branches.forEach((b) => (b.servicesOffered || []).forEach((s) => s && (counts[s] = (counts[s] || 0) + 1)));
+  return counts;
+}
+
+/**
  * Branch list for the Browse screen and Home screen's Popular/New sections
  * (Task 1/2). `search` matches branch name/address OR any doctor's
  * name/specialty at that branch (Task 2's exact wording). `department`
@@ -95,6 +108,7 @@ function distinctDepartments(branches) {
 async function listBranches({ search, sortBy, department }) {
   const active = await fetchActiveBranches();
   const availableDepartments = distinctDepartments(active);
+  const departmentCountsResult = departmentCounts(active);
 
   let matched = active;
 
@@ -122,6 +136,7 @@ async function listBranches({ search, sortBy, department }) {
   return {
     branches: await Promise.all(sorted.map(toPublicBranch)),
     availableDepartments,
+    departmentCounts: departmentCountsResult,
     reviewCountThreshold: reviewsService.REVIEW_COUNT_THRESHOLD,
   };
 }

@@ -99,6 +99,13 @@ class RouterNotifier extends ChangeNotifier {
 }
 
 Future<String?> _redirect(Ref ref, GoRouterState state) async {
+  // Dev-only preview routes (2026-08-14) — allowlisted before the auth
+  // check entirely, same pattern as the Patient App's `/dev/home-preview`.
+  // Not linked from anywhere in the real app UI.
+  if (state.matchedLocation.startsWith('/dev/')) {
+    return null;
+  }
+
   // currentUser is updated synchronously by sign-in/sign-out, unlike the
   // authStateChanges() stream snapshot, which can be stale on web right
   // after an interactive login.
@@ -167,6 +174,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     redirect: (context, state) => _redirect(ref, state),
     routes: [
       GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
+      GoRoute(
+        path: '/dev/dashboard-preview',
+        builder: (context, state) => const DashboardPreviewScreen(),
+      ),
       GoRoute(
         path: '/suspended',
         builder: (context, state) => const SuspendedScreen(),

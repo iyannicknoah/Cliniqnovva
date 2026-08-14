@@ -4,7 +4,7 @@
 /// literal strings against the SAME backend/Firestore, so they must stay
 /// byte-for-byte identical between the two apps.
 abstract final class AppConstants {
-  static const String appName = 'Cliniqnovva';
+  static const String appName = 'Clisante';
   static const String appTagline = 'Run your clinic. We handle the rest.';
 
   // Same backend both clients talk to (spec: "no backend architecture

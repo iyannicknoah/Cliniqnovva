@@ -11,6 +11,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/theme_ext.dart';
 import '../../../shared/utils/async_feedback.dart';
 import '../../../shared/widgets/app_icon.dart';
+import '../../../shared/widgets/app_select.dart';
 import '../../../shared/widgets/cliniqnovva_button.dart';
 import '../../../shared/widgets/cliniqnovva_text_field.dart';
 import '../../../shared/widgets/loading_widget.dart';
@@ -892,29 +893,12 @@ class _RecordInsuranceCardState extends ConsumerState<_RecordInsuranceCard> {
             ),
           ),
           const SizedBox(height: 6),
-          DropdownButtonFormField<String>(
-            initialValue: _scheme,
-            isExpanded: true,
-            style: TextStyle(color: context.appText, fontSize: 14),
-            dropdownColor: context.appCard,
-            decoration: InputDecoration(
-              isDense: true,
-              filled: true,
-              fillColor: context.appCard,
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 12,
-                vertical: 12,
-              ),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(AppTheme.inputRadius),
-                borderSide: BorderSide(color: context.appBorder),
-              ),
-            ),
-            items: _insuranceSchemeLabels.entries
-                .map(
-                  (e) => DropdownMenuItem(value: e.key, child: Text(e.value)),
-                )
-                .toList(),
+          AppSelect(
+            value: _scheme,
+            options: [
+              for (final e in _insuranceSchemeLabels.entries)
+                AppSelectOption(value: e.key, label: e.value),
+            ],
             onChanged: (v) => setState(() => _scheme = v ?? _scheme),
           ),
           const SizedBox(height: 12),

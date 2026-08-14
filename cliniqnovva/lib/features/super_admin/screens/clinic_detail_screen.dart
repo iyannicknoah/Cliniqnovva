@@ -5,9 +5,9 @@ import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_icons.dart';
-import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/theme_ext.dart';
 import '../../../shared/widgets/app_icon.dart';
+import '../../../shared/widgets/app_select.dart';
 import '../../../shared/utils/async_feedback.dart';
 import '../../../shared/widgets/cliniqnovva_button.dart';
 import '../../../shared/widgets/cliniqnovva_card.dart';
@@ -356,30 +356,13 @@ class _ClinicDetailScreenState
                       ),
                     ),
                     const SizedBox(height: 8),
-                    DropdownButtonFormField<String>(
-                      initialValue: _plan,
-                      decoration: InputDecoration(
-                        isDense: true,
-                        filled: true,
-                        fillColor: context.appCard,
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 14,
-                          vertical: 12,
-                        ),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(
-                            AppTheme.inputRadius,
-                          ),
-                          borderSide: BorderSide(color: context.appBorder),
-                        ),
-                      ),
-                      items: AppConstants.subscriptionPlans
+                    AppSelect(
+                      value: _plan,
+                      options: AppConstants.subscriptionPlans
                           .map(
-                            (plan) => DropdownMenuItem(
+                            (plan) => AppSelectOption(
                               value: plan,
-                              child: Text(
-                                '${plan[0].toUpperCase()}${plan.substring(1)}',
-                              ),
+                              label: '${plan[0].toUpperCase()}${plan.substring(1)}',
                             ),
                           )
                           .toList(),
@@ -401,32 +384,11 @@ class _ClinicDetailScreenState
                       ),
                     ),
                     const SizedBox(height: 8),
-                    DropdownButtonFormField<String>(
-                      initialValue: _billingCycle,
-                      decoration: InputDecoration(
-                        isDense: true,
-                        filled: true,
-                        fillColor: context.appCard,
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 14,
-                          vertical: 12,
-                        ),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(
-                            AppTheme.inputRadius,
-                          ),
-                          borderSide: BorderSide(color: context.appBorder),
-                        ),
-                      ),
-                      items: const [
-                        DropdownMenuItem(
-                          value: 'monthly',
-                          child: Text('Monthly'),
-                        ),
-                        DropdownMenuItem(
-                          value: 'quarterly',
-                          child: Text('Quarterly'),
-                        ),
+                    AppSelect(
+                      value: _billingCycle,
+                      options: const [
+                        AppSelectOption(value: 'monthly', label: 'Monthly'),
+                        AppSelectOption(value: 'quarterly', label: 'Quarterly'),
                       ],
                       onChanged: (value) => setState(
                         () => _billingCycle = value ?? _billingCycle,

@@ -7,6 +7,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/theme_ext.dart';
 import '../../../shared/utils/async_feedback.dart';
 import '../../../shared/widgets/app_icon.dart';
+import '../../../shared/widgets/app_select.dart';
 import '../../../shared/widgets/cliniqnovva_button.dart';
 import '../../../shared/widgets/cliniqnovva_text_field.dart';
 import '../models/department_model.dart';
@@ -305,40 +306,14 @@ class _DepartmentDropdown extends StatelessWidget {
               ),
           ];
 
-    return DropdownButtonFormField<String>(
-      initialValue: value,
-      isExpanded: true,
-      hint: Text(
-        'Select department',
-        style: TextStyle(color: context.appSubtext, fontSize: 14),
-      ),
-      style: TextStyle(color: context.appText, fontSize: 15),
-      dropdownColor: context.appCard,
-      decoration: InputDecoration(
-        isDense: true,
-        filled: true,
-        fillColor: context.appCard,
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 14,
-          vertical: 12,
-        ),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppTheme.inputRadius),
-          borderSide: BorderSide(color: context.appBorder),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppTheme.inputRadius),
-          borderSide: BorderSide(color: context.appBorder),
-        ),
-      ),
-      items: options
+    return AppSelect(
+      value: value,
+      hint: 'Select department',
+      options: options
           .map(
-            (d) => DropdownMenuItem(
+            (d) => AppSelectOption(
               value: d.id,
-              child: Text(
-                d.isActive ? d.name : '${d.name} (inactive)',
-                overflow: TextOverflow.ellipsis,
-              ),
+              label: d.isActive ? d.name : '${d.name} (inactive)',
             ),
           )
           .toList(),
