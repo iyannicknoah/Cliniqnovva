@@ -15,6 +15,7 @@ import '../../../shared/widgets/cliniqnovva_button.dart';
 import '../../../shared/widgets/cliniqnovva_text_field.dart';
 import '../../../shared/widgets/loading_widget.dart';
 import '../../../shared/widgets/segmented_tabs.dart';
+import '../../../shared/widgets/top_bar_actions.dart';
 import '../../../shared/providers/connectivity_provider.dart';
 import '../../auth/providers/access_control_provider.dart';
 import '../../lab_orders/widgets/patient_lab_orders_section.dart';
@@ -171,7 +172,7 @@ class _ProfileHeader extends StatelessWidget {
                 style: TextStyle(
                   color: context.appText,
                   fontSize: 20,
-                  fontWeight: FontWeight.w600,
+                  fontWeight: FontWeight.w800,
                 ),
               ),
               const SizedBox(height: 2),
@@ -182,6 +183,8 @@ class _ProfileHeader extends StatelessWidget {
             ],
           ),
         ),
+        const SizedBox(width: 12),
+        const TopBarActions(),
       ],
     );
   }

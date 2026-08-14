@@ -9,11 +9,13 @@ import '../../../shared/widgets/cliniqnovva_table.dart';
 import '../../../shared/widgets/cliniqnovva_text_field.dart';
 import '../../../shared/widgets/empty_state.dart';
 import '../../../shared/widgets/loading_widget.dart';
+import '../../../shared/widgets/top_bar_actions.dart';
 import '../../auth/providers/access_control_provider.dart';
 import '../../clinics/providers/branches_provider.dart' show showAllBranchesProvider;
 import '../../departments/providers/departments_provider.dart';
 import '../../departments/widgets/branch_selector.dart';
 import '../providers/patients_provider.dart';
+import 'register_patient_screen.dart';
 
 const _monthAbbr = [
   '',
@@ -131,7 +133,7 @@ class _PatientsBody extends ConsumerWidget {
                   style: TextStyle(
                     color: context.appText,
                     fontSize: 22,
-                    fontWeight: FontWeight.w600,
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
               ),
@@ -147,14 +149,17 @@ class _PatientsBody extends ConsumerWidget {
                 ),
                 const SizedBox(width: 4),
               ],
-              if (canRegister)
+              if (canRegister) ...[
                 SizedBox(
                   width: 190,
                   child: CliniqnovvaButton(
                     label: '+ Register Patient',
-                    onPressed: () => context.go('/patients/register'),
+                    onPressed: () => showRegisterPatientPanel(context),
                   ),
                 ),
+                const SizedBox(width: 12),
+              ],
+              const TopBarActions(),
             ],
           ),
           const SizedBox(height: 20),
@@ -204,6 +209,11 @@ class _PatientsList extends ConsumerWidget {
         children: [
           const CliniqnovvaTableHeader(
             columns: ['Patient', 'Phone', 'Last visit'],
+            // 2026-08-14, explicit user instruction — 150px right padding
+            // on this table's last column (label + row content), same
+            // mechanism as the Actions-column padding elsewhere but a
+            // different table/column and a different pixel value.
+            lastColumnEndPadding: 150,
           ),
           Expanded(
             child: patients.isEmpty
@@ -219,6 +229,7 @@ class _PatientsList extends ConsumerWidget {
                     children: patients
                         .map(
                           (patient) => CliniqnovvaTableRow(
+                            lastColumnEndPadding: 150,
                             onTap: () =>
                                 context.go('/patients/${patient.id}'),
                             cells: [

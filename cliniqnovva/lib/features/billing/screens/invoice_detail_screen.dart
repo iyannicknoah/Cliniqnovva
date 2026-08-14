@@ -16,6 +16,7 @@ import '../../../shared/widgets/cliniqnovva_button.dart';
 import '../../../shared/widgets/cliniqnovva_text_field.dart';
 import '../../../shared/widgets/loading_widget.dart';
 import '../../../shared/widgets/status_badge.dart';
+import '../../../shared/widgets/top_bar_actions.dart';
 import '../../patients/models/patient_model.dart';
 import '../../patients/providers/patients_provider.dart';
 import '../models/invoice_model.dart';
@@ -118,7 +119,7 @@ class _InvoiceBody extends ConsumerWidget {
                     style: TextStyle(
                       color: context.appText,
                       fontSize: 22,
-                      fontWeight: FontWeight.w600,
+                      fontWeight: FontWeight.w800,
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -144,6 +145,8 @@ class _InvoiceBody extends ConsumerWidget {
               text: _statusLabels[invoice.status] ?? invoice.status,
               type: _badgeTypeFor(invoice.status),
             ),
+            const SizedBox(width: 12),
+            const TopBarActions(),
           ],
         ),
         const SizedBox(height: 24),

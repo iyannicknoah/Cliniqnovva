@@ -161,7 +161,20 @@ class _AppSelectState extends State<AppSelect> {
                                     contentPadding: const EdgeInsets.symmetric(
                                       vertical: 12,
                                     ),
+                                    // 2026-08-14, explicit user instruction
+                                    // (re-fix — the app's global
+                                    // InputDecorationTheme sets its own
+                                    // enabledBorder/focusedBorder/
+                                    // disabledBorder, which win over a lone
+                                    // `border:` override per Flutter's
+                                    // per-state border resolution, so all
+                                    // four states must be set to `none`
+                                    // explicitly or the theme's visible
+                                    // border still shows through).
                                     border: InputBorder.none,
+                                    enabledBorder: InputBorder.none,
+                                    focusedBorder: InputBorder.none,
+                                    disabledBorder: InputBorder.none,
                                     hintText: widget.searchHint,
                                     hintStyle: TextStyle(
                                       color: context.appSubtext,

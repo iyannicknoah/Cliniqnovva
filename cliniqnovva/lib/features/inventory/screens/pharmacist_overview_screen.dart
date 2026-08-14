@@ -10,6 +10,7 @@ import '../../../shared/widgets/cliniqnovva_table.dart';
 import '../../../shared/widgets/loading_widget.dart';
 import '../../../shared/widgets/metric_card.dart';
 import '../../../shared/widgets/status_badge.dart';
+import '../../../shared/widgets/top_bar_actions.dart';
 import '../../auth/providers/access_control_provider.dart';
 import '../models/inventory_item_model.dart';
 import '../providers/inventory_provider.dart';
@@ -98,13 +99,21 @@ class _OverviewBody extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Overview',
-            style: TextStyle(
-              color: context.appText,
-              fontSize: 22,
-              fontWeight: FontWeight.w600,
-            ),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Overview',
+                  style: TextStyle(
+                    color: context.appText,
+                    fontSize: 22,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              const TopBarActions(),
+            ],
           ),
           const SizedBox(height: 24),
           Row(

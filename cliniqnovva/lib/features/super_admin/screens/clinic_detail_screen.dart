@@ -305,7 +305,7 @@ class _ClinicDetailScreenState
                       style: TextStyle(
                         color: context.appText,
                         fontSize: 20,
-                        fontWeight: FontWeight.w600,
+                        fontWeight: FontWeight.w800,
                       ),
                     ),
                   ),

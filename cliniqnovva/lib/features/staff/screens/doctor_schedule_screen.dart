@@ -14,6 +14,7 @@ import '../../../shared/widgets/cliniqnovva_text_field.dart';
 import '../../../shared/widgets/empty_state.dart';
 import '../../../shared/widgets/loading_widget.dart';
 import '../../../shared/widgets/searchable_dropdown.dart';
+import '../../../shared/widgets/top_bar_actions.dart';
 import '../../auth/providers/access_control_provider.dart';
 import '../../departments/providers/departments_provider.dart';
 import '../../departments/widgets/branch_selector.dart';
@@ -139,7 +140,7 @@ class _ScheduleBodyState extends ConsumerState<_ScheduleBody> {
                   style: TextStyle(
                     color: context.appText,
                     fontSize: 22,
-                    fontWeight: FontWeight.w600,
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
               ),
@@ -147,6 +148,7 @@ class _ScheduleBodyState extends ConsumerState<_ScheduleBody> {
                 const BranchSelector(),
                 const SizedBox(width: 12),
               ],
+              const TopBarActions(),
             ],
           ),
           const SizedBox(height: 24),

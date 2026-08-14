@@ -10,6 +10,7 @@ import '../../../shared/widgets/cliniqnovva_card.dart';
 import '../../../shared/widgets/empty_state.dart';
 import '../../../shared/widgets/loading_widget.dart';
 import '../../../shared/widgets/status_badge.dart';
+import '../../../shared/widgets/top_bar_actions.dart';
 import '../../auth/providers/access_control_provider.dart';
 import '../../clinics/providers/branches_provider.dart' show showAllBranchesProvider;
 import '../../departments/providers/departments_provider.dart' show activeBranchIdProvider;
@@ -68,10 +69,14 @@ class ReviewsScreen extends ConsumerWidget {
                     Expanded(
                       child: Text(
                         'Reviews',
-                        style: TextStyle(color: context.appText, fontSize: 22, fontWeight: FontWeight.w600),
+                        style: TextStyle(color: context.appText, fontSize: 22, fontWeight: FontWeight.w800),
                       ),
                     ),
-                    if (isOrgAdmin) const BranchSelector(),
+                    if (isOrgAdmin) ...[
+                      const BranchSelector(),
+                      const SizedBox(width: 12),
+                    ],
+                    const TopBarActions(),
                   ],
                 ),
                 const SizedBox(height: 24),

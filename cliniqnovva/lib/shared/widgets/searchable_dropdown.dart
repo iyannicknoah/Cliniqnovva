@@ -5,6 +5,19 @@ import '../../core/theme/app_theme.dart';
 import '../../core/theme/theme_ext.dart';
 import 'app_icon.dart';
 
+/// 2026-08-14, explicit user instruction — border restored on this field
+/// specifically (was made borderless earlier the same day, matching
+/// `AppSelect`'s search box — but that box sits inside an already-bordered
+/// floating panel, whereas this one IS the whole standalone field with
+/// nothing else framing it, so without its own border it visually
+/// disappeared into the page background). Subtle `appBorder` when idle,
+/// `appPrimary` highlight on focus — same convention every other input in
+/// the app uses.
+OutlineInputBorder _inputBorder(Color color) => OutlineInputBorder(
+  borderRadius: BorderRadius.circular(AppTheme.inputRadius),
+  borderSide: BorderSide(color: color),
+);
+
 /// Same visual shape/API as `LabeledDropdown` (optional label above a
 /// bordered, filled field) but type-to-filter instead of a fixed tap-to-open
 /// list — for pickers backed by longer name lists (doctors, currently)
@@ -145,24 +158,16 @@ class _SearchableDropdownState extends State<SearchableDropdown> {
                           horizontal: 14,
                           vertical: 12,
                         ),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(
-                            AppTheme.inputRadius,
-                          ),
-                          borderSide: BorderSide(color: context.appBorder),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(
-                            AppTheme.inputRadius,
-                          ),
-                          borderSide: BorderSide(color: context.appBorder),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(
-                            AppTheme.inputRadius,
-                          ),
-                          borderSide: BorderSide(color: context.appPrimary),
-                        ),
+                        // All four border states set explicitly (not just
+                        // `border`) — the app's global `InputDecorationTheme`
+                        // sets its own enabledBorder/focusedBorder/
+                        // disabledBorder, which win over a lone `border:`
+                        // override per Flutter's per-state border
+                        // resolution.
+                        border: _inputBorder(context.appBorder),
+                        enabledBorder: _inputBorder(context.appBorder),
+                        focusedBorder: _inputBorder(context.appPrimary),
+                        disabledBorder: _inputBorder(context.appBorder),
                       ),
                     );
                   },

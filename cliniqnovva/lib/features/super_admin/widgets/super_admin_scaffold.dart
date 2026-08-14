@@ -87,7 +87,7 @@ class SuperAdminScaffold extends ConsumerWidget {
                         style: TextStyle(
                           color: context.appText,
                           fontSize: 18,
-                          fontWeight: FontWeight.w600,
+                          fontWeight: FontWeight.w800,
                         ),
                       ),
                       const Spacer(),

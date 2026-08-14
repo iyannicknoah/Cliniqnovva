@@ -7,6 +7,7 @@ import '../../../shared/widgets/cliniqnovva_table.dart';
 import '../../../shared/widgets/empty_state.dart';
 import '../../../shared/widgets/loading_widget.dart';
 import '../../../shared/widgets/status_badge.dart';
+import '../../../shared/widgets/top_bar_actions.dart';
 import '../../auth/providers/access_control_provider.dart';
 import '../../appointments/providers/appointments_provider.dart';
 import '../../patients/providers/patients_provider.dart';
@@ -52,9 +53,17 @@ class NurseTodayScreen extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  "Today's Patients",
-                  style: TextStyle(color: context.appText, fontSize: 22, fontWeight: FontWeight.w600),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        "Today's Patients",
+                        style: TextStyle(color: context.appText, fontSize: 22, fontWeight: FontWeight.w800),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    const TopBarActions(),
+                  ],
                 ),
                 const SizedBox(height: 4),
                 Text(

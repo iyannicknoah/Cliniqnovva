@@ -140,19 +140,20 @@ class CliniqnovvaSidebar extends ConsumerWidget {
             child: collapsed
                 ? Column(
                     children: [
-                      const CliniqnovvaLogo(size: 35, radius: 17.5),
+                      const CliniqnovvaLogo(size: 28, radius: 14),
                       const SizedBox(height: 10),
                       toggle,
                     ],
                   )
                 : Row(
                     children: [
-                      // 2026-08-14, explicit user instruction: 35px (was
-                      // 28), radius kept at exactly half. `background: true`
-                      // (a synthetic white mat behind the mark) stays off —
-                      // the logo source is natively transparent with no
-                      // backing shape of its own.
-                      const CliniqnovvaLogo(size: 35, radius: 17.5),
+                      // 2026-08-14, explicit user instruction: back down to
+                      // 28px (was briefly 35 earlier the same day), radius
+                      // kept at exactly half. `background: true` (a synthetic
+                      // white mat behind the mark) stays off — the logo
+                      // source is natively transparent with no backing shape
+                      // of its own.
+                      const CliniqnovvaLogo(size: 28, radius: 14),
                       // 5px gap (explicit user instruction — was 0, briefly
                       // removed entirely earlier the same day).
                       const SizedBox(width: 5),

@@ -16,6 +16,7 @@ import '../../../shared/widgets/loading_widget.dart';
 import '../../../shared/widgets/row_actions_menu.dart';
 import '../../../shared/widgets/segmented_tabs.dart';
 import '../../../shared/widgets/status_badge.dart';
+import '../../../shared/widgets/top_bar_actions.dart';
 import '../../auth/providers/access_control_provider.dart';
 import '../../clinics/providers/branches_provider.dart'
     show showAllBranchesProvider;
@@ -135,7 +136,7 @@ class _AppointmentsBody extends ConsumerWidget {
                   style: TextStyle(
                     color: context.appText,
                     fontSize: 22,
-                    fontWeight: FontWeight.w600,
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
               ),
@@ -143,12 +144,15 @@ class _AppointmentsBody extends ConsumerWidget {
                 const BranchSelector(),
                 const SizedBox(width: 12),
               ],
-              if (canManage)
+              if (canManage) ...[
                 CliniqnovvaButton(
                   label: '+ Book Appointment',
                   isFullWidth: false,
                   onPressed: () => context.go('/appointments/book'),
                 ),
+                const SizedBox(width: 12),
+              ],
+              const TopBarActions(),
             ],
           ),
           if (effectiveBranchId != null && doctorId == null) ...[
@@ -376,6 +380,7 @@ class AppointmentsList extends ConsumerWidget {
         final rows = sorted
             .map(
               (appt) => CliniqnovvaTableRow(
+                lastColumnEndPadding: 50,
                 cells: [
                   _PatientCell(patientId: appt.patientId),
                   _DoctorCell(doctorId: appt.doctorId),
@@ -440,6 +445,12 @@ class AppointmentsList extends ConsumerWidget {
                 'Status',
                 'Actions',
               ],
+              // 2026-08-14, explicit user instruction — 50px right padding
+              // on the Actions column itself (label + row content), on
+              // every table with an Actions column, not the whole
+              // table/row. Supersedes an earlier, wrong first attempt that
+              // padded the whole embedded Dashboard table.
+              lastColumnEndPadding: 50,
             ),
             if (embedded)
               sorted.isEmpty

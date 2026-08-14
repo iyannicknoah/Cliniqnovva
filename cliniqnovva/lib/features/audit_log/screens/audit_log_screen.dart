@@ -5,6 +5,7 @@ import '../../../core/theme/theme_ext.dart';
 import '../../../shared/widgets/cliniqnovva_table.dart';
 import '../../../shared/widgets/cliniqnovva_text_field.dart';
 import '../../../shared/widgets/loading_widget.dart';
+import '../../../shared/widgets/top_bar_actions.dart';
 import '../../staff/providers/staff_provider.dart';
 import '../models/audit_log_model.dart';
 import '../providers/audit_log_provider.dart';
@@ -62,13 +63,21 @@ class AuditLogBodyState extends ConsumerState<AuditLogBody> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (widget.showTitle) ...[
-          Text(
-            'Audit Log',
-            style: TextStyle(
-              color: context.appText,
-              fontSize: 22,
-              fontWeight: FontWeight.w600,
-            ),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Audit Log',
+                  style: TextStyle(
+                    color: context.appText,
+                    fontSize: 22,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              const TopBarActions(),
+            ],
           ),
           const SizedBox(height: 20),
         ],

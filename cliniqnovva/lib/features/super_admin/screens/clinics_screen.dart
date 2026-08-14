@@ -216,6 +216,7 @@ class _ClinicsScreenState extends ConsumerState<ClinicsScreen> {
                         'Created',
                         'Actions',
                       ],
+                      lastColumnEndPadding: 50,
                     ),
                     if (filtered.isEmpty)
                       Padding(
@@ -230,6 +231,7 @@ class _ClinicsScreenState extends ConsumerState<ClinicsScreen> {
                     else
                       for (final org in filtered)
                         CliniqnovvaTableRow(
+                          lastColumnEndPadding: 50,
                           onTap: () => context.push(
                             '/super-admin/clinics/${org.id}',
                           ),

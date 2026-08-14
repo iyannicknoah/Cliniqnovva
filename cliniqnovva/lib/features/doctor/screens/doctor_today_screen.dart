@@ -10,6 +10,7 @@ import '../../../shared/widgets/empty_state.dart';
 import '../../../shared/widgets/loading_widget.dart';
 import '../../../shared/widgets/row_actions_menu.dart';
 import '../../../shared/widgets/status_badge.dart';
+import '../../../shared/widgets/top_bar_actions.dart';
 import '../../appointments/models/appointment_model.dart';
 import '../../appointments/providers/appointments_provider.dart';
 import '../../auth/providers/access_control_provider.dart';
@@ -58,9 +59,17 @@ class DoctorTodayScreen extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  "Today's Schedule",
-                  style: TextStyle(color: context.appText, fontSize: 22, fontWeight: FontWeight.w600),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        "Today's Schedule",
+                        style: TextStyle(color: context.appText, fontSize: 22, fontWeight: FontWeight.w800),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    const TopBarActions(),
+                  ],
                 ),
                 const SizedBox(height: 4),
                 Text(
@@ -126,7 +135,10 @@ class _TodayList extends ConsumerWidget {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const CliniqnovvaTableHeader(columns: ['Patient', 'Time', 'Status', 'Actions']),
+            const CliniqnovvaTableHeader(
+              columns: ['Patient', 'Time', 'Status', 'Actions'],
+              lastColumnEndPadding: 50,
+            ),
             Expanded(
               child: sorted.isEmpty
                   ? Center(
@@ -139,6 +151,7 @@ class _TodayList extends ConsumerWidget {
                       children: sorted
                           .map(
                             (appt) => CliniqnovvaTableRow(
+                              lastColumnEndPadding: 50,
                               onTap: () => context.go('/patients/${appt.patientId}'),
                               cells: [
                                 _PatientCell(patientId: appt.patientId),

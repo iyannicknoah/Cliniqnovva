@@ -10,6 +10,7 @@ import '../../../shared/widgets/cliniqnovva_table.dart';
 import '../../../shared/widgets/loading_widget.dart';
 import '../../../shared/widgets/row_actions_menu.dart';
 import '../../../shared/widgets/status_badge.dart';
+import '../../../shared/widgets/top_bar_actions.dart';
 import '../../auth/providers/access_control_provider.dart';
 import '../models/branch_model.dart';
 import '../providers/branches_provider.dart';
@@ -133,7 +134,7 @@ class _ClinicBranchesView extends ConsumerWidget {
                           style: TextStyle(
                             color: context.appText,
                             fontSize: 22,
-                            fontWeight: FontWeight.w600,
+                            fontWeight: FontWeight.w800,
                           ),
                         ),
                         const SizedBox(height: 4),
@@ -149,13 +150,20 @@ class _ClinicBranchesView extends ConsumerWidget {
                   ),
                   SizedBox(
                     width: 150,
-                    child: CliniqnovvaButton(
+                    // 2026-08-14, explicit user instruction — outlined
+                    // style specifically for this button (white/appBg
+                    // background, appSecondaryBg border, appPrimary text),
+                    // not the default filled brand-blue button every other
+                    // "+ Add X" uses.
+                    child: CliniqnovvaButton.outlined(
                       label: '+ Add Branch',
                       onPressed: result.limitReached
                           ? null
                           : () => showBranchPanel(context),
                     ),
                   ),
+                  const SizedBox(width: 12),
+                  const TopBarActions(),
                 ],
               ),
               if (result.limitReached) ...[
@@ -179,6 +187,7 @@ class _ClinicBranchesView extends ConsumerWidget {
                   'Status',
                   'Actions',
                 ],
+                lastColumnEndPadding: 50,
               ),
               Expanded(
                 child: branches.isEmpty
@@ -192,6 +201,7 @@ class _ClinicBranchesView extends ConsumerWidget {
                         children: branches
                             .map(
                               (branch) => CliniqnovvaTableRow(
+                                lastColumnEndPadding: 50,
                                 onTap: () {
                                   // Part 6 Task 3: click a branch → the
                                   // dashboard shows that branch's data only.
@@ -294,13 +304,21 @@ class _OwnBranchView extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'My Branch',
-                  style: TextStyle(
-                    color: context.appText,
-                    fontSize: 22,
-                    fontWeight: FontWeight.w600,
-                  ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'My Branch',
+                        style: TextStyle(
+                          color: context.appText,
+                          fontSize: 22,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    const TopBarActions(),
+                  ],
                 ),
                 const SizedBox(height: 24),
                 Container(

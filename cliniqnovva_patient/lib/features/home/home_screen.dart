@@ -95,7 +95,7 @@ class HomeTopBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        const CliniqnovvaLogo(size: 32, radius: 10),
+        const CliniqnovvaLogo(size: 35, radius: 10),
         Text(
           AppConstants.appName,
           style: const TextStyle(color: AppColors.skyBlue, fontSize: 19, fontWeight: FontWeight.w700),

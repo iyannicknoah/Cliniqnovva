@@ -8,6 +8,7 @@ import '../../../shared/widgets/avatar_widget.dart';
 import '../../../shared/widgets/cliniqnovva_button.dart';
 import '../../../shared/widgets/empty_state.dart';
 import '../../../shared/widgets/loading_widget.dart';
+import '../../../shared/widgets/top_bar_actions.dart';
 import '../../auth/providers/access_control_provider.dart';
 import '../../patients/providers/patients_provider.dart';
 import '../models/chat_model.dart';
@@ -64,7 +65,7 @@ class ChatInboxScreen extends ConsumerWidget {
                         style: TextStyle(
                           color: context.appText,
                           fontSize: 22,
-                          fontWeight: FontWeight.w600,
+                          fontWeight: FontWeight.w800,
                         ),
                       ),
                     ),
@@ -79,6 +80,8 @@ class ChatInboxScreen extends ConsumerWidget {
                         ),
                       ),
                     ),
+                    const SizedBox(width: 12),
+                    const TopBarActions(),
                   ],
                 ),
                 const SizedBox(height: 24),

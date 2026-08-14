@@ -20,10 +20,17 @@ class RowAction {
 /// A single "⋯" icon per table row that opens a dropdown of [actions]
 /// (2026-07-25, explicit user instruction — replaces the old row of inline
 /// icon/text buttons everywhere a table has an Actions column, matching a
-/// reference screenshot's Catalog-row kebab menu). Left-aligned (via
+/// reference screenshot's Catalog-row kebab menu). Right-aligned (via
 /// `Align`) so it lines up directly under the "Actions" header text instead
-/// of drifting toward the middle of the `Expanded` cell — same left edge
+/// of drifting toward the middle of the `Expanded` cell — same right edge
 /// whether a row has actions (the icon) or not (a "—" placeholder).
+///
+/// 2026-08-14, explicit user instruction — flipped from `centerLeft` to
+/// `centerRight`: `CliniqnovvaTableHeader`'s last column (see that file)
+/// moved from left- to right-aligned the same day, and this widget's own
+/// internal `Align` sizes to fill its `Expanded` cell, so it was overriding
+/// `CliniqnovvaTableRow`'s outer right-alignment wrap and pinning the icon
+/// back to the left — right-aligning it here too is what actually fixes it.
 ///
 /// Uses `PopupMenuButton(child: …)` rather than `icon: …` on purpose: the
 /// `icon` path wraps in a Material 3 `IconButton`, which ignores
@@ -43,13 +50,13 @@ class RowActionsMenu extends StatelessWidget {
   Widget build(BuildContext context) {
     if (actions.isEmpty) {
       return Align(
-        alignment: Alignment.centerLeft,
+        alignment: Alignment.centerRight,
         child: Text('—', style: TextStyle(color: context.appSubtext)),
       );
     }
 
     return Align(
-      alignment: Alignment.centerLeft,
+      alignment: Alignment.centerRight,
       child: Theme(
         data: Theme.of(context).copyWith(
           hoverColor: Colors.transparent,

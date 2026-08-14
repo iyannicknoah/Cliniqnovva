@@ -11,6 +11,7 @@ import '../../../shared/widgets/cliniqnovva_text_field.dart';
 import '../../../shared/widgets/loading_widget.dart';
 import '../../../shared/widgets/segmented_tabs.dart';
 import '../../../shared/widgets/status_badge.dart';
+import '../../../shared/widgets/top_bar_actions.dart';
 import '../../auth/providers/access_control_provider.dart';
 import '../../departments/providers/departments_provider.dart' show activeBranchIdProvider;
 import '../../patients/providers/patients_provider.dart';
@@ -60,9 +61,17 @@ class _LabOrdersScreenState extends ConsumerState<LabOrdersScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Lab Orders',
-                  style: TextStyle(color: context.appText, fontSize: 22, fontWeight: FontWeight.w600),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'Lab Orders',
+                        style: TextStyle(color: context.appText, fontSize: 22, fontWeight: FontWeight.w800),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    const TopBarActions(),
+                  ],
                 ),
                 const SizedBox(height: 20),
                 SizedBox(
@@ -81,7 +90,10 @@ class _LabOrdersScreenState extends ConsumerState<LabOrdersScreen> {
                     data: (orders) => Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const CliniqnovvaTableHeader(columns: ['Patient', 'Test', 'Ordered', 'Status', 'Action']),
+                        const CliniqnovvaTableHeader(
+                          columns: ['Patient', 'Test', 'Ordered', 'Status', 'Action'],
+                          lastColumnEndPadding: 50,
+                        ),
                         Expanded(
                           child: orders.isEmpty
                               ? Center(
@@ -187,6 +199,7 @@ class _WorklistRowState extends ConsumerState<_WorklistRow> {
   Widget build(BuildContext context) {
     final order = widget.order;
     return CliniqnovvaTableRow(
+      lastColumnEndPadding: 50,
       onTap: () => context.push('/patients/${order.patientId}'),
       cells: [
         _PatientNameCell(patientId: order.patientId),

@@ -10,6 +10,7 @@ import '../../../shared/widgets/empty_state.dart';
 import '../../../shared/widgets/loading_widget.dart';
 import '../../../shared/widgets/row_actions_menu.dart';
 import '../../../shared/widgets/status_badge.dart';
+import '../../../shared/widgets/top_bar_actions.dart';
 import '../../auth/providers/access_control_provider.dart';
 import '../../clinics/providers/branches_provider.dart' show showAllBranchesProvider;
 import '../models/department_model.dart';
@@ -125,7 +126,7 @@ class _DepartmentsBody extends ConsumerWidget {
                   style: TextStyle(
                     color: context.appText,
                     fontSize: 22,
-                    fontWeight: FontWeight.w600,
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
               ),
@@ -133,7 +134,7 @@ class _DepartmentsBody extends ConsumerWidget {
                 const BranchSelector(),
                 const SizedBox(width: 12),
               ],
-              if (canManage)
+              if (canManage) ...[
                 SizedBox(
                   width: 200,
                   child: CliniqnovvaButton(
@@ -146,6 +147,9 @@ class _DepartmentsBody extends ConsumerWidget {
                           ),
                   ),
                 ),
+                const SizedBox(width: 12),
+              ],
+              const TopBarActions(),
             ],
           ),
           const SizedBox(height: 28),
@@ -194,6 +198,7 @@ class _DepartmentsList extends ConsumerWidget {
               'Status',
               if (canManage) 'Actions',
             ],
+            lastColumnEndPadding: canManage ? 50 : 0,
           ),
           Expanded(
             child: departments.isEmpty
@@ -207,6 +212,7 @@ class _DepartmentsList extends ConsumerWidget {
                     children: departments
                         .map(
                           (dept) => CliniqnovvaTableRow(
+                            lastColumnEndPadding: canManage ? 50 : 0,
                             cells: [
                               Text(
                                 dept.name,

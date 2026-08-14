@@ -12,6 +12,7 @@ import '../../../shared/widgets/avatar_widget.dart';
 import '../../../shared/widgets/cliniqnovva_button.dart';
 import '../../../shared/widgets/cliniqnovva_text_field.dart';
 import '../../../shared/widgets/loading_widget.dart';
+import '../../../shared/widgets/top_bar_actions.dart';
 import '../../auth/providers/access_control_provider.dart';
 import '../../clinics/providers/branches_provider.dart' show showAllBranchesProvider;
 import '../../departments/providers/departments_provider.dart';
@@ -163,7 +164,7 @@ class _MergeBodyState extends ConsumerState<_MergeBody> {
                       style: TextStyle(
                         color: context.appText,
                         fontSize: 22,
-                        fontWeight: FontWeight.w600,
+                        fontWeight: FontWeight.w800,
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -174,7 +175,11 @@ class _MergeBodyState extends ConsumerState<_MergeBody> {
                   ],
                 ),
               ),
-              if (widget.showBranchSelector) const BranchSelector(),
+              if (widget.showBranchSelector) ...[
+                const BranchSelector(),
+                const SizedBox(width: 12),
+              ],
+              const TopBarActions(),
             ],
           ),
           const SizedBox(height: 28),

@@ -32,7 +32,6 @@ import '../../features/clinics/screens/onboarding_screen.dart';
 import '../../features/patients/screens/merge_patients_screen.dart';
 import '../../features/patients/screens/patient_profile_screen.dart';
 import '../../features/patients/screens/patients_screen.dart';
-import '../../features/patients/screens/register_patient_screen.dart';
 import '../../features/reports/screens/reports_screen.dart';
 import '../../features/reviews/screens/popular_clinics_screen.dart';
 import '../../features/reviews/screens/reviews_screen.dart';
@@ -277,10 +276,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/patients',
             builder: (context, state) => const PatientsScreen(),
-          ),
-          GoRoute(
-            path: '/patients/register',
-            builder: (context, state) => const RegisterPatientScreen(),
           ),
           GoRoute(
             path: '/patients/merge',

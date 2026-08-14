@@ -12,6 +12,7 @@ import '../../../shared/widgets/loading_widget.dart';
 import '../../../shared/widgets/row_actions_menu.dart';
 import '../../../shared/widgets/segmented_tabs.dart';
 import '../../../shared/widgets/status_badge.dart';
+import '../../../shared/widgets/top_bar_actions.dart';
 import '../../auth/providers/access_control_provider.dart';
 import '../../clinics/providers/branches_provider.dart' show showAllBranchesProvider;
 import '../../departments/providers/departments_provider.dart' show activeBranchIdProvider;
@@ -68,11 +69,15 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
                         style: TextStyle(
                           color: context.appText,
                           fontSize: 22,
-                          fontWeight: FontWeight.w600,
+                          fontWeight: FontWeight.w800,
                         ),
                       ),
                     ),
-                    if (isOrgAdmin) const BranchSelector(),
+                    if (isOrgAdmin) ...[
+                      const BranchSelector(),
+                      const SizedBox(width: 12),
+                    ],
+                    const TopBarActions(),
                   ],
                 ),
                 const SizedBox(height: 20),
@@ -148,6 +153,7 @@ class _StockTab extends ConsumerWidget {
               children: [
                 const CliniqnovvaTableHeader(
                   columns: ['Item', 'Category', 'Stock', 'Expiry', 'Status', 'Actions'],
+                  lastColumnEndPadding: 50,
                 ),
                 Expanded(
                   child: items.isEmpty
@@ -180,6 +186,7 @@ class _ItemRow extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return CliniqnovvaTableRow(
+      lastColumnEndPadding: 50,
       cells: [
         Text(
           item.name,

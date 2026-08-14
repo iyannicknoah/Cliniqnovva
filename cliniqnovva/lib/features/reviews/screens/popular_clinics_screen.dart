@@ -9,6 +9,7 @@ import '../../../shared/widgets/cliniqnovva_card.dart';
 import '../../../shared/widgets/empty_state.dart';
 import '../../../shared/widgets/loading_widget.dart';
 import '../../../shared/widgets/metric_card.dart';
+import '../../../shared/widgets/top_bar_actions.dart';
 import '../../auth/providers/access_control_provider.dart';
 import '../../departments/providers/departments_provider.dart' show activeBranchIdProvider;
 import '../../departments/widgets/branch_selector.dart';
@@ -54,10 +55,14 @@ class PopularClinicsScreen extends ConsumerWidget {
                     Expanded(
                       child: Text(
                         'Popular Clinics',
-                        style: TextStyle(color: context.appText, fontSize: 22, fontWeight: FontWeight.w600),
+                        style: TextStyle(color: context.appText, fontSize: 22, fontWeight: FontWeight.w800),
                       ),
                     ),
-                    if (isOrgAdmin) const BranchSelector(),
+                    if (isOrgAdmin) ...[
+                      const BranchSelector(),
+                      const SizedBox(width: 12),
+                    ],
+                    const TopBarActions(),
                   ],
                 ),
                 const SizedBox(height: 4),

@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/theme/theme_ext.dart';
 
-enum _ButtonVariant { filled, text }
+enum _ButtonVariant { filled, text, outlined }
 
 /// The single button component used everywhere in the app — 45px height,
 /// fully-rounded pill radius. Never use ElevatedButton/TextButton directly
@@ -28,7 +28,9 @@ class CliniqnovvaButton extends StatelessWidget {
     this.isFullWidth = true,
     this.color,
   }) : _variant = _ButtonVariant.filled,
-       underline = false;
+       underline = false,
+       borderColor = null,
+       backgroundColor = null;
 
   const CliniqnovvaButton.text({
     super.key,
@@ -38,13 +40,36 @@ class CliniqnovvaButton extends StatelessWidget {
     this.isFullWidth = false,
     this.color,
     this.underline = false,
-  }) : _variant = _ButtonVariant.text;
+  }) : _variant = _ButtonVariant.text,
+       borderColor = null,
+       backgroundColor = null;
+
+  /// White/page-background fill, a border, and `color`-tinted text — the
+  /// "outline" look (2026-08-14, explicit user instruction, Branches
+  /// screen's "+ Add Branch" specifically — not a default other call sites
+  /// should reach for without the same instruction). Defaults match that
+  /// request: text/icon in `context.appPrimary`, border in
+  /// `context.appSecondaryBg`, background in `context.appBg` — override any
+  /// of the three only for a deliberate different look.
+  const CliniqnovvaButton.outlined({
+    super.key,
+    required this.label,
+    required this.onPressed,
+    this.isLoading = false,
+    this.isFullWidth = true,
+    this.color,
+    this.borderColor,
+    this.backgroundColor,
+  }) : _variant = _ButtonVariant.outlined,
+       underline = false;
 
   final String label;
   final VoidCallback? onPressed;
   final bool isLoading;
   final bool isFullWidth;
   final Color? color;
+  final Color? borderColor;
+  final Color? backgroundColor;
   final _ButtonVariant _variant;
   final bool underline;
 
@@ -56,6 +81,8 @@ class CliniqnovvaButton extends StatelessWidget {
 
     final isDefaultPrimary = this.color == null;
     final color = this.color ?? context.appPrimary;
+    final outlinedBorderColor = borderColor ?? context.appSecondaryBg;
+    final outlinedBgColor = backgroundColor ?? context.appBg;
 
     // The default brand-blue fill always gets fixed white text (reference:
     // `--color-primary-contrast: #ffffff`, never auto-estimated) — only an
@@ -88,6 +115,35 @@ class CliniqnovvaButton extends StatelessWidget {
                     strokeWidth: 2,
                     color: onColor,
                   ),
+                )
+              : Text(
+                  label,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+        ),
+      ),
+      _ButtonVariant.outlined => SizedBox(
+        height: _height,
+        child: OutlinedButton(
+          onPressed: disabled ? null : onPressed,
+          style: OutlinedButton.styleFrom(
+            backgroundColor: outlinedBgColor,
+            foregroundColor: color,
+            disabledForegroundColor: color.withValues(alpha: 0.4),
+            side: BorderSide(color: outlinedBorderColor, width: 1),
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppTheme.buttonRadius),
+            ),
+          ),
+          child: isLoading
+              ? SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2, color: color),
                 )
               : Text(
                   label,

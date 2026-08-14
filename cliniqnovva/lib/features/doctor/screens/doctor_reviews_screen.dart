@@ -8,6 +8,7 @@ import '../../../shared/widgets/app_icon.dart';
 import '../../../shared/widgets/avatar_widget.dart';
 import '../../../shared/widgets/cliniqnovva_card.dart';
 import '../../../shared/widgets/loading_widget.dart';
+import '../../../shared/widgets/top_bar_actions.dart';
 import '../../patients/providers/patients_provider.dart';
 import '../../reviews/models/review_model.dart';
 import '../../reviews/providers/reviews_provider.dart';
@@ -57,9 +58,17 @@ class DoctorReviewsScreen extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Reviews About You',
-              style: TextStyle(color: context.appText, fontSize: 22, fontWeight: FontWeight.w600),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Reviews About You',
+                    style: TextStyle(color: context.appText, fontSize: 22, fontWeight: FontWeight.w800),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                const TopBarActions(),
+              ],
             ),
             const SizedBox(height: 4),
             Text(

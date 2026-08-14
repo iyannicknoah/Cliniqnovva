@@ -8,11 +8,9 @@ import '../../core/theme/theme_ext.dart';
 import '../../features/appointments/providers/appointments_provider.dart';
 import '../../features/auth/providers/access_control_provider.dart';
 import '../../features/auth/providers/auth_provider.dart';
-import '../../features/chat/widgets/chat_bell.dart';
 import '../../features/departments/providers/departments_provider.dart'
     show activeBranchIdProvider;
 import '../../features/reviews/providers/reviews_provider.dart';
-import '../../features/notifications/widgets/notification_bell.dart';
 import 'cliniqnovva_sidebar.dart';
 import 'loading_widget.dart';
 
@@ -213,24 +211,21 @@ final appNavItems = <SidebarNavItem>[
   ),
 ];
 
-/// Roles that can use Chat (2026-07-25) — used to gate the topbar [ChatBell]
-/// now that Chat no longer has its own sidebar nav item. Same set the old
-/// `nav_chat` [SidebarNavItem] used for `allowedRoles`.
-const _chatEnabledRoles = [
-  AppConstants.roleClinicAdmin,
-  AppConstants.roleBranchAdmin,
-  AppConstants.roleReceptionist,
-];
-
 /// Part 17 Task 4/5 — the shared shell for every non-Super-Admin screen:
 /// [CliniqnovvaSidebar] on the left (role-filtered from [appNavItems], with
 /// live badge counts; same white/black page background as the content pane,
-/// 2026-07-24), a slim topbar with the chat icon (2026-07-25, moved out of
-/// the sidebar — see [_chatEnabledRoles]) and notification bell, and the
-/// routed screen on the right. Wrapping happens
+/// 2026-07-24) and the routed screen on the right. Wrapping happens
 /// at the router level (a `ShellRoute` in `app_router.dart`) — none of the
 /// ~20 existing screens needed to change; each still renders its own
 /// `Scaffold`, which just becomes this shell's content pane.
+///
+/// 2026-08-14, explicit user instruction — the old fixed 56px topbar (chat
+/// icon + notification bell, right-aligned, sitting above every screen's
+/// own page-title row) was removed from here entirely. Those two icons now
+/// live inside each screen's own title row via the self-contained
+/// `TopBarActions` widget (`shared/widgets/top_bar_actions.dart`), so a
+/// page's title, branch filter, and the chat/notification icons render as
+/// ONE row instead of two stacked ones.
 class AppShell extends ConsumerWidget {
   const AppShell({super.key, required this.currentRoute, required this.child});
 
@@ -273,29 +268,7 @@ class AppShell extends ConsumerWidget {
                 userRoleLabel: roleLabel(role),
                 onNavTap: (route) => context.go(route),
               ),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Container(
-                      height: 56,
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      alignment: Alignment.centerRight,
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          if (_chatEnabledRoles.contains(role)) ...[
-                            ChatBell(branchId: branchId),
-                            const SizedBox(width: 4),
-                          ],
-                          const NotificationBell(),
-                        ],
-                      ),
-                    ),
-                    Expanded(child: child),
-                  ],
-                ),
-              ),
+              Expanded(child: child),
             ],
           ),
         );

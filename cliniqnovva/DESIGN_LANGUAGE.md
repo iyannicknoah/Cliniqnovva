@@ -398,6 +398,207 @@ growth/trend chart rather than introducing a new chart style or color.
 
 ## Change log
 
+- **2026-08-15 (Patients table: 150px right padding on "Last visit")** —
+  Explicit user instruction, same `lastColumnEndPadding` mechanism as the
+  Actions-column padding above but a different table and a different pixel
+  value (150, not 50) — `patients_screen.dart`'s `CliniqnovvaTableHeader`/
+  `CliniqnovvaTableRow` now pass `lastColumnEndPadding: 150`. Confirms the
+  param is a general per-table-instance override, not Actions-specific,
+  despite most existing call sites using it for Actions columns.
+- **2026-08-15 (Register Patient: centered modal, was a full routed page)**
+  — Explicit user instruction. `/patients/register` is no longer a route —
+  `register_patient_screen.dart` now exports `showRegisterPatientPanel`
+  (same centered `Material` + `AppTheme.cardRadius` + fade/scale modal
+  pattern as Add Branch/Add Service, `maxWidth: 560` since this form has
+  more fields than those). Both call sites updated: the Patients screen's
+  "+ Register Patient" button, and the Booking screen's "+ Register new"
+  shortcut (still passes `returnTo: '/appointments/book'` — on success the
+  dialog now calls `Navigator.pop` before `context.go`, since success
+  still needs real navigation to the patient profile or back to booking
+  with `?patientId=`, not just closing the dialog). Cancel and the
+  offline-queued-save path now just `Navigator.pop` instead of
+  `context.go`. The nested "possible duplicate?" `AlertDialog` (Part 10)
+  is unaffected — dialogs nesting inside this dialog already worked the
+  same way panels like Add Branch use their own nested dialogs.
+- **2026-08-14 (SearchableDropdown: border restored)** — Explicit user
+  instruction, seen on the Doctor Schedule screen's "Select doctor" field.
+  The border-removal pass earlier the same day made `SearchableDropdown`
+  borderless to match `AppSelect`'s search box, but that reasoning didn't
+  actually transfer: `AppSelect`'s search box sits inside an already-
+  bordered floating panel (redundant to also border it), while
+  `SearchableDropdown` IS the whole standalone field with nothing else
+  framing it — without its own border it visually disappeared into the page
+  background. Reverted to a real border on all four `InputDecoration`
+  states: `context.appBorder` when idle/enabled/disabled,
+  `context.appPrimary` on focus — the same idle/focus convention every
+  other input in the app uses. `AppSelect`'s own search box is untouched,
+  still intentionally borderless.
+- **2026-08-14 (Add/Edit Service: centered rounded-card modal, was a
+  right-edge slide-out)** — Explicit user instruction. `showServicePanel`
+  (`features/departments/widgets/add_edit_service_panel.dart`) switched
+  from a full-height right-edge `SlideTransition` panel to the same
+  centered `Center` + `FadeTransition`/`ScaleTransition` modal pattern Add
+  Branch/Add Clinic already use — `Material` + rounded `AppTheme.cardRadius`
+  corners, `maxWidth: 480`, `maxHeight` capped at 85% of the screen. The
+  original Part 7 spec explicitly called for a slide-out panel here; this
+  supersedes that in favor of consistency with every other quick-add modal
+  in the app.
+- **2026-08-14 (50px right padding on the Actions column specifically,
+  system-wide — correction)** — The user explicitly corrected an earlier
+  same-day attempt: NOT padding on the whole table/row (that was reverted —
+  see `AppointmentsList` in `appointments_screen.dart`, back to a plain
+  `return` with no wrapping `Padding`), but 50px of right padding on the
+  Actions column itself — its header label AND every row's action content —
+  on every table in the app that has an Actions column. Implemented via a
+  new `lastColumnEndPadding` param (default 0) on both
+  `CliniqnovvaTableHeader` and `CliniqnovvaTableRow`
+  (`shared/widgets/cliniqnovva_table.dart`), wrapping just the last
+  column's `Expanded` child in `Padding(EdgeInsetsDirectional.only(end:
+  lastColumnEndPadding))`. Set to `50` at every Actions-having call site:
+  Appointments (`AppointmentsList`, both the real screen and the
+  Dashboard's embedded copy — the "only the Dashboard" scoping from the
+  first attempt no longer applies now that this is about the column, not
+  the table), Branches, Inventory, Services (gated on `canManage`, same as
+  its conditional 'Actions' column), Departments (same gating), Staff (same
+  gating), Doctor Today, Super Admin Clinics, Lab Orders. Left at the 0
+  default on tables with no Actions column, including the two that
+  literally contain the string `'Action'` for an unrelated reason:
+  Inventory's stock-history table (last column is 'When', not an actions
+  column) and the Audit Log's `'Action'` column (an audit-event-type label,
+  not row actions — also not even the last column there, 'Target' is).
+- **2026-08-14 (Branches: outlined "+ Add Branch" button; Actions column
+  alignment fix)** — Two explicit user instructions:
+  1. **New `CliniqnovvaButton.outlined()` variant** (`shared/widgets/
+     cliniqnovva_button.dart`) — white/`appBg` background, `appSecondaryBg`
+     border, `appPrimary` text, all three overridable. Used ONLY on the
+     Branches screen's "+ Add Branch" button per the instruction ("make
+     button of add branch on the page to have this design") — every other
+     "+ Add X" button in the app stays the default filled brand-blue style;
+     this is an opt-in variant, not a new default.
+  2. **`RowActionsMenu` right-aligned** (`shared/widgets/
+     row_actions_menu.dart`) — its own internal `Align` flipped from
+     `centerLeft` to `centerRight`. This was a knock-on bug from the
+     earlier "table's last column right-aligned" change: `RowActionsMenu`'s
+     internal `Align` sizes to fill its `Expanded` cell and was overriding
+     `CliniqnovvaTableRow`'s outer right-alignment wrap, so the "⋯" icon
+     stayed pinned left under a now-right-aligned "Actions" header. Right-
+     aligning it here (both the icon and the "—" empty-state placeholder)
+     is what actually lines it up — affects every table's Actions column at
+     once, same as the original change.
+- **2026-08-14 (Table row height + Dashboard appointments right padding)**
+  — Two explicit user instructions:
+  1. **Row height, all tables.** `CliniqnovvaTableRow`'s vertical padding
+     went from 26px top/bottom to 32px — the ONE shared table component, so
+     every screen's table rows got a little taller at once, same as the
+     right-alignment change above.
+  2. **Right padding, Dashboard's "Today's Appointments" only.**
+     `AppointmentsList` (`features/appointments/screens/
+     appointments_screen.dart`) is shared between the real Appointments
+     screen (`embedded: false`) and the Dashboard's embedded copy
+     (`embedded: true`) — the user only wanted this on the Dashboard's copy,
+     so a 50px `EdgeInsetsDirectional.only(end: 50)` padding wraps the whole
+     table gated on `embedded`, leaving the real Appointments screen
+     untouched.
+- **2026-08-14 (Table's last column right-aligned)** — Explicit user
+  instruction, seen against the Dashboard's "Today's Appointments" table:
+  the last column (Actions, Status — whatever it is per screen) used to sit
+  left-aligned within its `Expanded` cell, leaving empty space trailing it
+  before the table's actual right edge. `CliniqnovvaTableHeader` now right-
+  aligns the last column's label (`TextAlign.right`) and `CliniqnovvaTableRow`
+  wraps its last cell in `Align(alignment: AlignmentDirectional.centerEnd)`,
+  so header and row content both land flush against the table's true right
+  edge. This is the ONE shared table component (`shared/widgets/
+  cliniqnovva_table.dart`) every screen's table uses — Appointments (incl.
+  the Dashboard's embedded copy), Lab Orders, Laboratorian Overview, Doctor
+  Today, Nurse Today — so all of them picked this up at once.
+- **2026-08-14 (Revenue chart: top gridline now actually renders)** —
+  Explicit user instruction, seen against the sample-data preview: the
+  gridline at the highest Y-axis tick (e.g. 400,000 RWF) wasn't drawing at
+  all, only its label was. `_RevenueTrendCard`'s `maxY` sat exactly on that
+  tick, so the line landed flush on the chart's very top pixel edge with no
+  headroom above it — fl_chart won't paint a gridline with nowhere to sit.
+  `maxY` now extends 40,000 past the last tick so that line has room to
+  render; the tick set/labels themselves are unchanged.
+- **2026-08-14 (Revenue chart Y-axis: dropped the 10k tick)** — Explicit
+  user instruction, seen against the new sample-data preview's populated
+  chart: the fixed Y-axis tick set on the Dashboard's Revenue trend bar
+  chart (`_RevenueTrendCard` in `dashboard_screen.dart`) went from
+  `[0, 10000, 100000, 200000, 300000, ...]` (a fine 10k marker just above
+  zero, then coarse 100k steps) to a plain evenly-spaced
+  `[0, 100000, 200000, 300000, ...]`. `gridData.horizontalInterval` and
+  `leftTitles.interval` both moved from `10000` to `100000` to match (both
+  only gate which values get checked against `yTickSet`, so this is a
+  cleanup, not a behavior change beyond dropping the 10k tick itself).
+- **2026-08-14 (No border on dropdown search fields — real fix)** — The
+  first pass at this (see below) only set `border:` on each search
+  `TextField`'s `InputDecoration`, which turned out not to be enough: the
+  app's global `AppTheme._inputDecorationTheme` (2026-08-13) explicitly sets
+  `enabledBorder`/`focusedBorder`/`disabledBorder`, and per Flutter's
+  per-state border resolution those theme values win over a lone `border:`
+  override on the widget itself (only an explicit per-widget `enabledBorder`/
+  `focusedBorder`/`disabledBorder` beats the theme — `border` alone doesn't).
+  Net effect: both dropdown search fields still rendered the theme's visible
+  border despite the first pass, confirmed by the user's screenshot. Fixed by
+  setting all FOUR border states explicitly on both: `AppSelect`'s search
+  `TextField` (no `fillColor`, so plain `InputBorder.none` for all four) and
+  `SearchableDropdown`'s field (has `fillColor`, so a shared
+  `_borderlessInputBorder` const — `OutlineInputBorder` + `BorderSide.none`
+  — keeps `AppTheme.inputRadius`'s rounded fill shape without a stroke, same
+  reasoning as the first pass, now applied to all four states instead of
+  just `border`). No other dropdown in the app has a search field —
+  `BranchSelector`'s dropdown (built on `AppSelect`) inherits this fix
+  automatically.
+- **2026-08-14 (No border on dropdown search fields — first pass, incomplete)**
+  — Explicit user instruction: "On all dropdowns: Remove border on search
+  textfield." Only set `border:` on `SearchableDropdown`'s field (`AppSelect`'s
+  was already `border: InputBorder.none`) — superseded by the entry above
+  once the global theme's per-state border override became apparent.
+- **2026-08-14 (Sidebar logo back down to 28px)** — `CliniqnovvaLogo` in
+  `shared/widgets/cliniqnovva_sidebar.dart` (both the collapsed-rail and
+  expanded states) went from 35px/radius 17.5 back to 28px/radius 14 —
+  explicit user instruction, same day it had been bumped up to 35px (see the
+  entry below this one).
+- **2026-08-14 (Topbar merged into each screen's title row; page titles bolded
+  to extra-bold system-wide)** — Explicit user instruction, two changes:
+  1. **Combined topbar.** `AppShell`'s old fixed 56px topbar (chat icon +
+     `NotificationBell`, right-aligned, sitting in its own row ABOVE every
+     screen's body) was removed entirely from `shared/widgets/app_shell.dart`.
+     Those two icons now live in a new self-contained `TopBarActions` widget
+     (`shared/widgets/top_bar_actions.dart`, reads role/branchId itself via
+     providers, needs no params) placed as the right-most element of each
+     screen's OWN page-title row — so title (left) and branch filter + any
+     page action buttons + chat/notification icons (right) render as ONE row
+     instead of two stacked ones. Applied to all ~28 screens behind the main
+     `ShellRoute` (dashboard, branches, departments, services, staff, doctor
+     schedule, patients + register/merge/profile, appointments + booking,
+     billing + invoice detail, accountant/pharmacist/laboratorian overviews,
+     inventory, lab orders, reports, reviews, popular clinics, audit log,
+     chat inbox + thread, doctor/nurse today, doctor reviews) — screens whose
+     title wasn't already inside a Row got wrapped in one. `SuperAdminScaffold`
+     was left untouched: its topbar already combined title + chat/notification
+     icons in one row from the start, which is exactly the pattern this
+     change brings everywhere else. `chat_thread_screen.dart`'s header
+     (conversation partner's name) got `TopBarActions()` added but was left
+     out of the bold-title pass below — its header text is a smaller/
+     differently-styled convention (16px) than every other screen's 22px page
+     heading, genuinely ambiguous whether it counts as "the page title."
+  2. **Extra-bold page titles.** Every main page-heading `Text` this change
+     touched (the ones listed above, at whatever size they already were —
+     22px for most list/index screens, 20px for detail headers like patient
+     name/org name, 18px for `SuperAdminScaffold`'s topbar title) went from
+     `FontWeight.w600` to `FontWeight.w800`. Subtitles/secondary lines, card
+     titles, dialog titles, and button labels were NOT touched — only the
+     one Text widget per screen that's the actual page/record heading.
+     Pre-login screens (login, onboarding, suspended) and the two mobile-
+     placeholder screens were left out of scope — they aren't part of the
+     sidebar-driven "system" this instruction was read as covering.
+  `flutter analyze` clean after this pass.
+- **2026-08-14 (Patient App HomeTopBar logo enlarged)** — `HomeTopBar`
+  (`cliniqnovva_patient/lib/features/home/home_screen.dart`)'s
+  `CliniqnovvaLogo` went from 32px to 35px (radius unchanged at 10) to
+  match the sidebar mark's 35px size — explicit user instruction. Login/
+  Register screens' own 32px instances were left as-is; only the Home
+  screen's top bar was in scope.
 - **2026-08-14 (Favicon source switched to Logo.png, sidebar logo shrunk +
   gap restored)** — Follow-up correction to the immediately-preceding
   entry. Checked the repo root again for a genuinely new file per the

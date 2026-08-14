@@ -15,10 +15,10 @@ import '../models/service_model.dart';
 import '../providers/departments_provider.dart';
 import '../providers/services_provider.dart';
 
-/// Part 7 Task 2 — "+ Add Service" is a right-edge SLIDE-OUT panel (spec's
-/// explicit wording), distinct from the centered-modal quick-add pattern
-/// used elsewhere (Add Branch, Add Clinic). Create when [service] is null,
-/// edit otherwise.
+/// Part 7 Task 2 originally made "+ Add Service" a right-edge SLIDE-OUT
+/// panel. 2026-08-14, explicit user instruction — switched to the same
+/// centered, rounded-corner modal pattern used elsewhere (Add Branch, Add
+/// Clinic) for consistency. Create when [service] is null, edit otherwise.
 Future<void> showServicePanel(
   BuildContext context, {
   required String branchId,
@@ -29,19 +29,18 @@ Future<void> showServicePanel(
     barrierDismissible: true,
     barrierLabel: 'Service',
     barrierColor: Colors.black45,
-    transitionDuration: const Duration(milliseconds: 220),
-    pageBuilder: (context, animation, secondaryAnimation) => Align(
-      alignment: Alignment.centerRight,
+    transitionDuration: const Duration(milliseconds: 200),
+    pageBuilder: (context, animation, secondaryAnimation) => Center(
       child: _ServicePanel(branchId: branchId, service: service),
     ),
     transitionBuilder: (context, animation, secondaryAnimation, child) {
       final curved = CurvedAnimation(parent: animation, curve: Curves.easeOut);
-      return SlideTransition(
-        position: Tween<Offset>(
-          begin: const Offset(1, 0),
-          end: Offset.zero,
-        ).animate(curved),
-        child: child,
+      return FadeTransition(
+        opacity: curved,
+        child: ScaleTransition(
+          scale: Tween<double>(begin: 0.96, end: 1).animate(curved),
+          child: child,
+        ),
       );
     },
   );
@@ -153,16 +152,22 @@ class _ServicePanelState extends ConsumerState<_ServicePanel> {
 
     return Material(
       color: context.appCard,
+      borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+      clipBehavior: Clip.antiAlias,
       child: Container(
-        width: 420,
-        height: double.infinity,
         decoration: BoxDecoration(
-          border: Border(left: BorderSide(color: context.appBorder)),
+          borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+          border: Border.all(color: context.appBorder),
         ),
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
+        constraints: BoxConstraints(
+          maxWidth: 480,
+          maxHeight: MediaQuery.of(context).size.height * 0.85,
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: SingleChildScrollView(
             child: Column(
+              mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
@@ -183,85 +188,76 @@ class _ServicePanelState extends ConsumerState<_ServicePanel> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 8),
-                Expanded(
-                  child: SingleChildScrollView(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        CliniqnovvaTextField(
-                          label: 'Service name',
-                          controller: _nameController,
-                          hint: 'e.g. General Consultation',
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'Department',
-                          style: TextStyle(
-                            color: context.appText,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        departmentsAsync.when(
-                          loading: () => const LinearProgressIndicator(),
-                          error: (e, _) => Text(
-                            '$e',
-                            style: const TextStyle(color: AppColors.errorRed),
-                          ),
-                          data: (departments) => _DepartmentDropdown(
-                            departments: departments,
-                            value: _departmentId,
-                            onChanged: (id) => setState(() => _departmentId = id),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: CliniqnovvaTextField(
-                                label: 'Default duration (mins)',
-                                controller: _durationController,
-                                hint: 'e.g. 30',
-                                keyboardType: TextInputType.number,
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: CliniqnovvaTextField(
-                                label: 'Default price (RWF)',
-                                controller: _priceController,
-                                hint: 'e.g. 5000',
-                                keyboardType: TextInputType.number,
-                              ),
-                            ),
-                          ],
-                        ),
-                        if (_error != null) ...[
-                          const SizedBox(height: 16),
-                          Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: AppColors.pillRedBg,
-                              borderRadius: BorderRadius.circular(
-                                AppTheme.inputRadius,
-                              ),
-                            ),
-                            child: Text(
-                              _error!,
-                              style: const TextStyle(
-                                color: AppColors.pillRedText,
-                                fontSize: 13,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
+                const SizedBox(height: 20),
+                CliniqnovvaTextField(
+                  label: 'Service name',
+                  controller: _nameController,
+                  hint: 'e.g. General Consultation',
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Department',
+                  style: TextStyle(
+                    color: context.appText,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
+                const SizedBox(height: 8),
+                departmentsAsync.when(
+                  loading: () => const LinearProgressIndicator(),
+                  error: (e, _) => Text(
+                    '$e',
+                    style: const TextStyle(color: AppColors.errorRed),
+                  ),
+                  data: (departments) => _DepartmentDropdown(
+                    departments: departments,
+                    value: _departmentId,
+                    onChanged: (id) => setState(() => _departmentId = id),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: CliniqnovvaTextField(
+                        label: 'Default duration (mins)',
+                        controller: _durationController,
+                        hint: 'e.g. 30',
+                        keyboardType: TextInputType.number,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: CliniqnovvaTextField(
+                        label: 'Default price (RWF)',
+                        controller: _priceController,
+                        hint: 'e.g. 5000',
+                        keyboardType: TextInputType.number,
+                      ),
+                    ),
+                  ],
+                ),
+                if (_error != null) ...[
+                  const SizedBox(height: 16),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppColors.pillRedBg,
+                      borderRadius: BorderRadius.circular(
+                        AppTheme.inputRadius,
+                      ),
+                    ),
+                    child: Text(
+                      _error!,
+                      style: const TextStyle(
+                        color: AppColors.pillRedText,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 16),
                 CliniqnovvaButton(
                   label: 'Save',

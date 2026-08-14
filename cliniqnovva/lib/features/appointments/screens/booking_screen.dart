@@ -12,11 +12,13 @@ import '../../../shared/widgets/cliniqnovva_button.dart';
 import '../../../shared/widgets/cliniqnovva_text_field.dart';
 import '../../../shared/widgets/loading_widget.dart';
 import '../../../shared/widgets/searchable_dropdown.dart';
+import '../../../shared/widgets/top_bar_actions.dart';
 import '../../auth/providers/access_control_provider.dart';
 import '../../departments/providers/departments_provider.dart';
 import '../../departments/providers/services_provider.dart';
 import '../../departments/widgets/branch_selector.dart';
 import '../../patients/providers/patients_provider.dart';
+import '../../patients/screens/register_patient_screen.dart';
 import '../../patients/widgets/patient_form_fields.dart';
 import '../../staff/providers/staff_provider.dart';
 import '../models/appointment_model.dart';
@@ -190,11 +192,15 @@ class _BookingFormState extends ConsumerState<_BookingForm> {
                       style: TextStyle(
                         color: context.appText,
                         fontSize: 22,
-                        fontWeight: FontWeight.w600,
+                        fontWeight: FontWeight.w800,
                       ),
                     ),
                   ),
-                  if (widget.showBranchSelector) const BranchSelector(),
+                  if (widget.showBranchSelector) ...[
+                    const BranchSelector(),
+                    const SizedBox(width: 12),
+                  ],
+                  const TopBarActions(),
                 ],
               ),
               const SizedBox(height: 24),
@@ -410,8 +416,9 @@ class _PatientPicker extends ConsumerWidget {
               width: 170,
               child: CliniqnovvaButton.text(
                 label: '+ Register new',
-                onPressed: () => context.go(
-                  '/patients/register?returnTo=/appointments/book',
+                onPressed: () => showRegisterPatientPanel(
+                  context,
+                  returnTo: '/appointments/book',
                 ),
               ),
             ),

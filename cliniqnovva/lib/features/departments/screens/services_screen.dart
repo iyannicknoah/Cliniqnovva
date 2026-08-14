@@ -10,6 +10,7 @@ import '../../../shared/widgets/empty_state.dart';
 import '../../../shared/widgets/loading_widget.dart';
 import '../../../shared/widgets/row_actions_menu.dart';
 import '../../../shared/widgets/status_badge.dart';
+import '../../../shared/widgets/top_bar_actions.dart';
 import '../../auth/providers/access_control_provider.dart';
 import '../../clinics/providers/branches_provider.dart' show showAllBranchesProvider;
 import '../models/department_model.dart';
@@ -123,7 +124,7 @@ class _ServicesBody extends ConsumerWidget {
                   style: TextStyle(
                     color: context.appText,
                     fontSize: 22,
-                    fontWeight: FontWeight.w600,
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
               ),
@@ -131,7 +132,7 @@ class _ServicesBody extends ConsumerWidget {
                 const BranchSelector(),
                 const SizedBox(width: 12),
               ],
-              if (canManage)
+              if (canManage) ...[
                 SizedBox(
                   width: 150,
                   child: CliniqnovvaButton(
@@ -144,6 +145,9 @@ class _ServicesBody extends ConsumerWidget {
                           ),
                   ),
                 ),
+                const SizedBox(width: 12),
+              ],
+              const TopBarActions(),
             ],
           ),
           const SizedBox(height: 28),
@@ -202,6 +206,7 @@ class _ServicesList extends ConsumerWidget {
                 'Status',
                 if (canManage) 'Actions',
               ],
+              lastColumnEndPadding: canManage ? 50 : 0,
             ),
             Expanded(
               child: services.isEmpty
@@ -215,6 +220,7 @@ class _ServicesList extends ConsumerWidget {
                       children: services
                           .map(
                             (service) => CliniqnovvaTableRow(
+                              lastColumnEndPadding: canManage ? 50 : 0,
                               cells: [
                                 Text(
                                   service.name,

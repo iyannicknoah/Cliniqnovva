@@ -14,6 +14,7 @@ import '../../../shared/widgets/cliniqnovva_card.dart';
 import '../../../shared/widgets/empty_state.dart';
 import '../../../shared/widgets/loading_widget.dart';
 import '../../../shared/widgets/metric_card.dart';
+import '../../../shared/widgets/top_bar_actions.dart';
 import '../../appointments/models/appointment_model.dart';
 import '../../appointments/providers/appointments_provider.dart';
 import '../../appointments/screens/appointments_screen.dart' show AppointmentsList;
@@ -101,10 +102,11 @@ class DashboardScreen extends ConsumerWidget {
                     Expanded(
                       child: Text(
                         'Dashboard',
-                        style: TextStyle(color: context.appText, fontSize: 22, fontWeight: FontWeight.w600),
+                        style: TextStyle(color: context.appText, fontSize: 22, fontWeight: FontWeight.w800),
                       ),
                     ),
-                    if (isOrgAdmin) const BranchSelector(),
+                    if (isOrgAdmin) ...[const BranchSelector(), const SizedBox(width: 12)],
+                    const TopBarActions(),
                   ],
                 ),
                 const SizedBox(height: 24),
@@ -342,19 +344,28 @@ class _RevenueTrendCardState extends ConsumerState<_RevenueTrendCard> {
                 // tallest bar, and always at least 50,000 at the top even
                 // with zero data.
                 final rawMax = values.reduce((a, b) => a > b ? a : b);
-                // 2026-08-14, explicit user instruction — fixed Y-axis tick
-                // set (0 / 10k / 100k / 200k / 300k RWF), replacing the
-                // uniform 50,000 step from the previous pass. Not evenly
-                // spaced by design (a fine 10k marker just above zero, then
-                // coarse 100k steps above that) — extends past 300k in
-                // further 100k steps only if real revenue actually clears
-                // it, so the fixed set is always at least these 5 values.
-                final yTicks = <int>[0, 10000, 100000, 200000, 300000];
+                // 2026-08-14, explicit user instruction — dropped the 10k
+                // marker just above zero from the previous pass's Y-axis
+                // tick set (0 / 10k / 100k / 200k / 300k RWF); now a plain
+                // 0 / 100k / 200k / 300k RWF set, evenly spaced. Extends
+                // past 300k in further 100k steps only if real revenue
+                // actually clears it, so the fixed set is always at least
+                // these 4 values.
+                final yTicks = <int>[0, 100000, 200000, 300000];
                 while (yTicks.last < rawMax + 100000) {
                   yTicks.add(yTicks.last + 100000);
                 }
                 final yTickSet = yTicks.toSet();
-                final maxY = yTicks.last.toDouble();
+                // 2026-08-14, explicit user instruction — the topmost
+                // gridline (at the highest tick, e.g. 400,000) wasn't
+                // rendering at all. Root cause: `maxY` sat exactly on that
+                // tick, so its gridline landed flush on the chart's very top
+                // pixel edge with zero headroom above it, and fl_chart
+                // doesn't draw a line with nowhere to sit — it needs to be
+                // strictly inside the plotted range, not on its boundary.
+                // Extending `maxY` a bit past the last tick gives that line
+                // room to actually paint.
+                final maxY = yTicks.last.toDouble() + 40000;
                 final barColor = context.appPrimary;
 
                 return BarChart(
@@ -365,7 +376,7 @@ class _RevenueTrendCardState extends ConsumerState<_RevenueTrendCard> {
                     gridData: FlGridData(
                       show: true,
                       drawVerticalLine: false,
-                      horizontalInterval: 10000,
+                      horizontalInterval: 100000,
                       checkToShowHorizontalLine: (value) => yTickSet.contains(value.round()),
                       getDrawingHorizontalLine: (value) => FlLine(color: context.appBorder, strokeWidth: 1),
                     ),
@@ -377,7 +388,7 @@ class _RevenueTrendCardState extends ConsumerState<_RevenueTrendCard> {
                         sideTitles: SideTitles(
                           showTitles: true,
                           reservedSize: 76,
-                          interval: 10000,
+                          interval: 100000,
                           getTitlesWidget: (value, meta) {
                             if (!yTickSet.contains(value.round())) return const SizedBox.shrink();
                             return Padding(

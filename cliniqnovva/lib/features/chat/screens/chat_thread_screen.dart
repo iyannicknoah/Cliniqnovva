@@ -9,6 +9,7 @@ import '../../../core/theme/theme_ext.dart';
 import '../../../shared/widgets/app_icon.dart';
 import '../../../shared/widgets/avatar_widget.dart';
 import '../../../shared/widgets/loading_widget.dart';
+import '../../../shared/widgets/top_bar_actions.dart';
 import '../../patients/providers/patients_provider.dart';
 import '../models/chat_model.dart';
 import '../providers/chats_provider.dart';
@@ -209,6 +210,8 @@ class _ThreadHeader extends ConsumerWidget {
               style: TextStyle(color: context.appText, fontSize: 16, fontWeight: FontWeight.w600),
             ),
           ),
+          const SizedBox(width: 12),
+          const TopBarActions(),
         ],
       ),
     );
