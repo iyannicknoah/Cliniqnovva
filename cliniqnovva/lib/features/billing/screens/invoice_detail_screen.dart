@@ -16,7 +16,6 @@ import '../../../shared/widgets/cliniqnovva_button.dart';
 import '../../../shared/widgets/cliniqnovva_text_field.dart';
 import '../../../shared/widgets/loading_widget.dart';
 import '../../../shared/widgets/status_badge.dart';
-import '../../../shared/widgets/top_bar_actions.dart';
 import '../../patients/models/patient_model.dart';
 import '../../patients/providers/patients_provider.dart';
 import '../models/invoice_model.dart';
@@ -32,7 +31,16 @@ const _statusLabels = {
 const _insuranceSchemeLabels = {
   AppConstants.insuranceMutuelle: 'Mutuelle de Santé',
   AppConstants.insuranceRssb: 'RSSB',
-  AppConstants.insurancePrivate: 'Private insurer',
+  AppConstants.insuranceRadiant: 'Radiant Insurance Company',
+  AppConstants.insuranceOldMutual: 'Old Mutual Rwanda',
+  AppConstants.insuranceBritam: 'Britam Insurance Company (Rwanda) Ltd',
+  AppConstants.insuranceSonarwa: 'SONARWA General Insurance Ltd',
+  AppConstants.insuranceSanlam: 'Sanlam Assurances Générales Ltd',
+  AppConstants.insurancePrime: 'PRIME Insurance Ltd',
+  AppConstants.insuranceMua: 'MUA Rwanda',
+  AppConstants.insuranceBkGeneral: 'BK General Insurance Company Ltd',
+  AppConstants.insuranceMayfair: 'Mayfair Insurance Company Rwanda Ltd',
+  AppConstants.insurancePrivate: 'Other private insurer',
 };
 
 BadgeType _badgeTypeFor(String status) => switch (status) {
@@ -47,46 +55,72 @@ String _formatDate(DateTime? d) {
   return '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 }
 
-/// Part 12 Task 3 — /billing/:invoiceId. Editable line items, server-
-/// recalculated total, cash/insurance recording (overflow-guarded server-
-/// side), void with a reason, and a printable/downloadable PDF receipt.
-class InvoiceDetailScreen extends ConsumerWidget {
-  const InvoiceDetailScreen({super.key, this.invoiceId});
+/// Part 12 Task 3's invoice view/edit UI. 2026-08-15, explicit user
+/// instruction — switched from a full routed page (`/billing/:invoiceId`) to
+/// a centered modal dialog, matching Register Patient/Add Branch's pattern
+/// (`Material` + rounded `AppTheme.cardRadius` corners, fade+scale
+/// transition). Editable line items, server-recalculated total,
+/// cash/insurance recording (overflow-guarded server-side), void with a
+/// reason, and a printable/downloadable PDF receipt.
+Future<void> showInvoiceDetailPanel(
+  BuildContext context, {
+  required String invoiceId,
+}) {
+  return showGeneralDialog<void>(
+    context: context,
+    barrierDismissible: true,
+    barrierLabel: 'Invoice',
+    barrierColor: Colors.black45,
+    transitionDuration: const Duration(milliseconds: 200),
+    pageBuilder: (context, animation, secondaryAnimation) =>
+        Center(child: _InvoiceDetailPanel(invoiceId: invoiceId)),
+    transitionBuilder: (context, animation, secondaryAnimation, child) {
+      final curved = CurvedAnimation(parent: animation, curve: Curves.easeOut);
+      return FadeTransition(
+        opacity: curved,
+        child: ScaleTransition(
+          scale: Tween<double>(begin: 0.96, end: 1).animate(curved),
+          child: child,
+        ),
+      );
+    },
+  );
+}
 
-  final String? invoiceId;
+class _InvoiceDetailPanel extends ConsumerWidget {
+  const _InvoiceDetailPanel({required this.invoiceId});
+
+  final String invoiceId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final id = invoiceId;
-    if (id == null) {
-      return Scaffold(
-        backgroundColor: context.appBg,
-        body: Center(
-          child: Text(
-            'No invoice id.',
-            style: TextStyle(color: context.appSubtext),
+    final invoiceAsync = ref.watch(invoiceDetailProvider(invoiceId));
+
+    return Material(
+      color: context.appCard,
+      borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+      clipBehavior: Clip.antiAlias,
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+          border: Border.all(color: context.appBorder),
+        ),
+        constraints: BoxConstraints(
+          maxWidth: 700,
+          maxHeight: MediaQuery.of(context).size.height * 0.85,
+        ),
+        child: invoiceAsync.when(
+          loading: () => const Padding(
+            padding: EdgeInsets.all(60),
+            child: LoadingWidget(),
           ),
-        ),
-      );
-    }
-
-    final invoiceAsync = ref.watch(invoiceDetailProvider(id));
-
-    return Scaffold(
-      backgroundColor: context.appBg,
-      body: invoiceAsync.when(
-        loading: () => const LoadingWidget(),
-        error: (e, _) => Center(
-          child: Text('$e', style: TextStyle(color: context.appSubtext)),
-        ),
-        data: (invoice) => Align(
-          alignment: Alignment.topCenter,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 700),
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(40),
-              child: _InvoiceBody(invoice: invoice),
-            ),
+          error: (e, _) => Padding(
+            padding: const EdgeInsets.all(24),
+            child: Text('$e', style: TextStyle(color: context.appSubtext)),
+          ),
+          data: (invoice) => SingleChildScrollView(
+            padding: const EdgeInsets.all(32),
+            child: _InvoiceBody(invoice: invoice),
           ),
         ),
       ),
@@ -146,7 +180,10 @@ class _InvoiceBody extends ConsumerWidget {
               type: _badgeTypeFor(invoice.status),
             ),
             const SizedBox(width: 12),
-            const TopBarActions(),
+            IconButton(
+              icon: const AppIcon(AppIcons.close),
+              onPressed: () => Navigator.of(context).pop(),
+            ),
           ],
         ),
         const SizedBox(height: 24),

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
@@ -17,6 +16,7 @@ import '../../departments/widgets/branch_selector.dart';
 import '../models/patient_model.dart';
 import '../providers/patients_provider.dart';
 import '../widgets/patient_form_fields.dart';
+import 'patient_profile_screen.dart';
 
 /// Part 9 Task 2's front-desk registration form. 2026-08-14, explicit user
 /// instruction — switched from a full routed page (`/patients/register`) to
@@ -27,20 +27,26 @@ import '../widgets/patient_form_fields.dart';
 /// and WARNS on a match rather than blocking — full merge handling is Part
 /// 10's scope.
 ///
-/// Part 11 Task 1's "register new" shortcut from the Booking screen passes
-/// [returnTo] — on success (or "use existing record"), this closes itself
-/// and navigates to `returnTo` with `?patientId=` instead of the usual
-/// profile page, so the booking flow picks up with the new patient already
-/// selected.
-Future<void> showRegisterPatientPanel(BuildContext context, {String? returnTo}) {
-  return showGeneralDialog(
+/// Part 11 Task 1's "register new" shortcut from the Booking dialog passes
+/// [returnPatientId] — on success (or "use existing record"), this pops
+/// itself with the patient id as the dialog's result (`Navigator.pop(id)`)
+/// instead of opening the usual Patient Profile panel, so the booking
+/// dialog underneath can just `await` this call and pick up the new patient
+/// directly. (2026-08-15 — replaced the old `returnTo` route-string param,
+/// which navigated to `/appointments/book?patientId=…`; that route no
+/// longer exists now that booking is a dialog too.)
+Future<String?> showRegisterPatientPanel(
+  BuildContext context, {
+  bool returnPatientId = false,
+}) {
+  return showGeneralDialog<String?>(
     context: context,
     barrierDismissible: true,
     barrierLabel: 'Register Patient',
     barrierColor: Colors.black45,
     transitionDuration: const Duration(milliseconds: 200),
     pageBuilder: (context, animation, secondaryAnimation) => Center(
-      child: _RegisterPatientPanel(returnTo: returnTo),
+      child: _RegisterPatientPanel(returnPatientId: returnPatientId),
     ),
     transitionBuilder: (context, animation, secondaryAnimation, child) {
       final curved = CurvedAnimation(parent: animation, curve: Curves.easeOut);
@@ -56,9 +62,9 @@ Future<void> showRegisterPatientPanel(BuildContext context, {String? returnTo}) 
 }
 
 class _RegisterPatientPanel extends ConsumerWidget {
-  const _RegisterPatientPanel({this.returnTo});
+  const _RegisterPatientPanel({this.returnPatientId = false});
 
-  final String? returnTo;
+  final bool returnPatientId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -93,7 +99,7 @@ class _RegisterPatientPanel extends ConsumerWidget {
             return _RegisterForm(
               branchId: isOrgAdmin ? null : ownBranchId,
               showBranchSelector: isOrgAdmin,
-              returnTo: returnTo,
+              returnPatientId: returnPatientId,
             );
           },
         ),
@@ -106,10 +112,10 @@ class _RegisterForm extends ConsumerStatefulWidget {
   const _RegisterForm({
     required this.branchId,
     required this.showBranchSelector,
-    this.returnTo,
+    this.returnPatientId = false,
   });
 
-  final String? returnTo;
+  final bool returnPatientId;
 
   final String? branchId;
 
@@ -258,11 +264,11 @@ class _RegisterFormState extends ConsumerState<_RegisterForm> {
   }
 
   void _goToPatient(String patientId) {
-    Navigator.of(context).pop();
-    if (widget.returnTo != null) {
-      context.go('${widget.returnTo}?patientId=$patientId');
+    if (widget.returnPatientId) {
+      Navigator.of(context).pop(patientId);
     } else {
-      context.go('/patients/$patientId');
+      Navigator.of(context).pop();
+      showPatientProfilePanel(context, id: patientId);
     }
   }
 

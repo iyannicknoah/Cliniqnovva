@@ -14,6 +14,7 @@ import '../../../shared/widgets/cliniqnovva_card.dart';
 import '../../../shared/widgets/cliniqnovva_table.dart';
 import '../../../shared/widgets/cliniqnovva_text_field.dart';
 import '../../../shared/widgets/status_badge.dart';
+import '../../../shared/widgets/success_dialog.dart';
 import '../../clinics/models/clinic.dart';
 import '../../clinics/providers/clinics_provider.dart';
 import '../widgets/confirm_status_dialog.dart';
@@ -89,8 +90,8 @@ class _ClinicDetailScreenState
                   int.tryParse(_subscriptionAmountController.text.trim()) ?? 0,
             }),
         loadingMessage: 'Saving changes…',
-        successMessage: 'Clinic updated.',
       );
+      if (mounted) showSuccessDialog(context, message: 'Clinic updated.');
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -232,8 +233,13 @@ class _ClinicDetailScreenState
                 : phoneController.text.trim(),
           ),
       loadingMessage: 'Creating branch…',
-      successMessage: 'Branch created on this clinic\'s behalf.',
     );
+    if (mounted) {
+      showSuccessDialog(
+        context,
+        message: 'Branch created on this clinic\'s behalf.',
+      );
+    }
   }
 
   @override

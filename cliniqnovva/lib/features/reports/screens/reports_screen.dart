@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 
@@ -214,63 +215,169 @@ class _DateFilterButton extends StatelessWidget {
   }
 }
 
-/// Export buttons shared by every tab — [rows] is (label, value) pairs
-/// already formatted as display strings, ready for both CSV and a PDF table.
-class _ExportRow extends StatelessWidget {
-  const _ExportRow({
+/// One named block of a multi-section export — e.g. "Summary", "By Branch
+/// (RWF)" — each with its own column headers, independent of every other
+/// section's shape (2 columns for a metric/value or trend list, 4 for
+/// No-Show's completed/no-shows/rate breakdown).
+class _ExportSection {
+  const _ExportSection({
     required this.title,
-    required this.summary,
-    required this.trendRows,
+    required this.columns,
+    required this.rows,
   });
 
   final String title;
-  final List<(String, String)> summary;
-  final List<(String, String)> trendRows;
+  final List<String> columns;
+  final List<List<String>> rows;
+}
+
+/// Resolves an id to its display name via [names], falling back to the
+/// same "Other / Manual" label the on-screen breakdown tables use for the
+/// synthetic 'manual'/'unknown' keys, or the raw id otherwise.
+String _displayName(Map<String, String> names, String key) =>
+    names[key] ??
+    (key == 'manual' || key == 'unknown' ? 'Other / Manual' : key);
+
+String _formatDateTime(DateTime d) =>
+    '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')} '
+    '${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
+
+/// Export buttons shared by every tab — 2026-08-15, explicit user
+/// instruction: replaced the old flat "Metric,Value" dump (which discarded
+/// every breakdown — By Branch/Doctor/Service never made it into a CSV or
+/// PDF at all) with a real multi-section report: each [_ExportSection]
+/// (Summary, the trend, By Branch, By Doctor, By Service/...) keeps its own
+/// column headers and renders as its own table, in both formats, with a
+/// title and a generated-at timestamp up top.
+class _ExportRow extends StatelessWidget {
+  const _ExportRow({required this.title, required this.sections});
+
+  final String title;
+  final List<_ExportSection> sections;
 
   Future<void> _exportCsv() async {
-    final csv = buildCsv([
-      'Metric',
-      'Value',
-    ], [...summary, ...trendRows].map((r) => [r.$1, r.$2]).toList());
-    await downloadCsv(csv);
+    final buffer = StringBuffer()
+      ..writeln(title)
+      ..writeln('Generated,${_formatDateTime(DateTime.now())}');
+    for (final section in sections) {
+      if (section.rows.isEmpty) continue;
+      buffer
+        ..writeln()
+        ..writeln(section.title)
+        ..write(buildCsv(section.columns, section.rows))
+        ..writeln();
+    }
+    await downloadCsv(buffer.toString());
   }
 
   Future<void> _exportPdf() async {
     final doc = pw.Document();
     doc.addPage(
-      pw.Page(
-        build: (context) => pw.Column(
-          crossAxisAlignment: pw.CrossAxisAlignment.start,
-          children: [
-            pw.Text(
-              title,
-              style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold),
-            ),
-            pw.SizedBox(height: 12),
-            pw.Table(
-              border: pw.TableBorder(bottom: const pw.BorderSide(width: 0.5)),
-              columnWidths: const {
-                0: pw.FlexColumnWidth(3),
-                1: pw.FlexColumnWidth(1),
-              },
-              children: [
-                for (final row in [...summary, ...trendRows])
-                  pw.TableRow(
-                    children: [
-                      pw.Padding(
-                        padding: const pw.EdgeInsets.symmetric(vertical: 4),
-                        child: pw.Text(row.$1),
-                      ),
-                      pw.Padding(
-                        padding: const pw.EdgeInsets.symmetric(vertical: 4),
-                        child: pw.Text(row.$2, textAlign: pw.TextAlign.right),
-                      ),
-                    ],
+      pw.MultiPage(
+        header: (context) => context.pageNumber == 1
+            ? pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Text(
+                    title,
+                    style: pw.TextStyle(
+                      fontSize: 20,
+                      fontWeight: pw.FontWeight.bold,
+                    ),
                   ),
-              ],
-            ),
-          ],
+                  pw.SizedBox(height: 3),
+                  pw.Text(
+                    'Generated ${_formatDateTime(DateTime.now())}',
+                    style: const pw.TextStyle(
+                      fontSize: 9,
+                      color: PdfColors.grey700,
+                    ),
+                  ),
+                  pw.SizedBox(height: 14),
+                ],
+              )
+            : pw.SizedBox(),
+        footer: (context) => pw.Align(
+          alignment: pw.Alignment.centerRight,
+          child: pw.Text(
+            'Page ${context.pageNumber} of ${context.pagesCount}',
+            style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey600),
+          ),
         ),
+        build: (context) => [
+          for (final section in sections)
+            if (section.rows.isNotEmpty)
+              pw.Padding(
+                padding: const pw.EdgeInsets.only(bottom: 16),
+                child: pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    pw.Text(
+                      section.title,
+                      style: pw.TextStyle(
+                        fontSize: 13,
+                        fontWeight: pw.FontWeight.bold,
+                      ),
+                    ),
+                    pw.SizedBox(height: 6),
+                    pw.Table(
+                      border: pw.TableBorder.all(
+                        width: 0.4,
+                        color: PdfColors.grey400,
+                      ),
+                      columnWidths: section.columns.length == 2
+                          ? const {
+                              0: pw.FlexColumnWidth(3),
+                              1: pw.FlexColumnWidth(1),
+                            }
+                          : null,
+                      children: [
+                        pw.TableRow(
+                          decoration: const pw.BoxDecoration(
+                            color: PdfColors.grey200,
+                          ),
+                          children: [
+                            for (final c in section.columns)
+                              pw.Padding(
+                                padding: const pw.EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 5,
+                                ),
+                                child: pw.Text(
+                                  c,
+                                  style: pw.TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: pw.FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                        for (final row in section.rows)
+                          pw.TableRow(
+                            children: [
+                              for (var i = 0; i < row.length; i++)
+                                pw.Padding(
+                                  padding: const pw.EdgeInsets.symmetric(
+                                    horizontal: 6,
+                                    vertical: 4,
+                                  ),
+                                  child: pw.Text(
+                                    row[i],
+                                    style: const pw.TextStyle(fontSize: 10),
+                                    textAlign: i == 0
+                                        ? pw.TextAlign.left
+                                        : pw.TextAlign.right,
+                                  ),
+                                ),
+                            ],
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+        ],
       ),
     );
     await Printing.layoutPdf(onLayout: (format) async => doc.save());
@@ -278,18 +385,25 @@ class _ExportRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 2026-08-15, explicit user instruction — real buttons (not the plain
+    // text links this used to be), right-aligned. `CliniqnovvaButton
+    // .outlined`'s defaults are exactly the requested look: text/icon in
+    // `context.appPrimary`, border in `context.appSecondaryBg`, background
+    // in `context.appBg`.
     return Row(
+      mainAxisAlignment: MainAxisAlignment.end,
       children: [
         SizedBox(
-          width: 130,
-          child: CliniqnovvaButton.text(
+          width: 140,
+          child: CliniqnovvaButton.outlined(
             label: 'Export CSV',
             onPressed: _exportCsv,
           ),
         ),
+        const SizedBox(width: 12),
         SizedBox(
-          width: 130,
-          child: CliniqnovvaButton.text(
+          width: 140,
+          child: CliniqnovvaButton.outlined(
             label: 'Export PDF',
             onPressed: _exportPdf,
           ),
@@ -324,7 +438,10 @@ class _TrendBars extends StatelessWidget {
       children: entries
           .map(
             (e) => Padding(
-              padding: const EdgeInsets.only(bottom: 10),
+              // 2026-08-15, explicit user instruction — "add enough
+              // spacing between these rows" (was 10, cramped next to the
+              // 16px-tall bars).
+              padding: const EdgeInsets.only(bottom: 18),
               child: Row(
                 children: [
                   SizedBox(
@@ -420,6 +537,155 @@ class _BreakdownTable extends StatelessWidget {
   }
 }
 
+/// One flattened row inside [_BreakdownDataTable] — a single entity
+/// (branch/doctor/service) on a single date.
+class _BreakdownRow {
+  const _BreakdownRow(this.date, this.name, this.value);
+  final String date;
+  final String name;
+  final int value;
+}
+
+/// 2026-08-15, explicit user instruction — the Revenue tab's By branch/By
+/// doctor/By service breakdowns should read as a proper table (header row +
+/// ruled rows), not the plain label/value list [_BreakdownTable] still uses
+/// elsewhere (Patient Volume tab). "Daily collected" stays the bar chart —
+/// this only replaces the three breakdown sections below it.
+///
+/// Same-day follow-up (explicit user instruction): a doctor/branch/service
+/// with revenue on several different dates now gets one row PER DATE
+/// instead of one collapsed whole-period-total row — [dailyEntries] is
+/// entityId -> {date -> amount} (`report.byBranchByDate` etc.), flattened
+/// here into [_BreakdownRow]s, grouped by entity (highest whole-period
+/// total first, matching the old ordering) with each entity's own dates
+/// sorted oldest-first underneath it. The Date/name/value columns use
+/// matching `Expanded(flex: ...)` weights in both the header and every row
+/// — was a bare trailing `Text` with nothing constraining its width, which
+/// let the `Expanded` name column swallow all the remaining space and
+/// shove the value against the card's far edge instead of reading as one
+/// proportioned table.
+class _BreakdownDataTable extends StatelessWidget {
+  const _BreakdownDataTable({
+    required this.title,
+    required this.columnLabel,
+    required this.valueLabel,
+    required this.dailyEntries,
+    required this.names,
+  });
+
+  final String title;
+  final String columnLabel;
+  final String valueLabel;
+  final Map<String, Map<String, int>> dailyEntries;
+  final Map<String, String> names;
+
+  @override
+  Widget build(BuildContext context) {
+    if (dailyEntries.isEmpty) return const SizedBox.shrink();
+
+    final entityTotals = {
+      for (final e in dailyEntries.entries)
+        e.key: e.value.values.fold<int>(0, (sum, v) => sum + v),
+    };
+    final sortedEntities = entityTotals.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+
+    final rows = <_BreakdownRow>[];
+    for (final entity in sortedEntities.take(10)) {
+      final name = names[entity.key] ??
+          (entity.key == 'manual' || entity.key == 'unknown'
+              ? 'Other / Manual'
+              : entity.key);
+      final dates = dailyEntries[entity.key]!.entries.toList()
+        ..sort((a, b) => a.key.compareTo(b.key));
+      for (final d in dates) {
+        rows.add(_BreakdownRow(d.key, name, d.value));
+      }
+    }
+
+    final headerStyle = TextStyle(
+      color: context.appSubtext,
+      fontSize: 12.5,
+      fontWeight: FontWeight.w600,
+    );
+
+    Widget columns({
+      required Widget date,
+      required Widget name,
+      required Widget value,
+    }) => Row(
+      children: [
+        SizedBox(width: 105, child: date),
+        const SizedBox(width: 20),
+        Expanded(flex: 2, child: name),
+        const SizedBox(width: 20),
+        Expanded(child: value),
+      ],
+    );
+
+    return CliniqnovvaCard(
+      title: title,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            // 20px vertical — matches CliniqnovvaTableHeader's own header
+            // row padding elsewhere in the app.
+            padding: const EdgeInsets.symmetric(vertical: 20),
+            child: columns(
+              date: Text('Date', style: headerStyle),
+              name: Text(columnLabel, style: headerStyle),
+              value: Text(
+                valueLabel,
+                textAlign: TextAlign.right,
+                style: headerStyle,
+              ),
+            ),
+          ),
+          Divider(height: 1, thickness: 1, color: context.appBorder),
+          ...rows.map(
+            (r) => Container(
+              decoration: BoxDecoration(
+                border: Border(
+                  bottom: BorderSide(color: context.appBorder),
+                ),
+              ),
+              // 32px vertical — matches CliniqnovvaTableRow's row height
+              // elsewhere in the app (was 10, noticeably shorter).
+              padding: const EdgeInsets.symmetric(vertical: 32),
+              child: columns(
+                date: Text(
+                  r.date,
+                  maxLines: 1,
+                  softWrap: false,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: context.appSubtext,
+                    fontSize: 12.5,
+                  ),
+                ),
+                name: Text(
+                  r.name,
+                  style: TextStyle(color: context.appText),
+                  overflow: TextOverflow.ellipsis,
+                ),
+                value: Text(
+                  '${r.value}',
+                  textAlign: TextAlign.right,
+                  style: TextStyle(
+                    color: context.appText,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _RevenueTab extends ConsumerWidget {
   const _RevenueTab({
     required this.branchId,
@@ -494,41 +760,102 @@ class _RevenueTab extends ConsumerWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
+              // 2026-08-15, explicit user instruction — "between every
+              // section increase the spacing" (was 16/20 throughout this
+              // tab; bumped to 28/32).
+              const SizedBox(height: 28),
               _ExportRow(
                 title: 'Revenue Report ($dateFrom to $dateTo)',
-                summary: [
-                  ('Total Collected (RWF)', '${report.totalCollectedRwf}'),
-                  ('Total Billed (RWF)', '${report.totalBilledRwf}'),
-                  ('Invoices', '${report.invoiceCount}'),
+                sections: [
+                  _ExportSection(
+                    title: 'Summary',
+                    columns: const ['Metric', 'Value'],
+                    rows: [
+                      ['Total Collected (RWF)', '${report.totalCollectedRwf}'],
+                      ['Total Billed (RWF)', '${report.totalBilledRwf}'],
+                      ['Invoices', '${report.invoiceCount}'],
+                    ],
+                  ),
+                  _ExportSection(
+                    title: '${_groupByLabels[report.groupBy]} Collected (RWF)',
+                    columns: const ['Date', 'Collected (RWF)'],
+                    rows:
+                        (report.trend.entries.toList()
+                              ..sort((a, b) => a.key.compareTo(b.key)))
+                            .map((e) => [e.key, '${e.value}'])
+                            .toList(),
+                  ),
+                  _ExportSection(
+                    title: 'By Branch (RWF)',
+                    columns: const ['Branch', 'Collected (RWF)'],
+                    rows:
+                        (report.byBranch.entries.toList()
+                              ..sort((a, b) => b.value.compareTo(a.value)))
+                            .map(
+                              (e) => [
+                                _displayName(branchNames, e.key),
+                                '${e.value}',
+                              ],
+                            )
+                            .toList(),
+                  ),
+                  _ExportSection(
+                    title: 'By Doctor (RWF)',
+                    columns: const ['Doctor', 'Collected (RWF)'],
+                    rows:
+                        (report.byDoctor.entries.toList()
+                              ..sort((a, b) => b.value.compareTo(a.value)))
+                            .map(
+                              (e) => [
+                                _displayName(doctorNames, e.key),
+                                '${e.value}',
+                              ],
+                            )
+                            .toList(),
+                  ),
+                  _ExportSection(
+                    title: 'By Service (RWF)',
+                    columns: const ['Service', 'Collected (RWF)'],
+                    rows:
+                        (report.byService.entries.toList()
+                              ..sort((a, b) => b.value.compareTo(a.value)))
+                            .map(
+                              (e) => [
+                                _displayName(serviceNames, e.key),
+                                '${e.value}',
+                              ],
+                            )
+                            .toList(),
+                  ),
                 ],
-                trendRows:
-                    (report.trend.entries.toList()
-                          ..sort((a, b) => a.key.compareTo(b.key)))
-                        .map((e) => (e.key, '${e.value}'))
-                        .toList(),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 32),
               CliniqnovvaCard(
                 title: '${_groupByLabels[report.groupBy]} collected (RWF)',
                 child: _TrendBars(trend: report.trend, valueSuffix: ''),
               ),
-              const SizedBox(height: 16),
-              _BreakdownTable(
+              const SizedBox(height: 28),
+              _BreakdownDataTable(
                 title: 'By branch (RWF)',
-                entries: report.byBranch,
+                columnLabel: 'Branch',
+                valueLabel: 'Collected (RWF)',
+                dailyEntries: report.byBranchByDate,
                 names: branchNames,
               ),
-              const SizedBox(height: 16),
-              _BreakdownTable(
+              const SizedBox(height: 28),
+              _BreakdownDataTable(
                 title: 'By doctor (RWF)',
-                entries: report.byDoctor,
+                columnLabel: 'Doctor',
+                valueLabel: 'Collected (RWF)',
+                dailyEntries: report.byDoctorByDate,
                 names: doctorNames,
               ),
-              const SizedBox(height: 16),
-              _BreakdownTable(
+              const SizedBox(height: 28),
+              _BreakdownDataTable(
                 title: 'By service (RWF)',
-                entries: report.byService,
+                columnLabel: 'Service',
+                valueLabel: 'Collected (RWF)',
+                dailyEntries: report.byServiceByDate,
                 names: serviceNames,
               ),
             ],
@@ -604,15 +931,53 @@ class _VolumeTab extends ConsumerWidget {
               const SizedBox(height: 16),
               _ExportRow(
                 title: 'Patient Volume Report ($dateFrom to $dateTo)',
-                summary: [
-                  ('Total Visits', '${report.totalVisits}'),
-                  ('Unique Patients', '${report.uniquePatients}'),
+                sections: [
+                  _ExportSection(
+                    title: 'Summary',
+                    columns: const ['Metric', 'Value'],
+                    rows: [
+                      ['Total Visits', '${report.totalVisits}'],
+                      ['Unique Patients', '${report.uniquePatients}'],
+                    ],
+                  ),
+                  _ExportSection(
+                    title: '${_groupByLabels[report.groupBy]} Visits',
+                    columns: const ['Date', 'Visits'],
+                    rows:
+                        (report.trend.entries.toList()
+                              ..sort((a, b) => a.key.compareTo(b.key)))
+                            .map((e) => [e.key, '${e.value}'])
+                            .toList(),
+                  ),
+                  _ExportSection(
+                    title: 'By Branch',
+                    columns: const ['Branch', 'Visits'],
+                    rows:
+                        (report.byBranch.entries.toList()
+                              ..sort((a, b) => b.value.compareTo(a.value)))
+                            .map(
+                              (e) => [
+                                _displayName(branchNames, e.key),
+                                '${e.value}',
+                              ],
+                            )
+                            .toList(),
+                  ),
+                  _ExportSection(
+                    title: 'By Doctor',
+                    columns: const ['Doctor', 'Visits'],
+                    rows:
+                        (report.byDoctor.entries.toList()
+                              ..sort((a, b) => b.value.compareTo(a.value)))
+                            .map(
+                              (e) => [
+                                _displayName(doctorNames, e.key),
+                                '${e.value}',
+                              ],
+                            )
+                            .toList(),
+                  ),
                 ],
-                trendRows:
-                    (report.trend.entries.toList()
-                          ..sort((a, b) => a.key.compareTo(b.key)))
-                        .map((e) => (e.key, '${e.value}'))
-                        .toList(),
               ),
               const SizedBox(height: 20),
               CliniqnovvaCard(
@@ -701,12 +1066,36 @@ class _NoShowTab extends ConsumerWidget {
               const SizedBox(height: 16),
               _ExportRow(
                 title: 'No-Show Report ($dateFrom to $dateTo)',
-                summary: [
-                  ('No-Show Rate', ratePct),
-                  ('Completed', '${report.completedCount}'),
-                  ('No-Shows', '${report.noShowCount}'),
+                sections: [
+                  _ExportSection(
+                    title: 'Summary',
+                    columns: const ['Metric', 'Value'],
+                    rows: [
+                      ['No-Show Rate', ratePct],
+                      ['Completed', '${report.completedCount}'],
+                      ['No-Shows', '${report.noShowCount}'],
+                    ],
+                  ),
+                  _ExportSection(
+                    title: 'By Branch',
+                    columns: const [
+                      'Branch',
+                      'Completed',
+                      'No-Shows',
+                      'No-Show Rate',
+                    ],
+                    rows: report.byBranch.entries
+                        .map(
+                          (e) => [
+                            _displayName(branchNames, e.key),
+                            '${e.value.completedCount}',
+                            '${e.value.noShowCount}',
+                            '${(e.value.noShowRate * 100).toStringAsFixed(1)}%',
+                          ],
+                        )
+                        .toList(),
+                  ),
                 ],
-                trendRows: const [],
               ),
               const SizedBox(height: 20),
               if (report.byBranch.isNotEmpty)

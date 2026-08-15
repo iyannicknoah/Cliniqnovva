@@ -15,6 +15,7 @@ import '../../clinics/providers/branches_provider.dart' show showAllBranchesProv
 import '../../departments/providers/departments_provider.dart';
 import '../../departments/widgets/branch_selector.dart';
 import '../providers/patients_provider.dart';
+import 'patient_profile_screen.dart';
 import 'register_patient_screen.dart';
 
 const _monthAbbr = [
@@ -231,7 +232,7 @@ class _PatientsList extends ConsumerWidget {
                           (patient) => CliniqnovvaTableRow(
                             lastColumnEndPadding: 150,
                             onTap: () =>
-                                context.go('/patients/${patient.id}'),
+                                showPatientProfilePanel(context, id: patient.id),
                             cells: [
                               Text(
                                 patient.name,

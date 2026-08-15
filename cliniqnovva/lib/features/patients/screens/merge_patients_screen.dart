@@ -19,6 +19,7 @@ import '../../departments/providers/departments_provider.dart';
 import '../../departments/widgets/branch_selector.dart';
 import '../models/patient_model.dart';
 import '../providers/patients_provider.dart';
+import 'patient_profile_screen.dart';
 
 /// Part 10 Task 2 — /patients/merge, Branch Admin/Clinic Admin only
 /// (enforced again server-side — this screen's own role gate is defense in
@@ -132,7 +133,8 @@ class _MergeBodyState extends ConsumerState<_MergeBody> {
         successMessage: 'Patients merged.',
       );
       if (!mounted) return;
-      context.go('/patients/${result.id}');
+      context.go('/patients');
+      showPatientProfilePanel(context, id: result.id);
     } catch (e) {
       if (!mounted) return;
       setState(() {

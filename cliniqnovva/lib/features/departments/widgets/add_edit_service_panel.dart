@@ -10,6 +10,7 @@ import '../../../shared/widgets/app_icon.dart';
 import '../../../shared/widgets/app_select.dart';
 import '../../../shared/widgets/cliniqnovva_button.dart';
 import '../../../shared/widgets/cliniqnovva_text_field.dart';
+import '../../../shared/widgets/success_dialog.dart';
 import '../models/department_model.dart';
 import '../models/service_model.dart';
 import '../providers/departments_provider.dart';
@@ -133,10 +134,13 @@ class _ServicePanelState extends ConsumerState<_ServicePanel> {
                 defaultPriceRwf: price,
               ),
         loadingMessage: _isEdit ? 'Saving service…' : 'Adding service…',
-        successMessage: _isEdit ? 'Service saved.' : 'Service added.',
       );
       if (!mounted) return;
       Navigator.of(context).pop();
+      showSuccessDialog(
+        context,
+        message: _isEdit ? 'Service saved.' : 'Service added.',
+      );
     } catch (e) {
       if (!mounted) return;
       setState(() {

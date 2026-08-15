@@ -11,6 +11,7 @@ import '../../../shared/widgets/app_icon.dart';
 import '../../../shared/widgets/app_select.dart';
 import '../../../shared/widgets/cliniqnovva_button.dart';
 import '../../../shared/widgets/cliniqnovva_text_field.dart';
+import '../../../shared/widgets/success_dialog.dart';
 import '../../clinics/providers/clinics_provider.dart';
 
 const _planBranchLimitLabels = {
@@ -115,24 +116,14 @@ class _AddClinicPanelState extends ConsumerState<_AddClinicPanel> {
               ),
             ),
         loadingMessage: 'Creating clinic…',
-        successMessage: 'Clinic created.',
       );
       if (!mounted) return;
       Navigator.of(context).pop();
-      await showDialog<void>(
-        context: context,
-        builder: (dialogContext) => AlertDialog(
-          title: const Text('Clinic created'),
-          content: Text(
+      showSuccessDialog(
+        context,
+        title: 'Clinic created',
+        message:
             '$name was created. The clinic admin can sign in with $adminEmail and the password you set.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('OK'),
-            ),
-          ],
-        ),
       );
     } catch (e) {
       if (!mounted) return;

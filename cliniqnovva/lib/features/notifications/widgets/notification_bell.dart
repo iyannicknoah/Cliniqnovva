@@ -7,6 +7,7 @@ import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/theme_ext.dart';
 import '../../../shared/widgets/app_icon.dart';
 import '../../../shared/widgets/loading_widget.dart';
+import '../../billing/screens/invoice_detail_screen.dart';
 import '../models/notification_model.dart';
 import '../providers/notifications_provider.dart';
 
@@ -125,9 +126,14 @@ class _NotificationMenu extends ConsumerWidget {
       ref.read(notificationsNotifierProvider.notifier).markRead(n.id);
     }
     onClose();
+    final invoiceId = n.type == 'paymentRecorded'
+        ? n.data['invoiceId'] as String?
+        : null;
+    if (invoiceId != null) {
+      showInvoiceDetailPanel(context, invoiceId: invoiceId);
+      return;
+    }
     final route = switch (n.type) {
-      'paymentRecorded' when n.data['invoiceId'] != null =>
-        '/billing/${n.data['invoiceId']}',
       'lowStock' => '/inventory',
       'newBooking' => '/appointments',
       _ => null,

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_theme.dart';
@@ -17,6 +16,7 @@ import '../../departments/providers/departments_provider.dart' show activeBranch
 import '../../departments/widgets/branch_selector.dart';
 import '../../patients/providers/patients_provider.dart';
 import '../providers/invoices_provider.dart';
+import 'invoice_detail_screen.dart';
 
 const _statusLabels = {
   AppConstants.invoiceUnpaid: 'Unpaid',
@@ -236,6 +236,7 @@ class _InvoicesList extends ConsumerWidget {
         children: [
           const CliniqnovvaTableHeader(
             columns: ['Patient', 'Date', 'Total (RWF)', 'Balance (RWF)', 'Status'],
+            lastColumnEndPadding: 50,
           ),
           Expanded(
             child: invoices.isEmpty
@@ -249,7 +250,11 @@ class _InvoicesList extends ConsumerWidget {
                     children: invoices
                         .map(
                           (invoice) => CliniqnovvaTableRow(
-                            onTap: () => context.go('/billing/${invoice.id}'),
+                            onTap: () => showInvoiceDetailPanel(
+                              context,
+                              invoiceId: invoice.id,
+                            ),
+                            lastColumnEndPadding: 50,
                             cells: [
                               _PatientCell(patientId: invoice.patientId),
                               Text(

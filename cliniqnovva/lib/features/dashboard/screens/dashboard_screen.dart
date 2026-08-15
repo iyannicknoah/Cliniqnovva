@@ -18,6 +18,7 @@ import '../../../shared/widgets/top_bar_actions.dart';
 import '../../appointments/models/appointment_model.dart';
 import '../../appointments/providers/appointments_provider.dart';
 import '../../appointments/screens/appointments_screen.dart' show AppointmentsList;
+import '../../appointments/screens/booking_screen.dart';
 import '../../auth/providers/access_control_provider.dart';
 import '../../billing/models/invoice_model.dart';
 import '../../billing/providers/invoices_provider.dart';
@@ -106,6 +107,14 @@ class DashboardScreen extends ConsumerWidget {
                       ),
                     ),
                     if (isOrgAdmin) ...[const BranchSelector(), const SizedBox(width: 12)],
+                    if (canManage) ...[
+                      CliniqnovvaButton(
+                        label: '+ Book Appointment',
+                        isFullWidth: false,
+                        onPressed: () => showBookingPanel(context),
+                      ),
+                      const SizedBox(width: 12),
+                    ],
                     const TopBarActions(),
                   ],
                 ),

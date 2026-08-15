@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../core/services/firebase_service.dart';
@@ -22,7 +21,9 @@ import '../../clinics/providers/branches_provider.dart'
     show showAllBranchesProvider;
 import '../../departments/providers/departments_provider.dart';
 import '../../departments/widgets/branch_selector.dart';
+import '../../billing/screens/invoice_detail_screen.dart';
 import '../../patients/providers/patients_provider.dart';
+import 'booking_screen.dart';
 import '../../staff/providers/staff_provider.dart';
 import '../models/appointment_model.dart';
 import '../providers/appointments_provider.dart';
@@ -148,7 +149,7 @@ class _AppointmentsBody extends ConsumerWidget {
                 CliniqnovvaButton(
                   label: '+ Book Appointment',
                   isFullWidth: false,
-                  onPressed: () => context.go('/appointments/book'),
+                  onPressed: () => showBookingPanel(context),
                 ),
                 const SizedBox(width: 12),
               ],
@@ -343,7 +344,10 @@ class AppointmentsList extends ConsumerWidget {
               content: const Text('Invoice created for this visit.'),
               action: SnackBarAction(
                 label: 'View Invoice',
-                onPressed: () => context.go('/billing/${updated.invoiceId}'),
+                onPressed: () => showInvoiceDetailPanel(
+                  context,
+                  invoiceId: updated.invoiceId!,
+                ),
               ),
               duration: const Duration(seconds: 6),
             ),

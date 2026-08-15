@@ -28,9 +28,10 @@ String _statusLabel(String status) => switch (status) {
   _ => status,
 };
 
-/// Lab-order history + actions for one patient, embedded in
-/// [PatientProfileScreen]'s "Lab Orders" tab. A Doctor sees an "Order a
-/// test" form and the review action on resulted orders; Nurse/Laboratorian
+/// Lab-order history + actions for one patient, embedded in the Patient
+/// Profile panel's (`patient_profile_screen.dart`) "Lab Orders" tab. A
+/// Doctor sees an "Order a test" form and the review action on resulted
+/// orders; Nurse/Laboratorian
 /// see collect/record-result actions (same dual-capability decision as
 /// addMedicalRecord's Nurse-only vitals tier, just extended to a second
 /// role here) — matches the confirmed clinical flow: Doctor orders ->

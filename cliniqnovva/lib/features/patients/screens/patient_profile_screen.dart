@@ -1,6 +1,7 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/constants/app_constants.dart';
@@ -15,9 +16,10 @@ import '../../../shared/widgets/cliniqnovva_button.dart';
 import '../../../shared/widgets/cliniqnovva_text_field.dart';
 import '../../../shared/widgets/loading_widget.dart';
 import '../../../shared/widgets/segmented_tabs.dart';
-import '../../../shared/widgets/top_bar_actions.dart';
+import '../../../shared/widgets/success_dialog.dart';
 import '../../../shared/providers/connectivity_provider.dart';
 import '../../auth/providers/access_control_provider.dart';
+import '../../chat/providers/chats_provider.dart';
 import '../../lab_orders/widgets/patient_lab_orders_section.dart';
 import '../models/medical_record_model.dart';
 import '../models/patient_document_model.dart';
@@ -45,78 +47,116 @@ String _formatDate(DateTime d) => '${_monthAbbr[d.month]} ${d.day}, ${d.year}';
 String _formatDateTime(DateTime d) =>
     '${_formatDate(d)} · ${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
 
-/// Part 9 Task 3 — /patients/:id. Profile | Medical Records | Documents.
+/// Part 9 Task 3. 2026-08-15, explicit user instruction — switched from a
+/// full routed page (`/patients/:id`) to the same centered modal pattern as
+/// Register Patient/Add Branch/Add Service (`Material` + `AppTheme.cardRadius`
+/// corners, fade+scale transition). Profile | Medical Records | Documents.
 /// The latter two tabs render whatever the API actually sent — a
 /// receptionist's [PatientModel.medicalRecords]/[documents] are null
 /// because the server omitted those keys, not because the client hid them.
-class PatientProfileScreen extends ConsumerStatefulWidget {
-  const PatientProfileScreen({super.key, this.id});
-
-  final String? id;
-
-  @override
-  ConsumerState<PatientProfileScreen> createState() =>
-      _PatientProfileScreenState();
+///
+/// The header's generic [TopBarActions] (staff chat inbox + notification
+/// bell) is replaced here by [_PatientChatButton] — a chat action scoped to
+/// THIS patient specifically, enabled only once they've linked a Patient
+/// App account (see [PatientModel.linkedAppAccountId]). The notification
+/// bell is dropped entirely on this screen (explicit instruction): it
+/// surfaces the staff member's own notifications, which have nothing to do
+/// with the patient record being viewed.
+Future<void> showPatientProfilePanel(BuildContext context, {required String id}) {
+  return showGeneralDialog(
+    context: context,
+    barrierDismissible: true,
+    barrierLabel: 'Patient profile',
+    barrierColor: Colors.black45,
+    transitionDuration: const Duration(milliseconds: 200),
+    pageBuilder: (context, animation, secondaryAnimation) =>
+        Center(child: _PatientProfilePanel(id: id)),
+    transitionBuilder: (context, animation, secondaryAnimation, child) {
+      final curved = CurvedAnimation(parent: animation, curve: Curves.easeOut);
+      return FadeTransition(
+        opacity: curved,
+        child: ScaleTransition(
+          scale: Tween<double>(begin: 0.96, end: 1).animate(curved),
+          child: child,
+        ),
+      );
+    },
+  );
 }
 
-class _PatientProfileScreenState extends ConsumerState<PatientProfileScreen> {
+class _PatientProfilePanel extends ConsumerStatefulWidget {
+  const _PatientProfilePanel({required this.id});
+
+  final String id;
+
+  @override
+  ConsumerState<_PatientProfilePanel> createState() =>
+      _PatientProfilePanelState();
+}
+
+class _PatientProfilePanelState extends ConsumerState<_PatientProfilePanel> {
   int _tab = 0;
 
   @override
   Widget build(BuildContext context) {
-    final id = widget.id;
-    if (id == null) {
-      return Scaffold(
-        backgroundColor: context.appBg,
-        body: Center(
-          child: Text('No patient id.', style: TextStyle(color: context.appSubtext)),
-        ),
-      );
-    }
-
     final claims = ref.watch(userClaimsProvider);
-    final patientAsync = ref.watch(patientDetailProvider(id));
+    final patientAsync = ref.watch(patientDetailProvider(widget.id));
 
-    return Scaffold(
-      backgroundColor: context.appBg,
-      body: claims.when(
-        loading: () => const LoadingWidget(),
-        error: (e, _) => Center(
-          child: Text('$e', style: TextStyle(color: context.appSubtext)),
+    return Material(
+      color: context.appCard,
+      borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+      clipBehavior: Clip.antiAlias,
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+          border: Border.all(color: context.appBorder),
         ),
-        data: (claimsData) {
-          final role = claimsData?['role'] as String? ?? '';
-          // Lab Orders tab (2026-07-29) — Doctor/Nurse/Laboratorian only,
-          // same role set that has any interaction with a lab order at all
-          // (order/perform/review). Laboratorian never reaches this screen
-          // via nav today (see app_shell.dart), but the tab still works if
-          // reached directly, and Doctor/Nurse do reach it via /patients.
-          final canSeeLabOrders =
-              role == AppConstants.roleDoctor ||
-              role == AppConstants.roleNurse ||
-              role == AppConstants.roleLaboratorian;
-          final tabLabels = [
-            'Profile',
-            'Medical Records',
-            'Documents',
-            if (canSeeLabOrders) 'Lab Orders',
-          ];
-          return patientAsync.when(
-            loading: () => const LoadingWidget(),
-            error: (e, _) => Center(
+        constraints: BoxConstraints(
+          maxWidth: 760,
+          maxHeight: MediaQuery.of(context).size.height * 0.85,
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: claims.when(
+            loading: () => const Padding(
+              padding: EdgeInsets.all(60),
+              child: LoadingWidget(),
+            ),
+            error: (e, _) => Padding(
+              padding: const EdgeInsets.all(24),
               child: Text('$e', style: TextStyle(color: context.appSubtext)),
             ),
-            data: (patient) => Align(
-              alignment: Alignment.topCenter,
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 760),
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(40),
+            data: (claimsData) {
+              final role = claimsData?['role'] as String? ?? '';
+              // Lab Orders tab (2026-07-29) — Doctor/Nurse/Laboratorian only,
+              // same role set that has any interaction with a lab order at
+              // all (order/perform/review).
+              final canSeeLabOrders =
+                  role == AppConstants.roleDoctor ||
+                  role == AppConstants.roleNurse ||
+                  role == AppConstants.roleLaboratorian;
+              final tabLabels = [
+                'Profile',
+                'Medical Records',
+                'Documents',
+                if (canSeeLabOrders) 'Lab Orders',
+              ];
+              return patientAsync.when(
+                loading: () => const Padding(
+                  padding: EdgeInsets.all(60),
+                  child: LoadingWidget(),
+                ),
+                error: (e, _) => Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Text('$e', style: TextStyle(color: context.appSubtext)),
+                ),
+                data: (patient) => SingleChildScrollView(
                   child: Column(
+                    mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       _ProfileHeader(patient: patient),
-                      const SizedBox(height: 28),
+                      const SizedBox(height: 24),
                       SegmentedTabs(
                         labels: tabLabels,
                         index: _tab,
@@ -136,10 +176,10 @@ class _PatientProfileScreenState extends ConsumerState<PatientProfileScreen> {
                     ],
                   ),
                 ),
-              ),
-            ),
-          );
-        },
+              );
+            },
+          ),
+        ),
       ),
     );
   }
@@ -184,8 +224,84 @@ class _ProfileHeader extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 12),
-        const TopBarActions(),
+        _PatientChatButton(patient: patient),
+        const SizedBox(width: 4),
+        IconButton(
+          icon: const AppIcon(AppIcons.close),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
       ],
+    );
+  }
+}
+
+/// Opens (or resumes) a chat thread with THIS patient — not the staff
+/// member's own chat inbox, which is what the generic `TopBarActions`/
+/// `ChatBell` open elsewhere. Disabled (dimmed, no tap) when
+/// [PatientModel.linkedAppAccountId] is null: a walk-in patient who's never
+/// opened the Patient App has no thread to receive the message in.
+class _PatientChatButton extends ConsumerStatefulWidget {
+  const _PatientChatButton({required this.patient});
+
+  final PatientModel patient;
+
+  @override
+  ConsumerState<_PatientChatButton> createState() =>
+      _PatientChatButtonState();
+}
+
+class _PatientChatButtonState extends ConsumerState<_PatientChatButton> {
+  bool _starting = false;
+
+  bool get _canChat => widget.patient.linkedAppAccountId != null;
+
+  Future<void> _start() async {
+    setState(() => _starting = true);
+    try {
+      final chatId = await runWithFeedback(
+        context,
+        () => ref.read(chatsNotifierProvider.notifier).startChat(
+          patientId: widget.patient.id,
+          branchId: widget.patient.branchId,
+          clinicId: widget.patient.clinicId,
+        ),
+        loadingMessage: 'Starting chat…',
+        successMessage: 'Chat ready.',
+      );
+      if (!mounted) return;
+      Navigator.of(context).pop();
+      context.go('/chat/$chatId');
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _starting = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: _canChat
+          ? 'Chat with ${widget.patient.name}'
+          : '${widget.patient.name} hasn\'t linked a Patient App account yet',
+      child: IconButton(
+        icon: _starting
+            ? SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: context.appSubtext,
+                ),
+              )
+            : AppIcon(
+                AppIcons.chat,
+                size: 22,
+                color: _canChat
+                    ? context.appText
+                    : context.appSubtext.withValues(alpha: 0.4),
+              ),
+        onPressed: _canChat && !_starting ? _start : null,
+      ),
     );
   }
 }
@@ -295,10 +411,10 @@ class _ProfileTabState extends ConsumerState<_ProfileTab> {
           },
         ),
         loadingMessage: 'Saving…',
-        successMessage: 'Profile saved.',
       );
       if (!mounted) return;
       setState(() => _saving = false);
+      showSuccessDialog(context, message: 'Profile saved.');
     } catch (e) {
       if (!mounted) return;
       setState(() {

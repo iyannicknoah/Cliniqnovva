@@ -281,7 +281,72 @@ signal.
 **SnackBar theme** (`AppTheme._snackBarTheme`) follows the same black/white
 inversion rule as `CliniqnovvaButton`/selected chips: black background with
 white text in light mode, white background with black text in dark mode —
-floating, 12px radius, no color accent.
+floating, 12px radius, no color accent. **Exception (2026-08-15):** the
+success SnackBar in `runWithFeedback` overrides this with a
+`AppColors.successGreen` (`#16A34A`) background and white text, so a
+successful write reads as unambiguously "good" rather than neutral. The
+loading and error SnackBars are untouched and still use the theme default.
+
+## Success dialog (`SuccessDialog`/`StaffAddedDialog`, `shared/widgets/`)
+
+**2026-08-15, explicit user spec (ported from two FlutterFlow components)** —
+major create/save forms show a centered popup instead of (or in addition to,
+for the two credential cases) the SnackBar: a 150px circle ringed in
+`context.appSecondaryBg` holding a 44px `Icons.check` in `context.appPrimary`
+(brand blue), a bold 18px title, a 15px `context.appSubtext` message. Card is
+400px tall, 20px radius, bordered in `AppColors.primary` at 12% opacity
+(`0x1F1E8CFF` in the original spec — same math). Auto-dismisses after 2
+seconds; shown via `showGeneralDialog` with the same fade+scale transition
+every other centered modal uses (Add Branch, Add Clinic, Add Service).
+
+Two variants:
+- **`showSuccessDialog(context, {title = 'Success!', required message})`** —
+  generic, dynamic message per call site. **No dismiss button** (explicit
+  instruction, 2026-08-15 follow-up — the original ported spec had a
+  full-width `CliniqnovvaButton` "Continue"; removed since the popup is
+  purely informational and already auto-dismisses).
+- **`showStaffAddedDialog(context, {required email, required password})`** —
+  fixed "Staff added" title, `SelectableText` email/password lines (so they
+  can still be copied inside the 2s window) instead of a generic message,
+  plus a full-width `CliniqnovvaButton` "Continue" (kept here, unlike
+  `SuccessDialog` — an admin reading credentials may want to dismiss once
+  they've copied them rather than wait out the 2s). 15px bottom padding
+  under the button (explicit instruction, 2026-08-15 follow-up), so it isn't
+  flush against the card's edge. Replaces the old plain `AlertDialog` in
+  `add_edit_staff_panel.dart`.
+
+**Scope is deliberately NOT "every write action"** — explicit user decision
+after being shown the ~40 call sites of `runWithFeedback`. Applied only to
+major create/save forms: Add Clinic (+ its "clinic created, admin can sign
+in with…" follow-up, now `showSuccessDialog` with a custom message instead
+of a second plain `AlertDialog`), clinic edit save, Super Admin "create
+branch on this clinic's behalf", Add/Edit Branch (edit only — see exception
+below), Add/Edit Service, Add/Edit Department, Add/Edit inventory Item,
+Patient profile save, and Add/Edit Staff (edit path; create path uses
+`StaffAddedDialog`). Quick inline actions (status toggles, archive/restore,
+review reply/hide, payment recording, check-in, mark-complete, delete)
+deliberately keep the `runWithFeedback` SnackBar — a blocking 2-second popup
+on every single-click action was judged too disruptive.
+
+`runWithFeedback`'s `successMessage` param is now optional (was required) —
+call sites that show one of these dialogs instead just omit it, so the
+loading SnackBar still shows and clears but no success SnackBar follows.
+
+**Fix (2026-08-15): yellow debug underline on all dialog text.** Both
+dialogs' `pageBuilder` returned `Center(child: ...)` directly — unlike
+`showDialog`, `showGeneralDialog` doesn't wrap its content in a `Material`
+ancestor, so every `Text`/`SelectableText` inside fell back to Flutter's
+debug "no Material found" style (yellow underline). Fixed by wrapping the
+`pageBuilder` result in `Material(type: MaterialType.transparency, child: ...)`
+in both `success_dialog.dart` and `staff_added_dialog.dart`.
+
+**Exception:** Add Branch's *create* path (not edit) skips the dialog —
+`_BranchPanel._save` immediately chains into `showStaffPanel(...)` to prompt
+for that branch's admin (2026-07-25 "immediately prompt" decision). Two
+stacked `showGeneralDialog` routes would break the auto-dismiss timer (it
+calls `Navigator.pop(context)` on whatever's on top of the root navigator
+after 2s, which would be the *wrong* dialog if both were open), so branch
+creation keeps its plain SnackBar there.
 
 ## Brand assets
 
@@ -398,6 +463,124 @@ growth/trend chart rather than introducing a new chart style or color.
 
 ## Change log
 
+- **2026-08-15 (Book Appointment doctor picker: specialty shown on the
+  right of each option)** — Explicit user instruction, so admins/
+  receptionists can tell same-department doctors apart at a glance.
+  `SearchableDropdown` (`shared/widgets/searchable_dropdown.dart`) gained an
+  optional `itemSubLabels` map — id → secondary text rendered right-aligned
+  in a `Row` next to the primary label, `context.appSubtext`, 12.5px, only
+  shown when non-blank. Backward compatible (defaults to null → identical
+  single-label row as before) — the doctor picker
+  (`booking_screen.dart#_DoctorPicker`) is the only caller passing it so
+  far, wired to `StaffModel.specialty`; `doctor_schedule_screen.dart`'s
+  `SearchableDropdown` call is unaffected.
+- **2026-08-15 (Book Appointment: centered modal, was a full routed page;
+  today's doctor availability preview added)** — Explicit user instruction,
+  two changes. First: `/appointments/book` is no longer a route —
+  `booking_screen.dart` now exports `showBookingPanel(context)`, same
+  centered `Material` + `AppTheme.cardRadius` + fade/scale modal pattern as
+  Register Patient/Patient Profile (`maxWidth: 640`, `maxHeight: 85%`,
+  scrollable). Both call sites (Appointments screen, Dashboard) updated.
+  The `?patientId=` "returnTo" hand-off from Register Patient's nested
+  "+ Register new" no longer round-trips through a route at all — that
+  panel's `showRegisterPatientPanel` gained a `returnPatientId` bool
+  (replacing the old `returnTo` route-string param): when true it pops
+  itself with the new patient id as the dialog result
+  (`Navigator.pop(id)`), and the booking dialog just `await`s it directly,
+  since both are dialogs stacked on the same screen now — no navigation
+  needed. Confirming a booking now pops the dialog before navigating to
+  `/appointments?justBooked=…`, same as before.
+  Second (**superseded same day — see the entry directly above this one**):
+  originally, once a doctor AND service were picked, "Available today"
+  rendered directly under the doctor search field via `_SlotGrid` queried
+  for today's date specifically.
+- **2026-08-15 (Doctor picker preview: ALL of the doctor's weekly slots, not
+  just today's)** — Explicit user correction to the "Available today"
+  preview above: showing only today's bookable grid read as broken on any
+  day the doctor doesn't work at all ("No available slots that day"), and
+  the instruction was for every slot, not today specifically. Replaced with
+  a "Weekly schedule" preview that lists every entry in
+  `StaffModel.schedule` (their actual recurring availability — e.g. "Mon ·
+  08:00–17:00", "Wed · 08:00–17:00"), sorted Monday→Sunday, independent of
+  what day it is. Tapping a day is a shortcut (`onDaySelected`) that jumps
+  `_date` to that weekday's next occurrence (today if today qualifies) —
+  step 4's grid then shows that day's real bookable slots (duration,
+  existing bookings, blocked time all still factored in there, unchanged).
+  Doctor specialty sublabels (previous entry) are unaffected by this fix.
+- **2026-08-15 (Dashboard: "+ Book Appointment" button added to the header
+  row)** — Explicit user instruction: between the Branches dropdown and the
+  chat/notification icons. Reuses the exact button `appointments_screen.dart`
+  already has (`CliniqnovvaButton`, `'+ Book Appointment'` label; now calls
+  `showBookingPanel(context)` — updated in the same-day modal-conversion
+  entry above), gated on the same `canManage` role
+  set (Clinic Admin/Branch Admin/Receptionist) the rest of this screen's
+  manage-only affordances already use.
+- **2026-08-15 (Success dialogs: Continue button removed from SuccessDialog,
+  15px bottom padding added to StaffAddedDialog's)** — Explicit user
+  instruction, two small follow-ups to the same-day success dialog work.
+  `SuccessDialog` (`shared/widgets/success_dialog.dart`) — the generic
+  auto-dismissing popup — no longer shows a "Continue" button at all, since
+  it already closes itself after 2 seconds and the button was redundant.
+  `StaffAddedDialog` (`shared/widgets/staff_added_dialog.dart`) keeps its
+  "Continue" button (an admin reading credentials may want to dismiss
+  early) but now wraps it in `Padding(bottom: 15)` so it isn't flush
+  against the card's bottom edge.
+- **2026-08-15 (Patient Profile: centered modal, was a full routed page;
+  patient-scoped chat button replaces TopBarActions)** — Explicit user
+  instruction. `/patients/:id` is no longer a route — `patient_profile_screen.dart`
+  now exports `showPatientProfilePanel(context, {required id})`, same
+  centered `Material` + `AppTheme.cardRadius` + fade/scale modal pattern as
+  Register Patient/Add Branch/Add Service (`maxWidth: 760`, `maxHeight: 85%`
+  of the viewport, scrollable). All six call sites updated to open the panel
+  instead of navigating: Patients screen row tap, Doctor/Nurse "Today"
+  appointment row tap, Lab Orders row tap, Register Patient's post-create
+  hand-off (`_goToPatient`), and Merge Patients' post-merge hand-off (now
+  `context.go('/patients')` then opens the panel, since the merge screen
+  itself is still a routed page and needs somewhere valid to land first).
+  The header's generic `TopBarActions` (staff chat inbox + notification
+  bell) is gone from this screen — replaced by a new `_PatientChatButton`
+  scoped to the patient being viewed: tapping it calls the existing
+  `ChatsNotifier.startChat` (same dedupe-or-create logic `new_chat_panel.dart`
+  already used) and navigates to `/chat/:chatId`. Disabled (dimmed icon,
+  tooltip explaining why, no tap) when the patient has no linked Patient App
+  account — added `PatientModel.linkedAppAccountId` (parses the backend's
+  existing `linkedAppAccountId` field, previously dropped client-side) to
+  gate this, since a walk-in-only patient has no app thread to receive a
+  message in. The notification bell is dropped entirely on this screen only
+  (explicit instruction) — every other screen's `TopBarActions` is
+  unaffected. A close "X" button was added to the header since a dialog
+  needs one where a routed page relied on browser/back-button navigation.
+- **2026-08-15 (Success dialogs: fixed yellow debug underline on text)** —
+  Both `showSuccessDialog` and `showStaffAddedDialog` built their content as
+  `Center(child: ...)` straight from `showGeneralDialog`'s `pageBuilder`,
+  with no `Material` ancestor. Flutter's debug fallback `TextStyle` for text
+  without a `Material`/`DefaultTextStyle` ancestor renders with a yellow
+  underline — that's what showed up on every line in both dialogs. Fixed by
+  wrapping the `pageBuilder` result in
+  `Material(type: MaterialType.transparency, child: ...)` in both
+  `success_dialog.dart` and `staff_added_dialog.dart`.
+- **2026-08-15 (New success dialog, ported from two FlutterFlow components)**
+  — Explicit user spec, exact code pasted for both. `SuccessDialog` (generic)
+  and `StaffAddedDialog` (shows generated email/password) added at
+  `shared/widgets/success_dialog.dart`/`staff_added_dialog.dart` — centered
+  card, `context.appPrimary`-colored check mark and "Continue" button (per
+  instruction: "use primary color on tick and button"), auto-dismiss after
+  2s. Wired into major create/save forms only (Add Clinic, clinic edit,
+  Super Admin create-branch-on-behalf, Add/Edit Branch edit path, Add/Edit
+  Service, Add/Edit Department, Add/Edit inventory Item, Patient profile
+  save, Add/Edit Staff) after the user was shown the ~40 total
+  `runWithFeedback` call sites and chose to scope it down rather than go
+  fully global — quick inline actions (status toggles, replies, payments,
+  etc.) still use the SnackBar. `runWithFeedback`'s `successMessage` is now
+  optional to support this. See "Success dialog" above for the full scope
+  list and the one exception (Add Branch's create path).
+- **2026-08-15 (Success SnackBar now green)** — Explicit user instruction.
+  `runWithFeedback`'s success SnackBar (`shared/utils/async_feedback.dart`)
+  now overrides the theme's black/white-inversion SnackBar with an
+  `AppColors.successGreen` (`#16A34A`) background and white text, so a
+  successful write reads as unambiguously "good" instead of neutral black.
+  The loading and error SnackBars are unchanged — this exception is scoped
+  to success only. See "Loading/success feedback" above.
 - **2026-08-15 (Register Patient: disabled while "All branches" is
   selected)** — Explicit user instruction, follow-up to the modal
   conversion above. A patient always belongs to exactly one branch
@@ -417,6 +600,139 @@ growth/trend chart rather than introducing a new chart style or color.
   `CliniqnovvaTableRow` now pass `lastColumnEndPadding: 150`. Confirms the
   param is a general per-table-instance override, not Actions-specific,
   despite most existing call sites using it for Actions columns.
+- **2026-08-16 (Reports — Revenue tab breakdown tables: per-date rows, real
+  columns, wired-up export buttons, more section spacing)** — Four explicit
+  user instructions, same session:
+  1. **Per-date rows.** `report.byBranch`/`byDoctor`/`byService` were
+     whole-period totals with no date dimension — a doctor active on 4
+     different days showed as ONE row. `reports.service.js#revenue()` now
+     also returns `byBranchByDate`/`byDoctorByDate`/`byServiceByDate`
+     (`{entityId: {date: amountRwf}}`, built via a new `addToNestedBucket`
+     helper alongside the existing flat totals, not replacing them — the
+     flat versions still back the CSV/PDF export's aggregate view).
+     `report_models.dart` gained `_nestedIntMap` + the 3 new `RevenueReport`
+     fields. `_BreakdownDataTable` (`reports_screen.dart`) now takes
+     `dailyEntries: Map<String, Map<String,int>>` instead of a flat
+     `Map<String,int>`, flattens it into one `_BreakdownRow` per
+     entity-per-date (entities ranked by whole-period total, same as
+     before; each entity's own dates sorted oldest-first underneath it),
+     and dropped the `dateRangeLabel` param entirely — a real per-row date
+     replaced the "same dateFrom–dateTo span on every row" placeholder from
+     the same-day-earlier entry below.
+  2. **One real table, not an isolated value column.** The Date/name/value
+     columns were `SizedBox(width:130)` + `Expanded` (swallowing ALL
+     remaining space) + a bare trailing `Text` — which shoved the value hard
+     against the card's right edge with a huge gap instead of reading as
+     one proportioned table. Replaced with a shared `columns()` builder used
+     by both the header and every row: `SizedBox(width:105)` (date) +
+     `Expanded(flex:2)` (name) + `Expanded(flex:1)` (value, right-aligned),
+     each separated by a fixed 20px gap — same shape top to bottom.
+  3. **Date one line, no wrap.** Column width bumped to 105 (was 130, but
+     held a two-line range string before) and the date `Text` gained
+     `maxLines: 1, softWrap: false, overflow: ellipsis` — moot in practice
+     now that each row holds a single short date instead of a range, but
+     kept as a safety net.
+  4. **Export buttons: real buttons, right-aligned.** `_ExportRow`'s Export
+     CSV/PDF were `CliniqnovvaButton.text` (plain text links, left-aligned).
+     Switched to `CliniqnovvaButton.outlined` — its DEFAULTS are exactly the
+     requested look (text/icon `context.appPrimary`, border
+     `context.appSecondaryBg`, background `context.appBg`), no per-call
+     overrides needed — and the row's `mainAxisAlignment` set to `.end`.
+  5. **More breathing room.** `_TrendBars`' per-row bottom padding 10→18px.
+     Every inter-section gap inside `_RevenueTab`'s `Column` (metric cards →
+     export row → trend card → the 3 breakdown tables) 16px/20px → 28px/32px.
+     Scoped to the Revenue tab only, matching how every other change in this
+     entry was scoped — Patient Volume/No-Show untouched.
+- **2026-08-15 (Reports — CSV/PDF exports: multi-section, not a flat metric
+  dump)** — Explicit user instruction ("export real and rich reports with
+  rich content and data"). Every tab's Export CSV/PDF previously flattened
+  everything into one `Metric,Value` list built from just `summary` +
+  `trendRows` — the By Branch/By Doctor/By Service (and, on No-Show, the
+  per-branch completed/no-show/rate breakdown) never made it into an export
+  at all, even though they're on screen. `_ExportRow` now takes a
+  `List<_ExportSection>` (Summary, the trend, each breakdown), each with its
+  own column headers — CSV writes each as its own header+rows block
+  separated by a blank line; PDF (switched from a single `pw.Page` to
+  `pw.MultiPage`, so a long branch/doctor/service list no longer overflows
+  one page) renders each as its own bordered, header-shaded table under a
+  bold section heading, with a title/generated-timestamp block on page 1
+  and a "Page X of Y" footer on every page. No-Show's By Branch export gained
+  3 real columns (Completed/No-Shows/No-Show Rate) instead of the on-screen
+  single formatted string ("86% (3/18)"). `_displayName()` centralizes the
+  id→name fallback (branch/doctor/service name, or "Other / Manual" for the
+  synthetic `manual`/`unknown` keys) so CSV/PDF resolve the same names the
+  on-screen tables show, not raw Firestore ids.
+- **2026-08-15 (Reports — Revenue tab: By branch/doctor/service as tables)**
+  — Explicit user instruction: keep "Daily collected" as the bar chart, but
+  the three breakdown sections below it should read as a proper table
+  (header row + ruled rows) instead of a plain label/value list.
+  `reports_screen.dart` gained `_BreakdownDataTable` (header row in
+  `appSubtext`/w600, each data row bottom-bordered in `context.appBorder`)
+  and the Revenue tab's `By branch (RWF)`/`By doctor (RWF)`/`By service
+  (RWF)` cards now use it. The older `_BreakdownTable` (no header row) is
+  untouched and still backs the Patient Volume tab's By branch/By doctor
+  cards — this change was scoped to the Revenue tab only, per the
+  instruction ("on that revenue tab").
+  - **Same-day follow-up** — explicit user instruction, two more changes to
+    `_BreakdownDataTable` specifically: (1) a `Date` column, fixed 130px,
+    inserted as the FIRST column (before Branch/Doctor/Service). Since
+    `report.byBranch`/`byDoctor`/`byService` are whole-period totals with no
+    per-row date of their own (only the separate "Daily collected" trend
+    breaks revenue down by date), every row shows the same `dateFrom to
+    dateTo` span rather than a fabricated per-row date — the caller now
+    passes `dateRangeLabel`. (2) Row height increased from 10px to 32px
+    vertical padding, and the header row from 10px to 20px — matching
+    `CliniqnovvaTableRow`/`CliniqnovvaTableHeader`'s own row heights
+    elsewhere in the app (see the 2026-08-14 "increase the height of row a
+    little" entry below), since these were noticeably shorter than every
+    other table in the app before this.
+- **2026-08-15 (Inventory Add/Edit Item: centered modal, was a right-edge
+  slide-out panel)** — Explicit user instruction. `add_edit_item_panel.dart`'s
+  `showInventoryItemPanel` now opens `Center`-anchored with a fade+scale
+  transition instead of `Align(alignment: centerRight)` + slide-from-right;
+  the panel's own `Material`/`Container` gained `borderRadius:
+  AppTheme.cardRadius` (all four corners, was square) and an all-around
+  `Border.all` (was `Border(left: ...)` only, since it used to butt against
+  the screen edge). Same `maxHeight: 85% of screen height` cap as Register
+  Patient/Invoice Detail — the fixed `height: double.infinity` from the
+  slide-out era is gone, so the dialog now sizes to content instead of
+  always spanning full height. Width stays 420 (unchanged).
+- **2026-08-15 (Sidebar: badge count on collapsed rail)** — Explicit user
+  instruction: the Appointments/Chat/Reviews badge counts (Part 17 Task 4)
+  showed next to the label in the expanded sidebar but disappeared entirely
+  when collapsed to the 76px icon-only rail — `_SidebarNavTile`'s collapsed
+  branch was just `Center(child: icon)`, no badge markup at all. Fixed with
+  a `Stack` wrapping the icon: when `badgeCount > 0`, a small corner dot
+  (`Positioned(right: -7, top: -5)`, `AppColors.brightRed`, white text,
+  8.5px font, "9+" cap past 9) sits on the icon's top-right corner — a
+  compact version of the expanded state's full pill badge, same red/white
+  styling as the notification bell's own unread-count dot. No new state or
+  provider — reads the same `item.badgeCount` the expanded row already did.
+- **2026-08-15 (Billing table: 50px right padding on "Status")** — Explicit
+  user instruction. `billing_screen.dart`'s `CliniqnovvaTableHeader`/
+  `CliniqnovvaTableRow` now pass `lastColumnEndPadding: 50`, matching the
+  Actions-column inset value even though this last column is Status, not
+  Actions — same `lastColumnEndPadding` mechanism as the Patients-table entry
+  above. Note this narrows the `cliniqnovva_table.dart` doc comment's claim
+  that Status columns are "never part of this instruction" — that's no
+  longer true for Billing specifically; other Status-column tables are
+  unaffected.
+- **2026-08-15 (Invoice detail: centered modal, was a full routed page; chat/
+  notification icons removed)** — Explicit user instruction, same pattern as
+  the Register Patient/Add Branch modals above. `/billing/:invoiceId` is no
+  longer a route — `invoice_detail_screen.dart` now exports
+  `showInvoiceDetailPanel(context, {required invoiceId})` (same centered
+  `Material` + `AppTheme.cardRadius` + fade/scale modal, `maxWidth: 700`,
+  85%-height cap, `IconButton(AppIcons.close)` in place of the old page's
+  `TopBarActions`). All four call sites updated: the Billing list row tap,
+  the Accountant Overview "recent invoices" row tap, the Appointments
+  screen's post-checkout "View Invoice" SnackBar action, and the
+  notification bell's `paymentRecorded` tap handler (special-cased ahead of
+  its route-string `switch`, since a modal isn't a `context.go` target). The
+  panel's own header also dropped the `TopBarActions` chat-bubble/bell icon
+  pair entirely — those are page-chrome, out of place on a modal dialog,
+  matching every other panel in the app (Register Patient, Add Branch, etc.
+  — none of them carry `TopBarActions` either).
 - **2026-08-15 (Register Patient: centered modal, was a full routed page)**
   — Explicit user instruction. `/patients/register` is no longer a route —
   `register_patient_screen.dart` now exports `showRegisterPatientPanel`

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../shared/utils/async_feedback.dart';
 import '../../../shared/widgets/cliniqnovva_button.dart';
 import '../../../shared/widgets/cliniqnovva_text_field.dart';
+import '../../../shared/widgets/success_dialog.dart';
 import '../models/department_model.dart';
 import '../providers/departments_provider.dart';
 
@@ -76,10 +77,13 @@ class _DepartmentDialogState extends ConsumerState<_DepartmentDialog> {
             ? notifier.rename(widget.department!.id, name)
             : notifier.create(branchId: widget.branchId!, name: name),
         loadingMessage: _isEdit ? 'Saving department…' : 'Adding department…',
-        successMessage: _isEdit ? 'Department saved.' : 'Department added.',
       );
       if (!mounted) return;
       Navigator.of(context).pop();
+      showSuccessDialog(
+        context,
+        message: _isEdit ? 'Department saved.' : 'Department added.',
+      );
     } catch (e) {
       if (!mounted) return;
       setState(() {

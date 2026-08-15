@@ -13,6 +13,8 @@ import '../../../shared/widgets/app_icon.dart';
 import '../../../shared/widgets/app_select.dart';
 import '../../../shared/widgets/cliniqnovva_button.dart';
 import '../../../shared/widgets/cliniqnovva_text_field.dart';
+import '../../../shared/widgets/staff_added_dialog.dart';
+import '../../../shared/widgets/success_dialog.dart';
 import '../../departments/models/department_model.dart';
 import '../../departments/providers/departments_provider.dart';
 import '../models/staff_model.dart';
@@ -162,10 +164,10 @@ class _StaffPanelState extends ConsumerState<_StaffPanel> {
                 : null,
           ),
           loadingMessage: 'Saving staff member…',
-          successMessage: 'Staff member saved.',
         );
         if (!mounted) return;
         Navigator.of(context).pop();
+        showSuccessDialog(context, message: 'Staff member saved.');
       } else {
         final created = await notifier.create(
           email: email,
@@ -183,7 +185,7 @@ class _StaffPanelState extends ConsumerState<_StaffPanel> {
         );
         if (!mounted) return;
         Navigator.of(context).pop();
-        await _showCredentialsDialog(created.email ?? email, password);
+        showStaffAddedDialog(context, email: created.email ?? email, password: password);
       }
     } catch (e) {
       if (!mounted) return;
@@ -192,24 +194,6 @@ class _StaffPanelState extends ConsumerState<_StaffPanel> {
         _error = '$e';
       });
     }
-  }
-
-  Future<void> _showCredentialsDialog(String email, String password) {
-    return showDialog<void>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Staff account created'),
-        content: SelectableText(
-          'Login: $email\nTemp password: $password\n\nShare this with them directly — no email was sent.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('OK'),
-          ),
-        ],
-      ),
-    );
   }
 
   @override

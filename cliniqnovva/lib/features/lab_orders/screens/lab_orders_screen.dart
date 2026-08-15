@@ -1,7 +1,6 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/theme_ext.dart';
 import '../../../shared/utils/async_feedback.dart';
@@ -15,6 +14,7 @@ import '../../../shared/widgets/top_bar_actions.dart';
 import '../../auth/providers/access_control_provider.dart';
 import '../../departments/providers/departments_provider.dart' show activeBranchIdProvider;
 import '../../patients/providers/patients_provider.dart';
+import '../../patients/screens/patient_profile_screen.dart';
 import '../models/lab_order_model.dart';
 import '../providers/lab_orders_provider.dart';
 
@@ -200,7 +200,7 @@ class _WorklistRowState extends ConsumerState<_WorklistRow> {
     final order = widget.order;
     return CliniqnovvaTableRow(
       lastColumnEndPadding: 50,
-      onTap: () => context.push('/patients/${order.patientId}'),
+      onTap: () => showPatientProfilePanel(context, id: order.patientId),
       cells: [
         _PatientNameCell(patientId: order.patientId),
         Text(order.testName, style: TextStyle(color: context.appText)),

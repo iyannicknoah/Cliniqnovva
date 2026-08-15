@@ -9,6 +9,7 @@ import '../../../core/theme/theme_ext.dart';
 import '../../../shared/utils/async_feedback.dart';
 import '../../../shared/widgets/app_icon.dart';
 import '../../../shared/widgets/cliniqnovva_button.dart';
+import '../../../shared/widgets/success_dialog.dart';
 import '../../staff/widgets/add_edit_staff_panel.dart';
 import '../models/branch_model.dart';
 import '../providers/branches_provider.dart';
@@ -88,10 +89,10 @@ class _BranchPanelState extends ConsumerState<_BranchPanel> {
           context,
           () => notifier.updateBranch(widget.branch!.id, form.buildBody()),
           loadingMessage: 'Saving branch…',
-          successMessage: 'Branch saved.',
         );
         if (!mounted) return;
         Navigator.of(context).pop();
+        showSuccessDialog(context, message: 'Branch saved.');
       } else {
         final created = await runWithFeedback(
           context,

@@ -9,14 +9,17 @@ import '../../../shared/utils/async_feedback.dart';
 import '../../../shared/widgets/app_icon.dart';
 import '../../../shared/widgets/cliniqnovva_button.dart';
 import '../../../shared/widgets/cliniqnovva_text_field.dart';
+import '../../../shared/widgets/success_dialog.dart';
 import '../../patients/widgets/patient_form_fields.dart';
 import '../models/inventory_item_model.dart';
 import '../providers/inventory_provider.dart';
 
-/// Part 13 Task 1 — "+ Add Item" slide-out panel, same right-edge pattern as
-/// Part 7's Add/Edit Service. Create when [item] is null, edit otherwise.
-/// Editing never touches quantity — that's Task 3's job (adjust dialog),
-/// so it's always logged with a reason.
+/// Part 13 Task 1 — "+ Add Item" panel. 2026-08-15, explicit user
+/// instruction — switched from a right-edge slide-out to a centered modal
+/// with rounded corners, matching the Register Patient/Add Branch/Invoice
+/// Detail pattern elsewhere in the app. Create when [item] is null, edit
+/// otherwise. Editing never touches quantity — that's Task 3's job (adjust
+/// dialog), so it's always logged with a reason.
 Future<void> showInventoryItemPanel(
   BuildContext context, {
   required String branchId,
@@ -27,19 +30,18 @@ Future<void> showInventoryItemPanel(
     barrierDismissible: true,
     barrierLabel: 'Item',
     barrierColor: Colors.black45,
-    transitionDuration: const Duration(milliseconds: 220),
-    pageBuilder: (context, animation, secondaryAnimation) => Align(
-      alignment: Alignment.centerRight,
+    transitionDuration: const Duration(milliseconds: 200),
+    pageBuilder: (context, animation, secondaryAnimation) => Center(
       child: _ItemPanel(branchId: branchId, item: item),
     ),
     transitionBuilder: (context, animation, secondaryAnimation, child) {
       final curved = CurvedAnimation(parent: animation, curve: Curves.easeOut);
-      return SlideTransition(
-        position: Tween<Offset>(
-          begin: const Offset(1, 0),
-          end: Offset.zero,
-        ).animate(curved),
-        child: child,
+      return FadeTransition(
+        opacity: curved,
+        child: ScaleTransition(
+          scale: Tween<double>(begin: 0.96, end: 1).animate(curved),
+          child: child,
+        ),
       );
     },
   );
@@ -154,10 +156,13 @@ class _ItemPanelState extends ConsumerState<_ItemPanel> {
                 expiryDate: _expiryDate != null ? _isoDate(_expiryDate!) : null,
               ),
         loadingMessage: _isEdit ? 'Saving item…' : 'Adding item…',
-        successMessage: _isEdit ? 'Item saved.' : 'Item added.',
       );
       if (!mounted) return;
       Navigator.of(context).pop();
+      showSuccessDialog(
+        context,
+        message: _isEdit ? 'Item saved.' : 'Item added.',
+      );
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -171,11 +176,16 @@ class _ItemPanelState extends ConsumerState<_ItemPanel> {
   Widget build(BuildContext context) {
     return Material(
       color: context.appCard,
+      borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+      clipBehavior: Clip.antiAlias,
       child: Container(
         width: 420,
-        height: double.infinity,
         decoration: BoxDecoration(
-          border: Border(left: BorderSide(color: context.appBorder)),
+          borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+          border: Border.all(color: context.appBorder),
+        ),
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.85,
         ),
         child: SafeArea(
           child: Padding(

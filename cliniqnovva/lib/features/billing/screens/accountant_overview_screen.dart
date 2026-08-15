@@ -2,7 +2,6 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
@@ -18,6 +17,7 @@ import '../../patients/providers/patients_provider.dart';
 import '../../reports/providers/reports_provider.dart';
 import '../../super_admin/widgets/payment_history_panel.dart' show formatRwf;
 import '../providers/invoices_provider.dart';
+import 'invoice_detail_screen.dart';
 
 const _statusLabels = {
   AppConstants.invoiceUnpaid: 'Unpaid',
@@ -225,7 +225,10 @@ class _OverviewBody extends ConsumerWidget {
                     ),
                     for (final invoice in top)
                       CliniqnovvaTableRow(
-                        onTap: () => context.go('/billing/${invoice.id}'),
+                        onTap: () => showInvoiceDetailPanel(
+                          context,
+                          invoiceId: invoice.id,
+                        ),
                         cells: [
                           _PatientCell(patientId: invoice.patientId),
                           Text(

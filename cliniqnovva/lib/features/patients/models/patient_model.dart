@@ -85,6 +85,7 @@ class PatientModel {
     this.invoiceCount,
     this.isActive = true,
     this.mergedInto,
+    this.linkedAppAccountId,
   });
 
   final String id;
@@ -118,6 +119,13 @@ class PatientModel {
   /// the surviving patient's id.
   final bool isActive;
   final String? mergedInto;
+
+  /// Set once a Patient App account links to this record
+  /// (`patients.service.js#linkPatientAccount`/`getOrCreatePatientRecordForClinic`)
+  /// — null for a walk-in patient who has never opened the mobile app.
+  /// Gates the Patient Profile chat button (2026-08-15): staff can only
+  /// message a patient who can actually receive it there.
+  final String? linkedAppAccountId;
 
   factory PatientModel.fromJson(Map<String, dynamic> json) {
     return PatientModel(
@@ -165,6 +173,7 @@ class PatientModel {
       invoiceCount: json['invoiceCount'] as int?,
       isActive: json['isActive'] as bool? ?? true,
       mergedInto: json['mergedInto'] as String?,
+      linkedAppAccountId: json['linkedAppAccountId'] as String?,
     );
   }
 

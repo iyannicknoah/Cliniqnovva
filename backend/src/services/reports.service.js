@@ -44,6 +44,12 @@ function addToBucket(map, key, amount = 1) {
   map[key] = (map[key] || 0) + amount;
 }
 
+/** Same as addToBucket, one level deeper — map[outerKey][innerKey] += amount. */
+function addToNestedBucket(map, outerKey, innerKey, amount = 1) {
+  const inner = (map[outerKey] ??= {});
+  inner[innerKey] = (inner[innerKey] || 0) + amount;
+}
+
 /**
  * Revenue report (Task 2): daily/weekly/monthly trend (`groupBy`), plus
  * per-branch/per-doctor/per-service breakdowns. `totalCollectedRwf` (cash +
@@ -86,6 +92,14 @@ async function revenue({ clinicId, branchId, dateFrom, dateTo, groupBy = 'day' }
   const byBranch = {};
   const byDoctor = {};
   const byService = {};
+  // byBranchByDate/byDoctorByDate/byServiceByDate (Task: "different dates
+  // for the same doctor are different rows") — same totals as
+  // byBranch/byDoctor/byService, one level deeper by invoice createdAt date,
+  // so the Reports screen can render one row per entity PER DATE instead of
+  // collapsing a whole date range into a single aggregate row.
+  const byBranchByDate = {};
+  const byDoctorByDate = {};
+  const byServiceByDate = {};
   let totalBilledRwf = 0;
   let totalCollectedRwf = 0;
 
@@ -94,12 +108,16 @@ async function revenue({ clinicId, branchId, dateFrom, dateTo, groupBy = 'day' }
     totalBilledRwf += inv.totalAmountRwf || 0;
     totalCollectedRwf += collected;
 
-    addToBucket(trend, bucketKey(inv.createdAt.slice(0, 10), groupBy), collected);
+    const invoiceDate = inv.createdAt.slice(0, 10);
+    addToBucket(trend, bucketKey(invoiceDate, groupBy), collected);
     addToBucket(byBranch, inv.branchId || 'unknown', collected);
+    addToNestedBucket(byBranchByDate, inv.branchId || 'unknown', invoiceDate, collected);
 
     const appt = inv.appointmentId ? appointmentById[inv.appointmentId] : null;
     addToBucket(byDoctor, appt?.doctorId || 'manual', collected);
+    addToNestedBucket(byDoctorByDate, appt?.doctorId || 'manual', invoiceDate, collected);
     addToBucket(byService, appt?.serviceId || 'manual', collected);
+    addToNestedBucket(byServiceByDate, appt?.serviceId || 'manual', invoiceDate, collected);
   }
 
   return {
@@ -113,6 +131,9 @@ async function revenue({ clinicId, branchId, dateFrom, dateTo, groupBy = 'day' }
     byBranch,
     byDoctor,
     byService,
+    byBranchByDate,
+    byDoctorByDate,
+    byServiceByDate,
   };
 }
 

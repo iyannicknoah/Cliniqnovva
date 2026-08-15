@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../../core/services/firebase_service.dart';
 import '../../../core/theme/theme_ext.dart';
@@ -15,6 +14,7 @@ import '../../appointments/models/appointment_model.dart';
 import '../../appointments/providers/appointments_provider.dart';
 import '../../auth/providers/access_control_provider.dart';
 import '../../patients/providers/patients_provider.dart';
+import '../../patients/screens/patient_profile_screen.dart';
 
 const _statusLabels = {
   'pending': 'Pending',
@@ -152,7 +152,10 @@ class _TodayList extends ConsumerWidget {
                           .map(
                             (appt) => CliniqnovvaTableRow(
                               lastColumnEndPadding: 50,
-                              onTap: () => context.go('/patients/${appt.patientId}'),
+                              onTap: () => showPatientProfilePanel(
+                                context,
+                                id: appt.patientId,
+                              ),
                               cells: [
                                 _PatientCell(patientId: appt.patientId),
                                 Text('${appt.startTime}–${appt.endTime}', style: TextStyle(color: context.appText)),

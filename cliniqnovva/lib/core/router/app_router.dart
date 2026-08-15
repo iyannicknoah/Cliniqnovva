@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/appointments/screens/appointments_screen.dart';
-import '../../features/appointments/screens/booking_screen.dart';
 import '../../features/audit_log/screens/audit_log_screen.dart' show AuditLogScreen;
 import '../../features/auth/providers/access_control_provider.dart';
 import '../../features/auth/providers/auth_provider.dart';
@@ -12,7 +11,6 @@ import '../../features/auth/screens/login_screen.dart';
 import '../../features/auth/screens/suspended_screen.dart';
 import '../../features/billing/screens/accountant_overview_screen.dart';
 import '../../features/billing/screens/billing_screen.dart';
-import '../../features/billing/screens/invoice_detail_screen.dart';
 import '../../features/chat/screens/chat_inbox_screen.dart';
 import '../../features/chat/screens/chat_thread_screen.dart';
 import '../../features/dashboard/screens/dashboard_screen.dart';
@@ -30,7 +28,6 @@ import '../../features/nurse/screens/nurse_today_screen.dart';
 import '../../features/clinics/screens/branches_screen.dart';
 import '../../features/clinics/screens/onboarding_screen.dart';
 import '../../features/patients/screens/merge_patients_screen.dart';
-import '../../features/patients/screens/patient_profile_screen.dart';
 import '../../features/patients/screens/patients_screen.dart';
 import '../../features/reports/screens/reports_screen.dart';
 import '../../features/reviews/screens/popular_clinics_screen.dart';
@@ -281,19 +278,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             path: '/patients/merge',
             builder: (context, state) => const MergePatientsScreen(),
           ),
-          GoRoute(
-            path: '/patients/:id',
-            builder: (context, state) =>
-                PatientProfileScreen(id: state.pathParameters['id']),
-          ),
 
           GoRoute(
             path: '/appointments',
             builder: (context, state) => const AppointmentsScreen(),
-          ),
-          GoRoute(
-            path: '/appointments/book',
-            builder: (context, state) => const BookingScreen(),
           ),
 
           GoRoute(
@@ -303,12 +291,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/billing',
             builder: (context, state) => const BillingScreen(),
-          ),
-          GoRoute(
-            path: '/billing/:invoiceId',
-            builder: (context, state) => InvoiceDetailScreen(
-              invoiceId: state.pathParameters['invoiceId'],
-            ),
           ),
 
           GoRoute(

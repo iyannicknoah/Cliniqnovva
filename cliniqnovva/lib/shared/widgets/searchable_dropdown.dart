@@ -39,6 +39,7 @@ class SearchableDropdown extends StatefulWidget {
     required this.items,
     required this.onChanged,
     this.itemLabels,
+    this.itemSubLabels,
   });
 
   final String? label;
@@ -47,6 +48,12 @@ class SearchableDropdown extends StatefulWidget {
   final List<String> items;
   final ValueChanged<String?> onChanged;
   final Map<String, String>? itemLabels;
+
+  /// Optional secondary text shown right-aligned on each option row (2026-08-15,
+  /// explicit user instruction — doctor specialty on the Book Appointment
+  /// picker). Absent/blank for an id just renders as a plain single-label
+  /// row, same as before this existed.
+  final Map<String, String>? itemSubLabels;
 
   @override
   State<SearchableDropdown> createState() => _SearchableDropdownState();
@@ -215,6 +222,7 @@ class _SearchableDropdownState extends State<SearchableDropdown> {
                               itemCount: list.length,
                               itemBuilder: (context, index) {
                                 final option = list[index];
+                                final subLabel = widget.itemSubLabels?[option];
                                 return InkWell(
                                   onTap: () => onSelected(option),
                                   child: Padding(
@@ -222,13 +230,31 @@ class _SearchableDropdownState extends State<SearchableDropdown> {
                                       horizontal: 14,
                                       vertical: 12,
                                     ),
-                                    child: Text(
-                                      _labelFor(option),
-                                      overflow: TextOverflow.ellipsis,
-                                      style: TextStyle(
-                                        color: context.appText,
-                                        fontSize: 14,
-                                      ),
+                                    child: Row(
+                                      children: [
+                                        Expanded(
+                                          child: Text(
+                                            _labelFor(option),
+                                            overflow: TextOverflow.ellipsis,
+                                            style: TextStyle(
+                                              color: context.appText,
+                                              fontSize: 14,
+                                            ),
+                                          ),
+                                        ),
+                                        if (subLabel != null &&
+                                            subLabel.isNotEmpty) ...[
+                                          const SizedBox(width: 8),
+                                          Text(
+                                            subLabel,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: TextStyle(
+                                              color: context.appSubtext,
+                                              fontSize: 12.5,
+                                            ),
+                                          ),
+                                        ],
+                                      ],
                                     ),
                                   ),
                                 );

@@ -8,7 +8,21 @@ const { db } = require('../config/firebase-admin');
 const notificationsService = require('./notifications.service');
 const auditLogService = require('./auditLog.service');
 
-const INSURANCE_SCHEMES = ['mutuelle', 'rssb', 'private', 'none'];
+const INSURANCE_SCHEMES = [
+  'mutuelle',
+  'rssb',
+  'radiant',
+  'oldMutual',
+  'britam',
+  'sonarwa',
+  'sanlam',
+  'prime',
+  'mua',
+  'bkGeneral',
+  'mayfair',
+  'private',
+  'none',
+];
 
 function httpError(status, message) {
   const err = new Error(message);

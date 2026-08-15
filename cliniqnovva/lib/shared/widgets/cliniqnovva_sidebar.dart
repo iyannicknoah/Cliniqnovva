@@ -262,7 +262,49 @@ class _SidebarNavTile extends StatelessWidget {
                 borderRadius: BorderRadius.circular(14),
               ),
               child: collapsed
-                  ? Center(child: icon)
+                  ? Center(
+                      child: Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          icon,
+                          // Collapsed rail has no label row to hang the full
+                          // pill badge off of (see the expanded branch below)
+                          // — a small corner dot on the icon itself instead,
+                          // same red/white styling as the notification
+                          // bell's unread-count dot.
+                          if (badgeCount > 0)
+                            Positioned(
+                              right: -7,
+                              top: -5,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 4,
+                                ),
+                                constraints: const BoxConstraints(
+                                  minWidth: 15,
+                                  minHeight: 15,
+                                ),
+                                decoration: const BoxDecoration(
+                                  color: AppColors.brightRed,
+                                  borderRadius: BorderRadius.all(
+                                    Radius.circular(20),
+                                  ),
+                                ),
+                                child: Text(
+                                  badgeCount > 9 ? '9+' : '$badgeCount',
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 8.5,
+                                    fontWeight: FontWeight.w700,
+                                    height: 1.3,
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    )
                   : Row(
                       children: [
                         icon,

@@ -88,9 +88,32 @@ abstract final class AppConstants {
   static const String insuranceRssb = 'rssb';
   static const String insurancePrivate = 'private';
   static const String insuranceNone = 'none';
+
+  // Named private insurers (2026-08-15) — offered alongside the generic
+  // insurancePrivate catch-all, not instead of it, so existing invoices
+  // recorded under 'private' and any insurer not in this list still work.
+  static const String insuranceRadiant = 'radiant';
+  static const String insuranceOldMutual = 'oldMutual';
+  static const String insuranceBritam = 'britam';
+  static const String insuranceSonarwa = 'sonarwa';
+  static const String insuranceSanlam = 'sanlam';
+  static const String insurancePrime = 'prime';
+  static const String insuranceMua = 'mua';
+  static const String insuranceBkGeneral = 'bkGeneral';
+  static const String insuranceMayfair = 'mayfair';
+
   static const List<String> insuranceSchemes = [
     insuranceMutuelle,
     insuranceRssb,
+    insuranceRadiant,
+    insuranceOldMutual,
+    insuranceBritam,
+    insuranceSonarwa,
+    insuranceSanlam,
+    insurancePrime,
+    insuranceMua,
+    insuranceBkGeneral,
+    insuranceMayfair,
     insurancePrivate,
     insuranceNone,
   ];

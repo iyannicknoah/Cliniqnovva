@@ -5,14 +5,15 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/theme_ext.dart';
+import '../../../shared/widgets/app_icon.dart';
 import '../../../shared/widgets/avatar_widget.dart';
 import '../../../shared/widgets/cliniqnovva_button.dart';
 import '../../../shared/widgets/cliniqnovva_text_field.dart';
 import '../../../shared/widgets/loading_widget.dart';
 import '../../../shared/widgets/searchable_dropdown.dart';
-import '../../../shared/widgets/top_bar_actions.dart';
 import '../../auth/providers/access_control_provider.dart';
 import '../../departments/providers/departments_provider.dart';
 import '../../departments/providers/services_provider.dart';
@@ -20,61 +21,102 @@ import '../../departments/widgets/branch_selector.dart';
 import '../../patients/providers/patients_provider.dart';
 import '../../patients/screens/register_patient_screen.dart';
 import '../../patients/widgets/patient_form_fields.dart';
+import '../../staff/models/staff_model.dart';
 import '../../staff/providers/staff_provider.dart';
 import '../models/appointment_model.dart';
 import '../providers/appointments_provider.dart';
 
-/// Part 11 Task 1 — /appointments/book. Every booking, regardless of who
-/// makes it, goes through this screen to POST /api/appointments/book — the
-/// one shared booking endpoint (Task 5) a future Patient App will reuse
-/// unchanged.
-class BookingScreen extends ConsumerWidget {
-  const BookingScreen({super.key});
+String _isoDate(DateTime d) =>
+    '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+
+/// Part 11 Task 1. 2026-08-15, explicit user instruction — switched from a
+/// full routed page (`/appointments/book`) to the same centered modal
+/// pattern as Register Patient/Patient Profile (`Material` +
+/// `AppTheme.cardRadius` corners, fade+scale transition). Every booking,
+/// regardless of who makes it, still goes through this dialog to POST
+/// /api/appointments/book — the one shared booking endpoint (Task 5) a
+/// future Patient App will reuse unchanged.
+Future<void> showBookingPanel(BuildContext context) {
+  return showGeneralDialog(
+    context: context,
+    barrierDismissible: true,
+    barrierLabel: 'Book Appointment',
+    barrierColor: Colors.black45,
+    transitionDuration: const Duration(milliseconds: 200),
+    pageBuilder: (context, animation, secondaryAnimation) =>
+        const Center(child: _BookingPanel()),
+    transitionBuilder: (context, animation, secondaryAnimation, child) {
+      final curved = CurvedAnimation(parent: animation, curve: Curves.easeOut);
+      return FadeTransition(
+        opacity: curved,
+        child: ScaleTransition(
+          scale: Tween<double>(begin: 0.96, end: 1).animate(curved),
+          child: child,
+        ),
+      );
+    },
+  );
+}
+
+class _BookingPanel extends ConsumerWidget {
+  const _BookingPanel();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final claims = ref.watch(userClaimsProvider);
-    final queryParams = GoRouterState.of(context).uri.queryParameters;
 
-    return Scaffold(
-      backgroundColor: context.appBg,
-      body: claims.when(
-        loading: () => const LoadingWidget(),
-        error: (e, _) => Center(
-          child: Text('$e', style: TextStyle(color: context.appSubtext)),
+    return Material(
+      color: context.appCard,
+      borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+      clipBehavior: Clip.antiAlias,
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+          border: Border.all(color: context.appBorder),
         ),
-        data: (data) {
-          final role = data?['role'] as String?;
-          final isOrgAdmin = role == AppConstants.roleClinicAdmin;
-          final ownBranchId = data?['branchId'] as String?;
-          return _BookingForm(
-            branchId: isOrgAdmin ? null : ownBranchId,
-            showBranchSelector: isOrgAdmin,
-            initialPatientId: queryParams['patientId'],
-          );
-        },
+        constraints: BoxConstraints(
+          maxWidth: 640,
+          maxHeight: MediaQuery.of(context).size.height * 0.85,
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: claims.when(
+            loading: () => const Padding(
+              padding: EdgeInsets.all(60),
+              child: LoadingWidget(),
+            ),
+            error: (e, _) => Padding(
+              padding: const EdgeInsets.all(24),
+              child: Text('$e', style: TextStyle(color: context.appSubtext)),
+            ),
+            data: (data) {
+              final role = data?['role'] as String?;
+              final isOrgAdmin = role == AppConstants.roleClinicAdmin;
+              final ownBranchId = data?['branchId'] as String?;
+              return _BookingForm(
+                branchId: isOrgAdmin ? null : ownBranchId,
+                showBranchSelector: isOrgAdmin,
+              );
+            },
+          ),
+        ),
       ),
     );
   }
 }
 
 class _BookingForm extends ConsumerStatefulWidget {
-  const _BookingForm({
-    required this.branchId,
-    required this.showBranchSelector,
-    this.initialPatientId,
-  });
+  const _BookingForm({required this.branchId, required this.showBranchSelector});
 
   final String? branchId;
   final bool showBranchSelector;
-  final String? initialPatientId;
 
   @override
   ConsumerState<_BookingForm> createState() => _BookingFormState();
 }
 
 class _BookingFormState extends ConsumerState<_BookingForm> {
-  late String? _patientId = widget.initialPatientId;
+  String? _patientId;
   final _patientSearchController = TextEditingController();
   String _patientQuery = '';
 
@@ -153,6 +195,7 @@ class _BookingFormState extends ConsumerState<_BookingForm> {
             endTime: slot.endTime,
           );
       if (!mounted) return;
+      Navigator.of(context).pop();
       context.go('/appointments?justBooked=${appointment.id}');
     } catch (e) {
       if (!mounted) return;
@@ -167,43 +210,39 @@ class _BookingFormState extends ConsumerState<_BookingForm> {
     }
   }
 
-  static String _isoDate(DateTime d) =>
-      '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
-
   @override
   Widget build(BuildContext context) {
     final effectiveBranchId =
         widget.branchId ?? ref.watch(activeBranchIdProvider);
 
-    return Align(
-      alignment: Alignment.topCenter,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 640),
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(40),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    return SingleChildScrollView(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      'Book Appointment',
-                      style: TextStyle(
-                        color: context.appText,
-                        fontSize: 22,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
+              Expanded(
+                child: Text(
+                  'Book Appointment',
+                  style: TextStyle(
+                    color: context.appText,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
                   ),
-                  if (widget.showBranchSelector) ...[
-                    const BranchSelector(),
-                    const SizedBox(width: 12),
-                  ],
-                  const TopBarActions(),
-                ],
+                ),
               ),
-              const SizedBox(height: 24),
+              if (widget.showBranchSelector) ...[
+                const BranchSelector(),
+                const SizedBox(width: 12),
+              ],
+              IconButton(
+                icon: const AppIcon(AppIcons.close),
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
               if (effectiveBranchId == null)
                 Text(
                   'empty_pick_branch'.tr(),
@@ -255,8 +294,13 @@ class _BookingFormState extends ConsumerState<_BookingForm> {
                       branchId: effectiveBranchId,
                       departmentId: _departmentId!,
                       doctorId: _doctorId,
+                      selectedDate: _date,
                       onChanged: (id) => setState(() {
                         _doctorId = id;
+                        _resetDownstreamOfDoctorOrDate();
+                      }),
+                      onDaySelected: (date) => setState(() {
+                        _date = date;
                         _resetDownstreamOfDoctorOrDate();
                       }),
                     ),
@@ -343,8 +387,6 @@ class _BookingFormState extends ConsumerState<_BookingForm> {
               const SizedBox(height: 24),
             ],
           ),
-        ),
-      ),
     );
   }
 }
@@ -416,10 +458,17 @@ class _PatientPicker extends ConsumerWidget {
               width: 170,
               child: CliniqnovvaButton.text(
                 label: '+ Register new',
-                onPressed: () => showRegisterPatientPanel(
-                  context,
-                  returnTo: '/appointments/book',
-                ),
+                // 2026-08-15 — Register Patient is a dialog too now, so this
+                // just nests it on top of the booking dialog and gets the
+                // new patient id back directly instead of round-tripping
+                // through a route (`returnTo` no longer exists).
+                onPressed: () async {
+                  final patientId = await showRegisterPatientPanel(
+                    context,
+                    returnPatientId: true,
+                  );
+                  if (patientId != null) onSelected(patientId);
+                },
               ),
             ),
           ],
@@ -627,18 +676,60 @@ class _DepartmentAndService extends ConsumerWidget {
   }
 }
 
+const _weekdayOrder = [
+  'monday',
+  'tuesday',
+  'wednesday',
+  'thursday',
+  'friday',
+  'saturday',
+  'sunday',
+];
+
+const _weekdayShortLabels = {
+  'monday': 'Mon',
+  'tuesday': 'Tue',
+  'wednesday': 'Wed',
+  'thursday': 'Thu',
+  'friday': 'Fri',
+  'saturday': 'Sat',
+  'sunday': 'Sun',
+};
+
+/// The next date (today included) that falls on [day] ('monday'..'sunday').
+DateTime _nextDateForWeekday(String day) {
+  final targetIndex = _weekdayOrder.indexOf(day);
+  if (targetIndex == -1) return DateTime.now();
+  final now = DateTime.now();
+  final diff = (targetIndex - (now.weekday - 1) + 7) % 7;
+  return DateTime(now.year, now.month, now.day + diff);
+}
+
+/// 2026-08-15, explicit user instruction — once a doctor is picked, ALL of
+/// their slots show right under the search field: not a single date's
+/// bookable grid (which reads as broken on a day they don't work at all —
+/// the exact complaint that led to this fix), but every entry in
+/// [StaffModel.schedule], their actual recurring weekly availability.
+/// Tapping a day is a shortcut that jumps [selectedDate] to its next
+/// occurrence (today if today qualifies) via [onDaySelected] — step 4's
+/// grid then shows that day's real bookable slots (service duration,
+/// existing bookings, and blocked time all factored in, same as always).
 class _DoctorPicker extends ConsumerWidget {
   const _DoctorPicker({
     required this.branchId,
     required this.departmentId,
     required this.doctorId,
+    required this.selectedDate,
     required this.onChanged,
+    required this.onDaySelected,
   });
 
   final String branchId;
   final String departmentId;
   final String? doctorId;
+  final DateTime? selectedDate;
   final ValueChanged<String?> onChanged;
+  final ValueChanged<DateTime> onDaySelected;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -660,13 +751,103 @@ class _DoctorPicker extends ConsumerWidget {
             style: TextStyle(color: context.appSubtext),
           );
         }
-        return SearchableDropdown(
-          label: 'Doctor',
-          value: doctorId,
-          hint: 'Select doctor',
-          items: doctors.map((d) => d.id).toList(),
-          itemLabels: {for (final d in doctors) d.id: d.name},
-          onChanged: onChanged,
+        StaffModel? selectedDoctor;
+        for (final d in doctors) {
+          if (d.id == doctorId) {
+            selectedDoctor = d;
+            break;
+          }
+        }
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SearchableDropdown(
+              label: 'Doctor',
+              value: doctorId,
+              hint: 'Select doctor',
+              items: doctors.map((d) => d.id).toList(),
+              itemLabels: {for (final d in doctors) d.id: d.name},
+              // 2026-08-15, explicit user instruction — specialty shown on
+              // the right of each option so admins/receptionists can tell
+              // doctors sharing a department apart at a glance.
+              itemSubLabels: {
+                for (final d in doctors) d.id: d.specialty ?? '',
+              },
+              onChanged: onChanged,
+            ),
+            if (selectedDoctor != null) ...[
+              const SizedBox(height: 16),
+              Text(
+                'Weekly schedule',
+                style: TextStyle(
+                  color: context.appSubtext,
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Builder(
+                builder: (context) {
+                  final entries = [...selectedDoctor!.schedule]
+                    ..sort(
+                      (a, b) => _weekdayOrder
+                          .indexOf(a.day)
+                          .compareTo(_weekdayOrder.indexOf(b.day)),
+                    );
+                  if (entries.isEmpty) {
+                    return Text(
+                      'No weekly schedule set for this doctor yet.',
+                      style: TextStyle(color: context.appSubtext),
+                    );
+                  }
+                  return Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: entries.map((entry) {
+                      final entryDate = _nextDateForWeekday(entry.day);
+                      final isSelected =
+                          selectedDate != null &&
+                          _isoDate(selectedDate!) == _isoDate(entryDate);
+                      return InkWell(
+                        borderRadius: BorderRadius.circular(10),
+                        onTap: () => onDaySelected(entryDate),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 10,
+                          ),
+                          decoration: BoxDecoration(
+                            color: isSelected
+                                ? context.appPrimary
+                                : context.appCard,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: isSelected
+                                  ? context.appPrimary
+                                  : context.appBorder,
+                            ),
+                          ),
+                          child: Text(
+                            '${_weekdayShortLabels[entry.day] ?? entry.day} · '
+                            '${entry.startTime}–${entry.endTime}',
+                            style: TextStyle(
+                              color: isSelected
+                                  ? (context.isDark
+                                        ? Colors.black
+                                        : Colors.white)
+                                  : context.appText,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  );
+                },
+              ),
+            ],
+          ],
         );
       },
     );

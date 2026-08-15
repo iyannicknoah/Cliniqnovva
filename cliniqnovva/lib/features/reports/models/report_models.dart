@@ -4,6 +4,14 @@
 Map<String, int> _intMap(dynamic json) => (json as Map<String, dynamic>? ?? {})
     .map((k, v) => MapEntry(k, (v as num).toInt()));
 
+/// One level deeper than [_intMap] — entityId -> {date -> amount}, backing
+/// the Reports screen's "different dates for the same doctor are different
+/// rows" breakdown tables (2026-08-15).
+Map<String, Map<String, int>> _nestedIntMap(dynamic json) =>
+    (json as Map<String, dynamic>? ?? {}).map(
+      (k, v) => MapEntry(k, _intMap(v)),
+    );
+
 class RevenueReport {
   const RevenueReport({
     required this.dateFrom,
@@ -16,6 +24,9 @@ class RevenueReport {
     required this.byBranch,
     required this.byDoctor,
     required this.byService,
+    required this.byBranchByDate,
+    required this.byDoctorByDate,
+    required this.byServiceByDate,
   });
 
   final String dateFrom;
@@ -28,6 +39,9 @@ class RevenueReport {
   final Map<String, int> byBranch;
   final Map<String, int> byDoctor;
   final Map<String, int> byService;
+  final Map<String, Map<String, int>> byBranchByDate;
+  final Map<String, Map<String, int>> byDoctorByDate;
+  final Map<String, Map<String, int>> byServiceByDate;
 
   factory RevenueReport.fromJson(Map<String, dynamic> json) => RevenueReport(
     dateFrom: json['dateFrom'] as String? ?? '',
@@ -40,6 +54,9 @@ class RevenueReport {
     byBranch: _intMap(json['byBranch']),
     byDoctor: _intMap(json['byDoctor']),
     byService: _intMap(json['byService']),
+    byBranchByDate: _nestedIntMap(json['byBranchByDate']),
+    byDoctorByDate: _nestedIntMap(json['byDoctorByDate']),
+    byServiceByDate: _nestedIntMap(json['byServiceByDate']),
   );
 }
 
