@@ -398,6 +398,18 @@ growth/trend chart rather than introducing a new chart style or color.
 
 ## Change log
 
+- **2026-08-15 (Register Patient: disabled while "All branches" is
+  selected)** — Explicit user instruction, follow-up to the modal
+  conversion above. A patient always belongs to exactly one branch
+  (`PatientModel.branchId` is singular) — submitting with "All branches"
+  active previously resolved to a null branch and failed server-side with
+  "No branch to register this patient under," with no indication why until
+  you hit Submit. `_RegisterForm.build` now watches `activeBranchIdProvider`
+  (falls back to it only for org admins, same as `_submit` already did) and
+  disables the Register button whenever it's null, with a small
+  `appSubtext` hint explaining why ("All branches" can't be used to
+  register a patient). Non-org-admins are unaffected — `widget.branchId` is
+  always a real branch for them already.
 - **2026-08-15 (Patients table: 150px right padding on "Last visit")** —
   Explicit user instruction, same `lastColumnEndPadding` mechanism as the
   Actions-column padding above but a different table and a different pixel

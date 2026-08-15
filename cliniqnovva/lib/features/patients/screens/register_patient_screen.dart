@@ -319,6 +319,16 @@ class _RegisterFormState extends ConsumerState<_RegisterForm> {
 
   @override
   Widget build(BuildContext context) {
+    // 2026-08-15, explicit user instruction — Register is disabled while
+    // "All branches" is the active filter, since a patient always belongs
+    // to exactly one branch and submitting in that state would otherwise
+    // just fail with "No branch to register this patient under." For a
+    // non-org-admin, `widget.branchId` is already a real branch, so this is
+    // always false for them.
+    final effectiveBranchId =
+        widget.branchId ?? ref.watch(activeBranchIdProvider);
+    final noBranchSelected = effectiveBranchId == null;
+
     return Padding(
       padding: const EdgeInsets.all(24),
       child: SingleChildScrollView(
@@ -441,6 +451,13 @@ class _RegisterFormState extends ConsumerState<_RegisterForm> {
                 ),
               ),
             ],
+            if (noBranchSelected) ...[
+              const SizedBox(height: 16),
+              Text(
+                'Select a specific branch above — "All branches" can\'t be used to register a patient.',
+                style: TextStyle(color: context.appSubtext, fontSize: 12.5),
+              ),
+            ],
             const SizedBox(height: 24),
             Row(
               children: [
@@ -455,7 +472,7 @@ class _RegisterFormState extends ConsumerState<_RegisterForm> {
                   child: CliniqnovvaButton(
                     label: 'Register',
                     isLoading: _saving,
-                    onPressed: _saving ? null : _submit,
+                    onPressed: _saving || noBranchSelected ? null : _submit,
                   ),
                 ),
               ],
