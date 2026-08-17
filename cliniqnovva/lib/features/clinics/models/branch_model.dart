@@ -104,6 +104,10 @@ class BranchModel {
     this.publicEmail,
     this.publicAddress,
     this.publicImageKey,
+    this.publicServiceIds,
+    this.publicDoctorIds,
+    this.payoutMethod,
+    this.payoutDetails,
   });
 
   final String id;
@@ -152,6 +156,26 @@ class BranchModel {
   /// backend stores (see storage.service.js doc comment).
   final String? publicImageKey;
 
+  /// "Go Public" wizard (2026-08-16) steps 2-4 — null means that step has
+  /// never been saved (distinct from an empty list/no method chosen, which
+  /// means the step WAS saved with nothing selected). See
+  /// `go_public_provider.dart#GoPublicSteps` for how these compute the
+  /// wizard's tick marks and the sidebar's "finish setup" reminder.
+  final List<String>? publicServiceIds;
+  final List<String>? publicDoctorIds;
+
+  /// One of 'momo' / 'airtel' / 'bank', or null if payout hasn't been set
+  /// up yet.
+  final String? payoutMethod;
+
+  /// Shape depends on [payoutMethod] — momo/airtel: {phone, accountName};
+  /// bank: {bankName, accountNumber, accountName}. Never verified against a
+  /// real payment provider (the wizard's payout step warns the clinic to
+  /// double-check before confirming) and never exposed to the Patient App
+  /// (browse.service.js#toPublicBranch is an explicit allowlist that
+  /// doesn't include it).
+  final Map<String, String>? payoutDetails;
+
   factory BranchModel.fromFirestore(String id, Map<String, dynamic> data) {
     return BranchModel(
       id: id,
@@ -195,6 +219,16 @@ class BranchModel {
       publicEmail: data['publicEmail'] as String?,
       publicAddress: data['publicAddress'] as String?,
       publicImageKey: data['publicImageKey'] as String?,
+      publicServiceIds: (data['publicServiceIds'] as List<dynamic>?)
+          ?.map((e) => e.toString())
+          .toList(),
+      publicDoctorIds: (data['publicDoctorIds'] as List<dynamic>?)
+          ?.map((e) => e.toString())
+          .toList(),
+      payoutMethod: data['payoutMethod'] as String?,
+      payoutDetails: (data['payoutDetails'] as Map<String, dynamic>?)?.map(
+        (k, v) => MapEntry(k, v.toString()),
+      ),
     );
   }
 
@@ -217,6 +251,10 @@ class BranchModel {
     'publicEmail': publicEmail,
     'publicAddress': publicAddress,
     'publicImageKey': publicImageKey,
+    'publicServiceIds': publicServiceIds,
+    'publicDoctorIds': publicDoctorIds,
+    'payoutMethod': payoutMethod,
+    'payoutDetails': payoutDetails,
   };
 
   factory BranchModel.fromJson(Map<String, dynamic> json) =>

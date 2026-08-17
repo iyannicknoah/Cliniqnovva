@@ -32,6 +32,14 @@ const WRITABLE_FIELDS = [
   'publicEmail',
   'publicAddress',
   'publicImageKey',
+  // Admin Web Dashboard's "Go Public" wizard (2026-08-16) — extends the
+  // onboarding-era public-profile fields above with 3 more steps. Kept as
+  // their own fields rather than folding into the public-profile object so
+  // each step can be saved independently ("Save and Next" per step).
+  'publicServiceIds',
+  'publicDoctorIds',
+  'payoutMethod',
+  'payoutDetails',
 ];
 
 const PUBLIC_PROFILE_REQUIRED_FIELDS = [
@@ -42,7 +50,41 @@ const PUBLIC_PROFILE_REQUIRED_FIELDS = [
   'publicImageKey',
 ];
 
+const PAYOUT_METHODS = ['momo', 'airtel', 'bank'];
+
+// Required keys of `payoutDetails`, per `payoutMethod` — momo/airtel are a
+// phone number + the name on that account; bank needs enough to actually
+// route a transfer. None of this is verified against a real payment
+// provider (explicit user instruction — the wizard's own payout step warns
+// the clinic to double-check before confirming).
+const PAYOUT_DETAIL_FIELDS = {
+  momo: ['phone', 'accountName'],
+  airtel: ['phone', 'accountName'],
+  bank: ['bankName', 'accountNumber', 'accountName'],
+};
+
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/**
+ * Validates `payoutDetails` against whichever `payoutMethod` is in effect
+ * (the merged view, same "existing doc + this call" logic as the
+ * isPublic gate below). Both fields travel together — a `payoutMethod`
+ * without matching `payoutDetails` (or vice versa) is never valid.
+ */
+function assertValidPayout(merged) {
+  if (merged.payoutMethod === undefined || merged.payoutMethod === null) return;
+  if (!PAYOUT_METHODS.includes(merged.payoutMethod)) {
+    throw httpError(400, `payoutMethod must be one of: ${PAYOUT_METHODS.join(', ')}`);
+  }
+  const details = merged.payoutDetails;
+  if (!details || typeof details !== 'object') {
+    throw httpError(400, 'payoutDetails is required when payoutMethod is set');
+  }
+  const missing = PAYOUT_DETAIL_FIELDS[merged.payoutMethod].filter((f) => !details[f]);
+  if (missing.length > 0) {
+    throw httpError(400, `payoutDetails for ${merged.payoutMethod} is missing: ${missing.join(', ')}`);
+  }
+}
 
 // Working-hours only — the subset a Branch Admin may edit on their own
 // branch (Part 6 Task 3: "editable working hours only"). holidayOverrides
@@ -213,6 +255,23 @@ async function update(id, fields, { actorId, actorRole, scope }) {
   if ('holidayOverrides' in fields && fields.holidayOverrides !== null && !Array.isArray(fields.holidayOverrides)) {
     throw httpError(400, 'holidayOverrides must be an array of holiday ids');
   }
+  if (
+    'publicServiceIds' in fields &&
+    fields.publicServiceIds !== null &&
+    (!Array.isArray(fields.publicServiceIds) || fields.publicServiceIds.some((v) => typeof v !== 'string'))
+  ) {
+    throw httpError(400, 'publicServiceIds must be an array of service ids');
+  }
+  if (
+    'publicDoctorIds' in fields &&
+    fields.publicDoctorIds !== null &&
+    (!Array.isArray(fields.publicDoctorIds) || fields.publicDoctorIds.some((v) => typeof v !== 'string'))
+  ) {
+    throw httpError(400, 'publicDoctorIds must be an array of doctor ids');
+  }
+  if ('payoutMethod' in fields || 'payoutDetails' in fields) {
+    assertValidPayout({ ...branch, ...fields });
+  }
   if (fields.isPublic === true) {
     // Checked against the MERGED view (existing doc + this call's fields),
     // not just this call's body — a public-profile field set in an earlier
@@ -226,6 +285,19 @@ async function update(id, fields, { actorId, actorRole, scope }) {
     }
     if (!EMAIL_PATTERN.test(merged.publicEmail)) {
       throw httpError(400, 'publicEmail must be a valid email address');
+    }
+    // "Go Public" wizard (2026-08-16) — the 3 steps beyond the original
+    // public-profile ones are required too, same "half-finished is worse
+    // than not public" reasoning as the profile-fields check above.
+    if (!Array.isArray(merged.publicServiceIds)) {
+      throw httpError(400, 'To go public, choose which services to show (even an empty selection must be saved)');
+    }
+    if (!Array.isArray(merged.publicDoctorIds)) {
+      throw httpError(400, 'To go public, choose which doctors to show (even an empty selection must be saved)');
+    }
+    assertValidPayout(merged);
+    if (!merged.payoutMethod) {
+      throw httpError(400, 'To go public, set up payout details');
     }
   }
 

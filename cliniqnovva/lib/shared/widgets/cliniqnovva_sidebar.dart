@@ -37,6 +37,7 @@ class SidebarNavItem {
     required this.route,
     required this.allowedRoles,
     this.badgeCount,
+    this.warning = false,
   });
 
   final String label;
@@ -44,6 +45,14 @@ class SidebarNavItem {
   final String route;
   final List<String> allowedRoles;
   final int? badgeCount;
+
+  /// 2026-08-16 — an amber "needs attention" dot instead of [badgeCount]'s
+  /// red numeric pill. Used by the "Go Public" pinned item (see
+  /// [CliniqnovvaSidebar.pinnedItem]) to remind an admin who saved some
+  /// wizard steps but hasn't finished — a count doesn't mean anything there,
+  /// just "come back and finish this". Mutually exclusive with [badgeCount]
+  /// in practice (no current item sets both).
+  final bool warning;
 }
 
 /// The single sidebar component for the Admin Web Dashboard surface —
@@ -68,6 +77,7 @@ class CliniqnovvaSidebar extends ConsumerWidget {
     required this.userRoleLabel,
     this.userPhotoUrl,
     required this.onNavTap,
+    this.pinnedItem,
   });
 
   final List<SidebarNavItem> items;
@@ -77,6 +87,14 @@ class CliniqnovvaSidebar extends ConsumerWidget {
   final String userRoleLabel;
   final String? userPhotoUrl;
   final ValueChanged<String> onNavTap;
+
+  /// 2026-08-16, explicit user instruction — the "Go Public" nav link
+  /// "has to be in one column with that bottom profile above the profile,
+  /// this means this will not be scrollable". Rendered as its own
+  /// `_SidebarNavTile` between the scrollable nav `ListView` and
+  /// `_ProfileChip`, inside this widget's own fixed `Column` — never part
+  /// of the `ListView`'s scroll region, unlike every item in [items].
+  final SidebarNavItem? pinnedItem;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -193,11 +211,36 @@ class CliniqnovvaSidebar extends ConsumerWidget {
               }).toList(),
             ),
           ),
+          if (pinnedItem != null) ...[
+            // 2026-08-17, explicit user instruction — the divider moved up
+            // here, above the pinned "Go Public" item (previously the
+            // profile chip's own top border, sitting below it instead; see
+            // `_ProfileChip.showTopBorder`).
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: collapsed ? 8 : 10),
+              child: Divider(height: 1, thickness: 1, color: context.appBorder),
+            ),
+            const SizedBox(height: 10),
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: collapsed ? 8 : 10),
+              child: _SidebarNavTile(
+                item: pinnedItem!,
+                active: pinnedItem!.route == currentRoute,
+                collapsed: collapsed,
+                pinned: true,
+                onTap: () => onNavTap(pinnedItem!.route),
+              ),
+            ),
+          ],
           _ProfileChip(
             userName: userName,
             userRoleLabel: userRoleLabel,
             userPhotoUrl: userPhotoUrl,
             collapsed: collapsed,
+            // No divider needed between the profile chip and the item above
+            // it when "Go Public" is pinned — that divider now sits above
+            // "Go Public" instead (see above).
+            showTopBorder: pinnedItem == null,
           ),
         ],
       ),
@@ -211,12 +254,19 @@ class _SidebarNavTile extends StatelessWidget {
     required this.active,
     required this.collapsed,
     required this.onTap,
+    this.pinned = false,
   });
 
   final SidebarNavItem item;
   final bool active;
   final bool collapsed;
   final VoidCallback onTap;
+
+  /// True only for the pinned "Go Public" item (2026-08-17, explicit user
+  /// instruction) — solid primary-color background with white icon/text
+  /// regardless of [active], and a slightly taller tap target than regular
+  /// nav rows.
+  final bool pinned;
 
   @override
   Widget build(BuildContext context) {
@@ -228,129 +278,186 @@ class _SidebarNavTile extends StatelessWidget {
     final inactiveColor = context.appSubtext;
     final hoverColor = AppColors.primary.withValues(alpha: 0.06);
     final badgeCount = item.badgeCount ?? 0;
+    final iconColor = pinned
+        ? Colors.white
+        : (active ? activeColor : inactiveColor);
     final icon = AppIcon(
       item.icon,
       size: 19,
-      color: active ? activeColor : inactiveColor,
+      color: iconColor,
       style: HeroIconStyle.outline,
     );
 
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
-      child: Tooltip(
-        // Collapsed rail has no visible label — a hover tooltip keeps the
-        // item identifiable (2026-08-14). Empty/no-op in expanded mode.
-        message: collapsed ? item.label.tr() : '',
-        waitDuration: const Duration(milliseconds: 400),
-        child: Material(
-          color: Colors.transparent,
-          borderRadius: BorderRadius.circular(14),
-          child: InkWell(
-            borderRadius: BorderRadius.circular(14),
-            onTap: onTap,
-            hoverColor: hoverColor,
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              padding: collapsed
-                  ? const EdgeInsets.symmetric(vertical: 11)
-                  : const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-              decoration: BoxDecoration(
-                // Active state: light blue tint pill (2026-08-14, follows
-                // the white-sidebar flip — was a translucent-white pill
-                // when the sidebar itself was solid blue).
-                color: active ? AppColors.primaryTint : Colors.transparent,
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: collapsed
-                  ? Center(
-                      child: Stack(
-                        clipBehavior: Clip.none,
-                        children: [
-                          icon,
-                          // Collapsed rail has no label row to hang the full
-                          // pill badge off of (see the expanded branch below)
-                          // — a small corner dot on the icon itself instead,
-                          // same red/white styling as the notification
-                          // bell's unread-count dot.
-                          if (badgeCount > 0)
-                            Positioned(
-                              right: -7,
-                              top: -5,
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 4,
+    // 2026-08-17, explicit user instruction — collapsed "Go Public" becomes
+    // a perfect circle the exact size of the profile chip's avatar
+    // (`AvatarWidget(size: 36)`) instead of the regular rounded-square rail
+    // button, so the two read as matching circular icons stacked at the
+    // rail's bottom. Expanded mode, and every non-pinned item, keep the
+    // existing 14-radius pill shape untouched.
+    final collapsedPinned = collapsed && pinned;
+    final tileRadius = collapsedPinned ? 18.0 : 14.0;
+
+    final tile = Tooltip(
+      // Collapsed rail has no visible label — a hover tooltip keeps the
+      // item identifiable (2026-08-14). Empty/no-op in expanded mode.
+      message: collapsed ? item.label.tr() : '',
+      waitDuration: const Duration(milliseconds: 400),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(tileRadius),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(tileRadius),
+          onTap: onTap,
+          hoverColor: hoverColor,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            width: collapsedPinned ? 36 : null,
+            height: collapsedPinned ? 36 : null,
+            padding: collapsedPinned
+                ? EdgeInsets.zero
+                : collapsed
+                ? EdgeInsets.symmetric(vertical: pinned ? 14 : 11)
+                : EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: pinned ? 13 : 9,
+                  ),
+            decoration: BoxDecoration(
+              // Active state: light blue tint pill (2026-08-14, follows
+              // the white-sidebar flip — was a translucent-white pill
+              // when the sidebar itself was solid blue). Pinned "Go
+              // Public" (2026-08-17, explicit user instruction): solid
+              // primary background regardless of active state.
+              color: pinned
+                  ? AppColors.primary
+                  : (active ? AppColors.primaryTint : Colors.transparent),
+              borderRadius: BorderRadius.circular(tileRadius),
+            ),
+            child: collapsed
+                ? Center(
+                    child: Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        icon,
+                        // Collapsed rail has no label row to hang the full
+                        // pill badge off of (see the expanded branch below)
+                        // — a small corner dot on the icon itself instead,
+                        // same red/white styling as the notification
+                        // bell's unread-count dot.
+                        if (badgeCount > 0)
+                          Positioned(
+                            right: -7,
+                            top: -5,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 4,
+                              ),
+                              constraints: const BoxConstraints(
+                                minWidth: 15,
+                                minHeight: 15,
+                              ),
+                              decoration: const BoxDecoration(
+                                color: AppColors.brightRed,
+                                borderRadius: BorderRadius.all(
+                                  Radius.circular(20),
                                 ),
-                                constraints: const BoxConstraints(
-                                  minWidth: 15,
-                                  minHeight: 15,
-                                ),
-                                decoration: const BoxDecoration(
-                                  color: AppColors.brightRed,
-                                  borderRadius: BorderRadius.all(
-                                    Radius.circular(20),
-                                  ),
-                                ),
-                                child: Text(
-                                  badgeCount > 9 ? '9+' : '$badgeCount',
-                                  textAlign: TextAlign.center,
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 8.5,
-                                    fontWeight: FontWeight.w700,
-                                    height: 1.3,
-                                  ),
+                              ),
+                              child: Text(
+                                badgeCount > 9 ? '9+' : '$badgeCount',
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 8.5,
+                                  fontWeight: FontWeight.w700,
+                                  height: 1.3,
                                 ),
                               ),
                             ),
-                        ],
+                          ),
+                        // Plain dot, no count — "come back and finish
+                        // this", not a quantity (see [SidebarNavItem.warning]).
+                        if (item.warning)
+                          const Positioned(
+                            right: -3,
+                            top: -1,
+                            child: DecoratedBox(
+                              decoration: BoxDecoration(
+                                color: AppColors.warningAmber,
+                                shape: BoxShape.circle,
+                              ),
+                              child: SizedBox(width: 10, height: 10),
+                            ),
+                          ),
+                      ],
+                    ),
+                  )
+                : Row(
+                    children: [
+                      icon,
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          item.label.tr(),
+                          style: TextStyle(
+                            color: pinned ? Colors.white : iconColor,
+                            fontSize: 13,
+                            fontWeight: (pinned || active)
+                                ? FontWeight.w600
+                                : FontWeight.w500,
+                          ),
+                        ),
                       ),
-                    )
-                  : Row(
-                      children: [
-                        icon,
-                        const SizedBox(width: 10),
-                        Expanded(
+                      if (badgeCount > 0) ...[
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 1,
+                          ),
+                          constraints: const BoxConstraints(minWidth: 18),
+                          decoration: BoxDecoration(
+                            color: AppColors.brightRed,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
                           child: Text(
-                            item.label.tr(),
-                            style: TextStyle(
-                              color: active ? activeColor : inactiveColor,
-                              fontSize: 13,
-                              fontWeight: active
-                                  ? FontWeight.w600
-                                  : FontWeight.w500,
+                            badgeCount > 99 ? '99+' : '$badgeCount',
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w700,
+                              height: 1.3,
                             ),
                           ),
                         ),
-                        if (badgeCount > 0) ...[
-                          const SizedBox(width: 6),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 6,
-                              vertical: 1,
-                            ),
-                            constraints: const BoxConstraints(minWidth: 18),
-                            decoration: BoxDecoration(
-                              color: AppColors.brightRed,
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Text(
-                              badgeCount > 99 ? '99+' : '$badgeCount',
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 10.5,
-                                fontWeight: FontWeight.w700,
-                                height: 1.3,
-                              ),
-                            ),
-                          ),
-                        ],
                       ],
-                    ),
-            ),
+                      if (item.warning) ...[
+                        const SizedBox(width: 6),
+                        const DecoratedBox(
+                          decoration: BoxDecoration(
+                            color: AppColors.warningAmber,
+                            shape: BoxShape.circle,
+                          ),
+                          child: SizedBox(width: 8, height: 8),
+                        ),
+                      ],
+                    ],
+                  ),
           ),
         ),
       ),
+    );
+
+    // 2026-08-17, explicit user instruction — the collapsed circular "Go
+    // Public" button was landing off-center vs. the avatar below it
+    // (`_ProfileChip`'s own centering math sits it near the rail's true
+    // center already). `Center` here forces this tile to the same true
+    // center of the rail, so the two circles land on the same vertical
+    // line. Every other case (expanded, or collapsed but not pinned) is
+    // unaffected — those keep their existing shrink-wrapped, left-ish
+    // position within the rail.
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: collapsedPinned ? Center(child: tile) : tile,
     );
   }
 }
@@ -366,12 +473,19 @@ class _ProfileChip extends ConsumerStatefulWidget {
     required this.userRoleLabel,
     this.userPhotoUrl,
     required this.collapsed,
+    this.showTopBorder = true,
   });
 
   final String userName;
   final String userRoleLabel;
   final String? userPhotoUrl;
   final bool collapsed;
+
+  /// False when the sidebar already drew a divider above the pinned "Go
+  /// Public" item just above this chip (2026-08-17, explicit user
+  /// instruction — see [CliniqnovvaSidebar.build]), so this chip doesn't
+  /// draw a second one right under it.
+  final bool showTopBorder;
 
   @override
   ConsumerState<_ProfileChip> createState() => _ProfileChipState();
@@ -440,7 +554,9 @@ class _ProfileChipState extends ConsumerState<_ProfileChip> {
         margin: const EdgeInsets.fromLTRB(10, 8, 10, 0),
         padding: EdgeInsets.all(widget.collapsed ? 8 : 12),
         decoration: BoxDecoration(
-          border: Border(top: BorderSide(color: context.appBorder)),
+          border: widget.showTopBorder
+              ? Border(top: BorderSide(color: context.appBorder))
+              : null,
         ),
         // Collapsed rail (2026-08-14): just the avatar, centered, tapping it
         // opens the SAME theme/language/logout menu the "more" button opens
@@ -606,7 +722,11 @@ class _ProfileMenuContentState extends ConsumerState<_ProfileMenuContent> {
             // flat page cards stay shadow-free, only portaled/floating
             // surfaces like this menu get one.
             boxShadow: [
-              BoxShadow(color: Colors.black.withValues(alpha: 0.16), blurRadius: 28, offset: const Offset(0, 12)),
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.16),
+                blurRadius: 28,
+                offset: const Offset(0, 12),
+              ),
             ],
           ),
           child: Column(
@@ -754,7 +874,11 @@ class _LanguageSubmenu extends StatelessWidget {
           borderRadius: BorderRadius.circular(13),
           border: Border.all(color: context.appBorder, width: 1),
           boxShadow: [
-            BoxShadow(color: Colors.black.withValues(alpha: 0.16), blurRadius: 28, offset: const Offset(0, 12)),
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.16),
+              blurRadius: 28,
+              offset: const Offset(0, 12),
+            ),
           ],
         ),
         child: Column(

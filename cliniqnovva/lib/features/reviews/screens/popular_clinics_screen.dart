@@ -2,25 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/app_constants.dart';
-import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/theme_ext.dart';
-import '../../../shared/widgets/app_icon.dart';
 import '../../../shared/widgets/cliniqnovva_card.dart';
 import '../../../shared/widgets/empty_state.dart';
 import '../../../shared/widgets/loading_widget.dart';
 import '../../../shared/widgets/metric_card.dart';
 import '../../../shared/widgets/top_bar_actions.dart';
 import '../../auth/providers/access_control_provider.dart';
+import '../../clinics/models/branch_model.dart';
+import '../../clinics/providers/branches_provider.dart';
 import '../../departments/providers/departments_provider.dart' show activeBranchIdProvider;
 import '../../departments/widgets/branch_selector.dart';
 import '../providers/reviews_provider.dart';
-
-String _formatDateTime(DateTime? d) {
-  if (d == null) return 'not yet calculated';
-  final local = d.toLocal();
-  return '${local.year}-${local.month.toString().padLeft(2, '0')}-${local.day.toString().padLeft(2, '0')} '
-      '${local.hour.toString().padLeft(2, '0')}:${local.minute.toString().padLeft(2, '0')}';
-}
 
 /// Part 16 Task 5 — /popular-clinics. INTERNAL, read-only: a branch's own
 /// popularityScore and where it ranks among its clinic's branches —
@@ -126,34 +119,135 @@ class _PopularityView extends ConsumerWidget {
               ],
             ),
             const SizedBox(height: 20),
-            CliniqnovvaCard(
-              child: Row(
-                children: [
-                  AppIcon(AppIcons.trophy, size: 22, color: context.appSubtext),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'How this is calculated',
-                          style: TextStyle(color: context.appText, fontSize: 14, fontWeight: FontWeight.w600),
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          'Recent reviews (last 90 days) count fully; older ones count less. Branches with '
-                          'very few reviews are scored down proportionally so a single rating can\'t outrank '
-                          'a branch with a long, solid track record. Hidden reviews are never counted.\n\n'
-                          'Last recalculated: ${_formatDateTime(rank.popularityCalculatedAt)}',
-                          style: TextStyle(color: context.appSubtext, fontSize: 13, height: 1.5),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            _OtherBranchesSection(currentBranchId: branchId),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Watches [branchesProvider] and renders every branch other than the
+/// currently selected one as a table — same visual shape as Reports'
+/// `_BreakdownDataTable` (header row + ruled rows, equal-width columns,
+/// 100px right padding on the last column's content). Each row fetches its
+/// own [popularityRankProvider] independently, same endpoint the current
+/// branch's metric cards above already use, just with a different
+/// `branchId`.
+class _OtherBranchesSection extends ConsumerWidget {
+  const _OtherBranchesSection({required this.currentBranchId});
+
+  final String currentBranchId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final branchesAsync = ref.watch(branchesProvider);
+
+    return branchesAsync.when(
+      loading: () => const SizedBox.shrink(),
+      error: (e, _) => const SizedBox.shrink(),
+      data: (result) {
+        final others = result.branches.where((b) => b.id != currentBranchId).toList();
+        if (others.isEmpty) return const SizedBox.shrink();
+
+        final headerStyle = TextStyle(
+          color: context.appSubtext,
+          fontSize: 12.5,
+          fontWeight: FontWeight.w600,
+        );
+
+        return CliniqnovvaCard(
+          title: 'Other branches',
+          showBorder: false,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 20),
+                child: _otherBranchColumns(
+                  branch: Text('Branch', style: headerStyle),
+                  rank: Text('Rank', textAlign: TextAlign.right, style: headerStyle),
+                  score: Text('Popularity Score', textAlign: TextAlign.right, style: headerStyle),
+                  rating: Text('Average Rating', textAlign: TextAlign.right, style: headerStyle),
+                  reviews: Text('Reviews', textAlign: TextAlign.right, style: headerStyle),
+                ),
+              ),
+              Divider(height: 1, thickness: 1, color: context.appBorder),
+              for (final b in others) _OtherBranchRow(branch: b),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+Widget _otherBranchColumns({
+  required Widget branch,
+  required Widget rank,
+  required Widget score,
+  required Widget rating,
+  required Widget reviews,
+}) => Row(
+  children: [
+    Expanded(child: branch),
+    Expanded(child: rank),
+    Expanded(child: score),
+    Expanded(child: rating),
+    Expanded(
+      child: Padding(
+        padding: const EdgeInsets.only(right: 100),
+        child: reviews,
+      ),
+    ),
+  ],
+);
+
+class _OtherBranchRow extends ConsumerWidget {
+  const _OtherBranchRow({required this.branch});
+
+  final BranchModel branch;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final rankAsync = ref.watch(popularityRankProvider(branch.id));
+    final branchText = Text(
+      branch.name,
+      style: TextStyle(color: context.appText),
+      overflow: TextOverflow.ellipsis,
+    );
+    final cellStyle = TextStyle(color: context.appText, fontWeight: FontWeight.w500);
+
+    return Container(
+      decoration: BoxDecoration(
+        border: Border(bottom: BorderSide(color: context.appBorder)),
+      ),
+      padding: const EdgeInsets.symmetric(vertical: 32),
+      child: rankAsync.when(
+        loading: () => _otherBranchColumns(
+          branch: branchText,
+          rank: const SizedBox.shrink(),
+          score: const SizedBox.shrink(),
+          rating: const SizedBox.shrink(),
+          reviews: const SizedBox.shrink(),
+        ),
+        error: (e, _) => _otherBranchColumns(
+          branch: branchText,
+          rank: Text('—', textAlign: TextAlign.right, style: TextStyle(color: context.appSubtext)),
+          score: const SizedBox.shrink(),
+          rating: const SizedBox.shrink(),
+          reviews: const SizedBox.shrink(),
+        ),
+        data: (r) => _otherBranchColumns(
+          branch: branchText,
+          rank: Text(
+            r.totalBranchesRanked > 0 ? '#${r.rank} of ${r.totalBranchesRanked}' : '—',
+            textAlign: TextAlign.right,
+            style: cellStyle,
+          ),
+          score: Text(r.popularityScore.toStringAsFixed(2), textAlign: TextAlign.right, style: cellStyle),
+          rating: Text(r.averageRating.toStringAsFixed(1), textAlign: TextAlign.right, style: cellStyle),
+          reviews: Text('${r.reviewCount}', textAlign: TextAlign.right, style: cellStyle),
         ),
       ),
     );

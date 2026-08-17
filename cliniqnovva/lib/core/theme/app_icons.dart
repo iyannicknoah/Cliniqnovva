@@ -59,4 +59,11 @@ class AppIcons {
 
   // Onboarding Step 4 — public profile image picker placeholder.
   static const image = IconRef.hero(HeroIcons.photo);
+
+  // 2026-08-16 — "Go Public" wizard: sidebar nav icon + the success step's
+  // "download badge" button. Sidebar icon swapped globe -> mobile phone
+  // 2026-08-17 (explicit user instruction).
+  static const globe = IconRef.hero(HeroIcons.globeAlt);
+  static const mobilePhone = IconRef.hero(HeroIcons.devicePhoneMobile);
+  static const download = IconRef.hero(HeroIcons.arrowDownTray);
 }

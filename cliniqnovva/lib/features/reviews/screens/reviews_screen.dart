@@ -283,6 +283,39 @@ class _ReviewCard extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              AvatarWidget(firstName: patientName, size: 32),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            patientName,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(color: context.appSubtext, fontSize: 12.5, fontWeight: FontWeight.w600),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        ReviewSingleStarRating(rating: review.branchRating),
+                      ],
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      _formatDate(review.createdAt),
+                      style: TextStyle(color: context.appSubtext, fontSize: 11.5),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
             children: [
               Expanded(
                 child: Text(
@@ -295,22 +328,6 @@ class _ReviewCard extends ConsumerWidget {
                 const SizedBox(width: 8),
               ],
               if (review.isHidden) const StatusBadge(text: 'Hidden', type: BadgeType.error),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              AvatarWidget(firstName: patientName, size: 26),
-              const SizedBox(width: 8),
-              ReviewStarRow(rating: review.branchRating),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  '$patientName · ${_formatDate(review.createdAt)}',
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(color: context.appSubtext, fontSize: 12.5, fontWeight: FontWeight.w600),
-                ),
-              ),
             ],
           ),
           const SizedBox(height: 10),

@@ -1,14 +1,32 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/theme/app_icons.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/theme_ext.dart';
+import '../../../shared/widgets/app_icon.dart';
 import '../../../shared/widgets/cliniqnovva_table.dart';
 import '../../../shared/widgets/cliniqnovva_text_field.dart';
 import '../../../shared/widgets/loading_widget.dart';
 import '../../../shared/widgets/top_bar_actions.dart';
+import '../../billing/screens/invoice_detail_screen.dart';
 import '../../staff/providers/staff_provider.dart';
 import '../models/audit_log_model.dart';
 import '../providers/audit_log_provider.dart';
+
+/// Target collection audit entries use for invoice actions
+/// (invoices.service.js#recordPayment/void/etc.) — the one case where
+/// tapping a row opens the full invoice detail panel instead of the
+/// generic [_AuditLogDetailDialog].
+const _invoicesCollection = 'invoices';
+
+void _openLogDetail(BuildContext context, AuditLogModel log) {
+  if (log.targetCollection == _invoicesCollection && log.targetId != null) {
+    showInvoiceDetailPanel(context, invoiceId: log.targetId!);
+  } else {
+    showAuditLogDetailDialog(context, log: log);
+  }
+}
 
 /// Restored 2026-07-29 (docs/technical-spec.md §6.12) — view-only table of
 /// every audited action (clinic suspend/billing/payment, staff create/
@@ -107,6 +125,7 @@ class AuditLogBodyState extends ConsumerState<AuditLogBody> {
                 children: [
                   const CliniqnovvaTableHeader(
                     columns: ['When', 'Actor', 'Action', 'Target'],
+                    lastColumnEndPadding: 50,
                   ),
                   Expanded(
                     child: filtered.isEmpty
@@ -140,6 +159,8 @@ class _AuditLogRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return CliniqnovvaTableRow(
+      lastColumnEndPadding: 50,
+      onTap: () => _openLogDetail(context, log),
       cells: [
         Text(
           _formatDateTime(log.timestamp),
@@ -153,6 +174,141 @@ class _AuditLogRow extends StatelessWidget {
           style: TextStyle(color: context.appSubtext),
         ),
       ],
+    );
+  }
+}
+
+/// Generic audit-entry detail dialog — every field [AuditLogModel] has,
+/// laid out as label/value rows. The one case this ISN'T shown for is an
+/// `invoices` target ([_openLogDetail] opens [showInvoiceDetailPanel]
+/// instead, per explicit user instruction: "if it is an invoice show all
+/// info about that invoice" — the full invoice, not just these 4 fields).
+Future<void> showAuditLogDetailDialog(
+  BuildContext context, {
+  required AuditLogModel log,
+}) {
+  return showGeneralDialog<void>(
+    context: context,
+    barrierDismissible: true,
+    barrierLabel: 'Audit log entry',
+    barrierColor: Colors.black45,
+    transitionDuration: const Duration(milliseconds: 200),
+    pageBuilder: (context, animation, secondaryAnimation) =>
+        Center(child: _AuditLogDetailDialog(log: log)),
+    transitionBuilder: (context, animation, secondaryAnimation, child) {
+      final curved = CurvedAnimation(parent: animation, curve: Curves.easeOut);
+      return FadeTransition(
+        opacity: curved,
+        child: ScaleTransition(
+          scale: Tween<double>(begin: 0.96, end: 1).animate(curved),
+          child: child,
+        ),
+      );
+    },
+  );
+}
+
+class _AuditLogDetailDialog extends StatelessWidget {
+  const _AuditLogDetailDialog({required this.log});
+
+  final AuditLogModel log;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: context.appCard,
+      borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+      clipBehavior: Clip.antiAlias,
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+          border: Border.all(color: context.appBorder),
+        ),
+        constraints: const BoxConstraints(maxWidth: 440),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Audit log entry',
+                      style: TextStyle(
+                        color: context.appText,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    icon: const AppIcon(AppIcons.close),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              _DetailRow(label: 'When', value: _formatDateTime(log.timestamp)),
+              _DetailRow(label: 'Action', value: log.action),
+              _DetailRow(
+                label: 'Actor',
+                valueWidget: _ActorCell(
+                  actorId: log.actorId,
+                  actorRole: log.actorRole,
+                ),
+              ),
+              _DetailRow(
+                label: 'Target collection',
+                value: log.targetCollection,
+              ),
+              _DetailRow(label: 'Target id', value: log.targetId ?? '—'),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _DetailRow extends StatelessWidget {
+  const _DetailRow({required this.label, String? value, Widget? valueWidget})
+    : _value = value,
+      _valueWidget = valueWidget;
+
+  final String label;
+  final String? _value;
+  final Widget? _valueWidget;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 130,
+            child: Text(
+              label,
+              style: TextStyle(color: context.appSubtext, fontSize: 13.5),
+            ),
+          ),
+          Expanded(
+            child:
+                _valueWidget ??
+                Text(
+                  _value ?? '—',
+                  style: TextStyle(
+                    color: context.appText,
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -463,6 +463,398 @@ growth/trend chart rather than introducing a new chart style or color.
 
 ## Change log
 
+- **2026-08-16 (New "Go Public" wizard — sidebar link, overview page, 5-step
+  modal)** — Explicit user instruction/spec, confirmed against 4 clarifying
+  questions before starting (full stack now; services step uses the real
+  Services catalog, not the branch's `servicesOffered` tags; payout fields
+  are phone+name for MoMo/Airtel and bankName+accountNumber+accountName for
+  Bank; the final "badge" is a real generated PNG, not a static asset).
+  Backend already had partial scaffolding from the Part 6 onboarding wizard
+  (`isPublic`/`publicDisplayName`/`publicPhone`/`publicEmail`/
+  `publicAddress`/`publicImageKey` on `branches`, gated together by
+  `branches.service.js`'s `isPublic === true` check) — this reuses that for
+  step 1 and adds 3 more fields alongside it: `publicServiceIds`,
+  `publicDoctorIds` (both `List<String>`, `null` = step never saved, `[]` =
+  saved with nothing chosen), and `payoutMethod`/`payoutDetails` (never
+  exposed to the Patient App — `browse.service.js#toPublicBranch` is an
+  explicit allowlist that was never touched). The `isPublic === true` gate
+  was extended to also require all 3 new fields, so "half set up" can never
+  go live — same reasoning the original 5-field check already used.
+  - **Sidebar entry, not scrollable.** Explicit requirement: "has to be in
+    one column with that bottom profile above the profile, this means this
+    will not be scrollable." `CliniqnovvaSidebar` gained a `pinnedItem`
+    param — a `SidebarNavItem` rendered between the scrollable nav
+    `ListView` and `_ProfileChip`, inside the sidebar's own fixed `Column`,
+    never inside the `ListView`'s scroll region. `AppShell` computes it
+    (Clinic Admin/Branch Admin only, hidden when no specific branch is
+    selected — same branch-scoped-screen convention as Reports/Popular
+    Clinics) and passes it down. `SidebarNavItem` also gained a `warning`
+    bool (separate from the existing numeric `badgeCount`) — a plain amber
+    dot, collapsed-rail corner dot and expanded-row trailing dot, both
+    reusing the existing red-badge dot's positioning/sizing but recolored
+    and count-less, since "reminder to finish" isn't a quantity.
+  - **Step completion is derived, not stored.** `GoPublicSteps`
+    (`features/go_public/providers/go_public_provider.dart`) computes
+    `infoDone`/`servicesDone`/`doctorsDone`/`payoutDone`/`isLive` straight
+    from `BranchModel` fields — no separate progress document. `needsAttention`
+    (`started && !isLive`) drives the sidebar's warning dot: some step
+    saved, but not live yet — matches the explicit "when he saves when he
+    comes back we show badge... to remind him to finish".
+  - **Overview page** (`/go-public`, `GoPublicScreen`) — same
+    `Padding(all:40)` page shell as every other screen. Shows the 5 steps
+    as numbered-circle rows (ticked once `GoPublicSteps` says done, "Done"
+    label trailing) inside a `CliniqnovvaCard`, a green "You're live" banner
+    once `isLive`, and a `CliniqnovvaButton` ("Go Public" / "Manage public
+    profile" depending on `isLive`) that opens the wizard dialog.
+  - **Wizard dialog** (`showGoPublicWizard`, same centered `showGeneralDialog`
+    fade+scale pattern as `showBranchPanel`) — 820px-wide modal: a 210px
+    left column of 5 tabs (number/tick circle + title, active tab tinted
+    `appSecondaryBg`, free navigation between any tab) beside a scrollable
+    right content pane for the active step, with a shared "Save & Next"
+    button beneath steps 1-4 (step 5 has its own "Go Public" confirm button
+    instead, since it's the terminus, not another save). Step 1 (Clinic
+    info) mirrors `onboarding_screen.dart`'s `_PublicVisibilityStep` fields
+    (image picker via `file_picker`, display name/phone/email/address)
+    minus its Public/Private toggle — opening this wizard at all already
+    means "going public". Steps 2/3 (Services/Doctors) are checkbox lists
+    off `servicesProvider`/`staffListProvider` (filtered to
+    `role == doctor`), seeded from `publicServiceIds`/`publicDoctorIds`.
+    Step 4 (Payout) uses the existing `SegmentedTabs` for the
+    MoMo/Airtel/Bank choice, conditional fields per method, an amber
+    `pillAmberBg`/`pillAmberText` warning banner ("not verified against
+    your provider... double-check") plus a required confirmation checkbox
+    before Save is accepted — both the client and
+    `branches.service.js#assertValidPayout` enforce the same required-field
+    shape per method. Step 5 (Go live/Success): before `isLive`, a "Go
+    Public" button (disabled with an explanatory amber banner if
+    `!allStepsDone`) that sets `isPublic: true`; after, a celebratory state
+    with a `RepaintBoundary`-captured share badge (branded gradient card:
+    logo, public display name, "is now booking on Cliniqnovva") and a
+    "Download badge" button — `boundary.toImage()` → PNG bytes → base64
+    `data:` URI → `url_launcher`'s `launchUrl`, the same
+    dependency-free download trick `csv_export.dart#downloadCsv` already
+    uses for CSV exports, just with an image MIME type instead of text/csv.
+  - **Heroicons rule enforced.** Two spots initially used a raw Material
+    `Icon` (the overview page's "You're live" banner, the payout step's
+    warning banner) — both replaced with `AppIcon`/`AppIcons` (`.check`,
+    `.warning`) per the project's "Heroicons everywhere, never raw
+    `Icon`/`Icons.*`" rule, caught before this entry was written. Two new
+    `AppIcons` entries: `globe` (`HeroIcons.globeAlt`, the sidebar icon) and
+    `download` (`HeroIcons.arrowDownTray`, unused by the current badge
+    button — that one deliberately kept the outlined button's default
+    icon-less look — but added for the next place a download action needs
+    one).
+  - **Translations.** `nav_go_public` added to `en`/`fr`/`rw.json` ("Go
+    Public" / "Publier" / "Sohora Icyerekezo") rather than leaving it to
+    `easy_localization`'s missing-key fallback (which would've shown the
+    literal string `nav_go_public` in the sidebar).
+  - **2026-08-17 follow-up (highlighted pill, moved divider, phone icon)**
+    — Explicit user instruction from a screenshot of the sidebar's
+    "Go Public"/profile-chip area. Divider moved: the 1px `appBorder`
+    divider used to be `_ProfileChip`'s own top border, sitting between
+    "Go Public" and the profile chip below it; it's now drawn once in
+    `CliniqnovvaSidebar.build` directly above the pinned "Go Public" item
+    instead, and `_ProfileChip` gained a `showTopBorder` flag (false
+    whenever a `pinnedItem` is present) so the border isn't drawn twice.
+    "Go Public" itself is now a solid-`AppColors.primary` pill with white
+    icon/label (previously matched the plain nav-row style: transparent/
+    tinted background, blue-or-gray text) via a new `pinned` flag on
+    `_SidebarNavTile` — background, icon color, and label color/weight all
+    branch on `pinned` before falling back to the regular active/inactive
+    logic, and its padding grew slightly (9→13px vertical expanded,
+    11→14px collapsed) for a taller tap target than regular rows. Icon
+    swapped `AppIcons.globe` (`HeroIcons.globeAlt`) → new
+    `AppIcons.mobilePhone` (`HeroIcons.devicePhoneMobile`); `globe` itself
+    is left in the catalog, just unused by this item now.
+  - **2026-08-17 follow-up #2 (collapsed rail: circular, avatar-sized)** —
+    Explicit user instruction from a screenshot of the collapsed rail: the
+    collapsed "Go Public" button should match the profile chip's avatar
+    exactly — same 36×36 size, fully circular — instead of the regular
+    rounded-square rail button every other collapsed nav item uses.
+    `_SidebarNavTile` computes `collapsedPinned = collapsed && pinned`; only
+    in that state does the tile get a fixed `width`/`height` of 36,
+    zero padding, and `borderRadius: 18` (a true circle) on the
+    `Material`/`InkWell`/container all together. Expanded mode (still the
+    solid-primary pill from follow-up #1) and every non-pinned item are
+    unaffected — the 14-radius pill shape and existing padding logic still
+    apply whenever `collapsedPinned` is false.
+  - **2026-08-17 follow-up #3 (collapsed circle: centered on the avatar's
+    line)** — The 36×36 circle from follow-up #2 still landed a few pixels
+    left of the avatar below it, because `_SidebarNavTile`'s own
+    `Padding`/`Material`/`InkWell` chain shrink-wraps its content and the
+    sidebar's rail `Column` is `crossAxisAlignment: start` (every regular
+    nav icon is intentionally left-ish, not centered) — while
+    `_ProfileChip`'s avatar sits inside a `Center` and lands near the
+    rail's true horizontal center. Fix: `_SidebarNavTile.build` now builds
+    the tooltip/material/tile tree once (`final tile = ...`) and only
+    wraps it in a `Center` when `collapsedPinned` is true, forcing that one
+    circle to the rail's true center — the same line the avatar already
+    sits on. Every other case returns `tile` unwrapped, so regular
+    collapsed icons and the full expanded pill keep their prior
+    (shrink-wrapped, left-ish) position.
+  - **2026-08-17 follow-up #4 (Go Public page: header removed, steps
+    centered, card border dropped)** — Explicit user instruction from a
+    screenshot of the page's own header strip. `GoPublicScreen` dropped its
+    per-page header `Row` entirely (the "Go Public" title, `BranchSelector`
+    for org admins, and `TopBarActions`' chat/notification icons) — the
+    page now opens directly with the subtitle line. This is the one screen
+    in the app without that header convention; an org admin now switches
+    branches from any other screen (the selection is a shared
+    `activeBranchIdProvider`, not page-local) rather than from this one.
+    `_GoPublicBody`'s content (the "You're live" banner, the "Setup steps"
+    card, and the "Go Public"/"Manage public profile" button) is wrapped in
+    `Center` + `ConstrainedBox(maxWidth: 480)` instead of stretching full
+    page width — centered both horizontally (via the `ConstrainedBox`) and
+    vertically (it sits inside the parent `Column`'s `Expanded`, so `Center`
+    also centers it in the remaining vertical space). The button gained its
+    own `Center` wrapper so it stays centered under the now-narrower card
+    rather than left-aligned. The "Setup steps" `CliniqnovvaCard` now passes
+    `showBorder: false` (an existing flag, first used by the Dashboard's
+    Today's Appointments card) to drop its border, keeping just the
+    background/radius.
+  - **2026-08-17 follow-up #5 (subtitle removed; steps restyled: bigger
+    centered heading, 80px number circles, bold titles, per-step
+    description)** — Further explicit user instruction. The page's
+    remaining subtitle line ("List this branch on the Cliniqnovva Patient
+    App...") is gone too — `GoPublicScreen.build`'s `Padding` now goes
+    straight to `_GoPublicBody`/`NoBranchSelectedState`, no `Column`
+    wrapper needed since there's only the one child left. The "Setup
+    steps" card no longer uses `CliniqnovvaCard`'s built-in `title:` prop
+    (that renders left-aligned at a fixed 16px, no per-instance override
+    exists) — instead the card's `child` `Column` starts with its own
+    `Text('Setup steps', textAlign: center)` at 24px/w800, and gets
+    `crossAxisAlignment: stretch` so that heading (and everything below it)
+    spans the card's full width, which is what actually makes
+    `textAlign: center` take effect. `_StepRow`'s number circle grew
+    30px → 80px (check icon 15px → 34px, number text 13px → 28px, scaled up
+    so they don't look lost inside the bigger circle); the step title grew
+    14px → 20px and is now always `FontWeight.bold` regardless of `done`
+    (previously only semi-bold, and only once done). Each row also gained a
+    `description` line (new `_stepDescriptions` const, parallel to the
+    existing `_stepTitles`) — a one-line reminder of what that step
+    collects (e.g. Clinic info: "Display name, address, phone, email"),
+    rendered at 12.5px/`appSubtext` under the title inside a `Column` (the
+    title `Text` was previously the row's only content in that slot).
+  - **2026-08-17 follow-up #6 (bordered card wraps steps + button; divider
+    under heading; number circle/title resized)** — Further explicit user
+    instruction. `CliniqnovvaCard` is back to its default `showBorder: true`
+    (the plain flag flip from follow-up #4 — no new styling code, since the
+    component already supported this) and now wraps everything for this
+    section in one bordered panel: the "Setup steps" heading, a hairline
+    `Divider(height: 1, thickness: 1, color: context.appBorder)` — the same
+    divider style used elsewhere in the app, e.g. the sidebar's rail divider
+    — directly under it, the step rows, and (moved inside the card, no
+    longer a separate block below it) the "Go Public"/"Manage public
+    profile" button. The button dropped its fixed 220px width in favor of
+    `CliniqnovvaButton`'s own `isFullWidth` default (`SizedBox(width:
+    double.infinity)` internally) inside a `Padding(horizontal: 20)` — so it
+    spans the card's full width minus 20px on each side — and gained an
+    outer `SizedBox(height: 55)`; `CliniqnovvaButton` itself is fixed at a
+    45px internal height, but a tight incoming height constraint from a
+    wrapping `SizedBox` still overrides that (same mechanism as the width
+    override). `_StepRow`'s number circle shrank 80px → 60px (check icon
+    34px → 26px, number text 28px → 22px, scaled down to match) and its
+    title shrank 20px → 17px, `FontWeight.bold` → `FontWeight.w600`
+    (semi-bold, down from full bold) — a size correction after follow-up #5
+    over-scaled both.
+  - **2026-08-17 follow-up #7 (button height 50px, panel width 480→640,
+    steps re-centered as a group, true screen centering)** — Further
+    explicit user instruction, in three parts. (1) The button's outer
+    `SizedBox` height dropped 55px → 50px. (2) The outer `ConstrainedBox`
+    around the whole card grew 480px → 640px, for a visibly bigger panel.
+    (3) With the card now wider, the step rows (which stretch full-width
+    via their own internal `Expanded` text) started reading as
+    edge-to-edge rather than "centered" — explicit instruction was to keep
+    each row's own text left-aligned but present the step list itself as a
+    centered block. Fix: the step rows' `Column` is wrapped in its own
+    `Center` + `ConstrainedBox(maxWidth: 480)`, nested inside the wider
+    640px card — same "true center, left-aligned content" split the
+    button-and-card level already uses. (4) Follow-up: a screenshot showed
+    the whole card still reading as off-center on the full browser
+    window — because a plain `Center` here only centers within this page's
+    own content pane (to the right of the fixed-width sidebar), which
+    visibly shifts the card right by half the sidebar's width compared to
+    the true screen center. `_GoPublicBody.build` now watches
+    `sidebarCollapsedProvider` and wraps its `Center` in
+    `Transform.translate(offset: Offset(-sidebarWidth / 2, 0))` — sidebar
+    width is 76px collapsed (matching `CliniqnovvaSidebar`'s private
+    `_collapsedSidebarWidth`, duplicated here since it isn't exported) or
+    `AppTheme.sidebarWidth` (250px) expanded — so the card lands on the
+    true screen center regardless of sidebar state, rather than merely
+    centering in the leftover pane.
+  - **2026-08-17 follow-up #8 (sidebar removed entirely, back icon added)**
+    — Further explicit user instruction, superseding follow-up #7's sidebar
+    compensation: "Go Public" now has NO sidebar at all, not even a
+    compensated centering. `AppShell.build` (`shared/widgets/app_shell.dart`)
+    special-cases `currentRoute == '/go-public'` — `body` renders `child`
+    directly with no `CliniqnovvaSidebar`/`Row`, unlike every other route
+    which keeps the normal sidebar + content layout. Since there's no other
+    way back to the rest of the app now, `GoPublicScreen` gained its own
+    `_BackButton` (top-left, via a `Column` — same secondary-bg/rounded-
+    square look as the sidebar's own collapse toggle) that calls
+    `context.go('/dashboard')` — safe for both roles that can reach this
+    page (Clinic Admin/Branch Admin both have a `/dashboard` nav item).
+    Follow-up #7's sidebar-width `Transform.translate` compensation in
+    `_GoPublicBody` is gone too — with no sidebar taking space on this page
+    anymore, a plain `Center` already lands on the true screen center, so
+    the compensation would now overcorrect.
+- **2026-08-16 (Popular Clinics: "How this is calculated" removed, "Other
+  branches" table added)** — Two explicit user instructions from a
+  screenshot of `/popular-clinics`: (1) the "How this is calculated"
+  `CliniqnovvaCard` (trophy icon + explanation paragraph + "Last
+  recalculated" timestamp) is gone entirely — `popular_clinics_screen.dart`
+  dropped the block and its now-unused `_formatDateTime` helper/`AppIcon`
+  import. (2) New "Other branches" table below the metric cards, showing
+  every branch in the clinic except the one currently selected — same
+  visual shape as Reports' `_BreakdownDataTable` (header row + ruled rows,
+  equal-width `Expanded` columns, 100px right padding on the last column).
+  Columns: Branch, Rank, Popularity Score, Average Rating, Reviews. The
+  backend's `/api/v1/reviews/popularity-rank` endpoint only returns ONE
+  branch's own stats per call (scoped by its `branchId` query param, same
+  as the page's own metric cards already use) — there's no bulk
+  "all-branches" endpoint — so `_OtherBranchesSection` watches
+  `branchesProvider` for the clinic's full branch list, filters out the
+  current branch, and each `_OtherBranchRow` independently watches
+  `popularityRankProvider(branch.id)` for its own row's data (loading/error
+  per row shows blank cells rather than blocking the whole table).
+- **2026-08-16 (Reviews page: review card reordered — profile before
+  comment)** — Explicit user instruction, from a screenshot of a review
+  card's top section (avatar/stars/name/date, then the comment text above
+  it). `_ReviewCard` (`reviews_screen.dart`) reordered so the patient-info
+  row comes FIRST, comment text SECOND (was comment first). The patient-info
+  row itself also changed shape: was `Avatar + ReviewStarRow(5 icons) +
+  "name · date"` all on one line; now `Avatar + Column[Row[name, one star
+  icon + rating as "4.0"/"3.0" via new `ReviewSingleStarRating`], date on
+  its own line underneath]`. `ReviewSingleStarRating`
+  (`features/reviews/widgets/review_display.dart`) is new — a single star
+  icon + `rating.toStringAsFixed(1)`, alongside the existing 5-icon
+  `ReviewStarRow` (kept, still backs the doctor sub-rating block below and
+  other call sites — this only changed the patient-info row). Flag/Hidden
+  `StatusBadge`s stayed attached to the comment `Row`, not the profile row,
+  since they describe the review/comment rather than the reviewer. The
+  doctor sub-rating block (`_RatingBlock`, "Dr. X" + stars + doctor comment)
+  below is untouched.
+  - **Same-day follow-up (avatar bumped up a little)** — explicit user
+    instruction: `AvatarWidget(firstName: patientName, size: 26)` → `32`
+    (both width and height, `AvatarWidget`'s `size` is a single square
+    dimension).
+- **2026-08-16 (Reviews page: 250px right padding on the rating summary)**
+  — Explicit user instruction, from a screenshot of the "4.5 / 8 ratings /
+  stars" block on `/reviews`. `RatingSummaryHeader`
+  (`features/reviews/widgets/review_display.dart`) wraps that left `Column`
+  (average rating, rating count, star row) in
+  `Padding(EdgeInsets.only(right: 250))`, widening the gap before the
+  5/4/3/2/1-star distribution bars column next to it — same "large explicit
+  right-padding on a specific element" pattern as the Reports tables' 100px
+  value-column padding and Patients/Billing's 150px/50px column padding
+  (this session). The user didn't specify a side when asked to clarify
+  (right-only vs. all sides); right-only was chosen to match that
+  established pattern — revisit if that reading turns out wrong.
+  - **Same-day follow-up (whole block centered, not edge-to-edge)** —
+    explicit user instruction ("put everything in the screenshot to be
+    center aligned and placed"): the outer `Row` used `Expanded` on both the
+    rating-info column and the distribution-bars column, which stretched the
+    whole thing edge-to-edge across the card (rating info hugging the left
+    edge, bars hugging the right). Restructured: outer `Row` wrapped in
+    `Center` with `mainAxisSize: MainAxisSize.min` (so it sizes to content
+    and centers as one group within the still-full-width `CliniqnovvaCard`,
+    not the individual columns), rating-info `Column` gained
+    `crossAxisAlignment: CrossAxisAlignment.center` +
+    `textAlign: TextAlign.center` on its two `Text`s (the star row is
+    already intrinsically sized, needs no change), and the distribution
+    column's `Expanded(flex: 2)` became `SizedBox(width: 400)` — the bars'
+    `ReviewDistributionRow` reads its track width from the immediate
+    parent's constraints, so a fixed width was needed once `Expanded` (which
+    required a flex ancestor) was removed. The 250px right padding from the
+    entry above is unchanged, now serving as the gap inside the centered
+    group rather than a page-width-relative offset.
+  - **Same-day follow-up (centering reverted, 250px moved to the left
+    side)** — explicit user instruction ("revert that center and add that
+    padding of 250px on the left side"): the `Center`/`MainAxisSize.min`/
+    fixed-`SizedBox(width: 400)` structure from the entry above is fully
+    reverted — back to the original edge-to-edge `Row` with `Expanded` on
+    both the rating-info column and the `flex: 2` distribution-bars column,
+    `crossAxisAlignment: CrossAxisAlignment.start`, no center-aligned text.
+    The 250px padding moved from `Padding(right: 250)` around the rating-info
+    `Column` to `Padding(left: 250)` wrapping the entire outer `Row` — the
+    whole block (both columns) is now indented 250px from the card's left
+    edge, rather than only widening the gap between the two columns.
+  - **Same-day follow-up (500px left padding + divider between the two
+    columns)** — explicit user instruction: the left padding
+    250px → 500px. A vertical divider was added between the rating-info
+    column and the distribution-bars column, `context.appSecondaryBg`
+    colored (same token `ReviewDistributionRow` already uses for its own
+    track background, so the divider reads as the same "quiet" gray as the
+    unfilled bars) — `VerticalDivider(width: 1, thickness: 1, color:
+    context.appSecondaryBg)`, with 16px `SizedBox`s on each side (was a bare
+    32px `SizedBox` gap). The outer `Row` is now wrapped in `IntrinsicHeight`
+    with `crossAxisAlignment: CrossAxisAlignment.stretch` — `VerticalDivider`
+    needs a bounded height from its parent to render (a plain `Row` gives
+    unbounded height), and `IntrinsicHeight` also makes the divider span the
+    taller of the two columns instead of collapsing to zero height.
+  - **Same-day follow-up (150px past the divider, then flush left)** —
+    two more explicit user instructions: (1) the 16px `SizedBox` on the
+    divider's right (between it and the distribution-bars column) →
+    150px, matching the session's established "large explicit padding on
+    one side" pattern; the 16px gap on the divider's left is unchanged.
+    (2) "align everything on the left" — the outer `Padding(left: 500)`
+    from the entry above is removed entirely (back to flush against the
+    card's left edge, spacing between the two columns now comes only from
+    the divider's own 16px/150px gaps), and the distribution-bars `Column`
+    gained `crossAxisAlignment: CrossAxisAlignment.start` (was the Flutter
+    default, `.center` — didn't visibly matter while every
+    `ReviewDistributionRow` filled its `Expanded` width edge-to-edge, but
+    made left-alignment explicit rather than incidental).
+  - **Same-day follow-up (all the extra spacing/padding removed)** —
+    explicit user instruction ("remove all these spacing and paddings"),
+    reacting to how cramped/arbitrary the accumulated 16px+150px gaps
+    around the divider looked. Both `SizedBox`s flanking the
+    `VerticalDivider` are gone — the rating-info column, the divider, and
+    the distribution-bars column now sit directly adjacent with no
+    explicit gap between them (`VerticalDivider`'s own built-in
+    `width: 1` still reserves its 1px line plus Flutter's default
+    indent/endIndent of 0, so there's no visible gap at all here). This is
+    a full reversion of every spacing/padding change made to
+    `RatingSummaryHeader` today — 250px, then 500px, then 16/150px are all
+    gone; only the divider itself (added earlier today) remains.
+  - **Same-day follow-up (the leftover gap was `Expanded`, not padding)** —
+    the visible gap the user was pointing at ("what is that space still
+    doing there") survived the previous entry because it was never a
+    `SizedBox`: the rating-info column was wrapped in `Expanded`, which
+    forces a `Row` child to fill its full flex share of width regardless of
+    content — with 3 short lines of text (a 2-digit number, "N ratings", a
+    handful of stars) inside a card that spans the whole page, that flex
+    share was far wider than the content, leaving dead space before the
+    divider. Fix: dropped `Expanded` from the rating-info column entirely
+    (now a bare `Column` with `mainAxisSize: MainAxisSize.min`, sized to its
+    own content — a non-`Expanded`/`Flexible` `Row` child always sizes to
+    intrinsic width) so the divider sits directly against the text/stars.
+    The distribution-bars column keeps its `Expanded` (now implicit `flex:
+    1`, was `flex: 2` — no longer meaningful with only one other flexible
+    sibling) so the bars still stretch to fill the remaining card width.
+  - **Same-day follow-up (30px gap between the 5 stars)** — explicit user
+    instruction ("in that row add 30px spacing of row items"), scoped to
+    `RatingSummaryHeader`'s star row specifically — NOT the shared
+    `ReviewStarRow` widget globally, which also backs the compact review
+    cards on this page and the Dashboard's preview list (30px between 5
+    stars there would blow those out to ~150px wide, crowding the
+    name/comment text next to them). `ReviewStarRow` gained an optional
+    `spacing` param (default `0`, so every other call site is unaffected)
+    that inserts a `SizedBox(width: spacing)` between consecutive stars;
+    `RatingSummaryHeader` is the only caller passing `spacing: 30`.
+  - **Same-day follow-up (reverted)** — explicit user instruction ("revert
+    to how it was"): the `spacing` param above is gone, `ReviewStarRow` is
+    back to its original form (bare `List.generate`, no gap), and
+    `RatingSummaryHeader`'s star row is back to `ReviewStarRow(rating:
+    averageRating.round(), size: 18)` with no `spacing` argument.
+  - **Same-day follow-up (24px gap on both sides of the divider)** —
+    explicit user instruction: with zero gap on either side of the
+    `VerticalDivider` (from the earlier "remove all spacing and paddings"
+    follow-up), the 5th star at `size: 18` was overlapping the "2" label of
+    the distribution rows on the other side of the divider. User confirmed
+    (asked directly, not guessed) the fix belongs on the outer row around
+    the divider, not on the star row itself: a `SizedBox(width: 24)` added
+    on both the left and right of the `VerticalDivider`.
 - **2026-08-15 (Book Appointment doctor picker: specialty shown on the
   right of each option)** — Explicit user instruction, so admins/
   receptionists can tell same-department doctors apart at a glance.
@@ -643,6 +1035,95 @@ growth/trend chart rather than introducing a new chart style or color.
      export row → trend card → the 3 breakdown tables) 16px/20px → 28px/32px.
      Scoped to the Revenue tab only, matching how every other change in this
      entry was scoped — Patient Volume/No-Show untouched.
+  - **Same-day follow-up #2** — two more explicit user instructions to
+    `_BreakdownDataTable` (`reports_screen.dart`):
+    1. **Equal-width columns, Branch centered.** The `columns()` builder's
+       `SizedBox(width:105)` (date) + `Expanded(flex:2)` (name) +
+       `Expanded(flex:1)` (value) + two 20px gap `SizedBox`s — which still
+       left Branch/Doctor/Service dominating the row and reading as a big
+       gap before the value column — replaced with three plain
+       `Expanded(child: ...)` (no explicit flex, no gap `SizedBox`s), so
+       Date/name/value now split the row evenly and it reads as one table
+       instead of two. The name column's `Text` (both header and data rows)
+       gained `textAlign: TextAlign.center`.
+    2. **100px right padding on the value column's content, not the
+       column.** The value stays right-aligned (`textAlign: TextAlign.right`
+       on the `Text` itself), but the `columns()` builder now wraps the
+       `value` child in `Padding(padding: EdgeInsets.only(right: 100))` —
+       padding lives on the cell content (so header and data rows both
+       shift together), not on the outer `Expanded`/column gap.
+    3. **"By branch" hidden when one branch is selected.** In `_RevenueTab`,
+       the `By branch (RWF)` `_BreakdownDataTable` is now wrapped in
+       `if (branchId == null)` — `branchId == null` is the app's existing
+       "All branches" sentinel (`activeBranchIdProvider`, same convention as
+       Inventory/Departments/Patients etc.). With one specific branch
+       selected every row repeated that same branch name, so the section
+       added nothing; it still shows for org admins viewing "All branches".
+       By doctor/By service are unaffected — doctors/services aren't
+       branch-scoped the same way, so a single-branch filter still shows
+       useful within-branch variety.
+  - **Same-day follow-up #3 (revert to one row per entity)** — explicit user
+    instruction: the per-date-row change above (follow-up #1, "per-date
+    rows") produced duplicate branch/doctor/service names stacked as
+    separate rows, which read as broken rather than useful. Reverted:
+    `_BreakdownDataTable` now takes a flat `entries: Map<String, int>`
+    (`report.byBranch`/`byDoctor`/`byService` again, not the `...ByDate`
+    nested maps) plus a `dateRangeLabel: String`, and builds exactly one
+    `_BreakdownRow` per entity (top 10 by total, descending) with every
+    row's date cell showing the same `dateRangeLabel` ("$dateFrom to
+    $dateTo") — matching how the Date column worked before follow-up #1.
+    The `byBranchByDate`/`byDoctorByDate`/`byServiceByDate` fields stay on
+    `RevenueReport`/the backend response (harmless, just unused by this
+    table now) since removing them wasn't asked for. The column
+    layout/padding from follow-up #2 is unchanged.
+  - **Same-day follow-up #4 (name column back to left-aligned)** — explicit
+    user instruction, pointing at the Staff table's `Name` column (header
+    and cell text both starting at the same left edge) as the reference:
+    the `textAlign: TextAlign.center` follow-up #2 added to the name
+    column's header and row `Text` is removed again — back to Flutter's
+    default left alignment, matching Staff/every other data table in the
+    app. Equal-width columns and the value column's 100px right padding
+    (also from follow-up #2) are unchanged.
+  - **Same-day follow-up #5 (filter row moved onto the tab-switcher's
+    line)** — explicit user instruction: the date-from/to + groupBy `Wrap`
+    used to sit on its own row below the `SegmentedTabs`
+    (Revenue/Patient Volume/No-Show), 16px under it. Now both share one
+    `Row`: `SegmentedTabs` (still `SizedBox(width: 420)`) on the left, a
+    `Spacer()`, then the same filter `Wrap` pushed flush to the right edge,
+    vertically centered against the tabs. The standalone 16px gap between
+    them is gone since they're the same row now.
+  - **Same-day follow-up #6 (more room before the tab content)** — explicit
+    user instruction: the gap between the tab/filter `Row` (follow-up #5)
+    and the tab content below it (metric cards etc.) read as too tight —
+    `SizedBox(height: 24)` → `32`, matching the 28/32 spacing scale the
+    2026-08-16 per-date-row entry above already established for this same
+    `Column`.
+  - **Same-day follow-up #7 (Patient Volume tab adopts the same breakdown
+    table)** — explicit user instruction ("apply the same design from
+    revenue tab to patient volume tab"): `_VolumeTab`'s By branch/By doctor
+    cards switched from the older `_BreakdownTable` (plain label/value list,
+    no header row) to `_BreakdownDataTable` — same header row + ruled rows,
+    equal-width columns, `Visits` as the value column instead of `Collected
+    (RWF)`. Also picked up, matching Revenue: the 16/20px inter-section gaps
+    bumped to 28/32px, and By branch hidden behind `if (branchId == null)`
+    (single-branch selection would otherwise repeat one branch name down
+    every row). `_BreakdownTable` had no remaining callers after this, so
+    the class was deleted — No-Show's By Branch breakdown was never built
+    on it, see its own follow-up below instead.
+  - **Same-day follow-up #8 (No-Show tab adopts the same breakdown table)**
+    — explicit user instruction ("both patient volume and no-show make sure
+    data are displayed in table like the revenue tab"): No-Show's By branch
+    card was a plain `Column` of label/`Row`s that squeezed everything into
+    one formatted trailing string ("86% (3/18)") — replaced with a new
+    `_NoShowBreakdownTable`, same visual shape as `_BreakdownDataTable`
+    (header row + ruled rows, equal-width `Expanded` columns, 100px right
+    padding on the last column's content) but with 3 separate right-aligned
+    value columns — Completed/No-Shows/No-Show Rate, from
+    `NoShowBranchStat` — instead of 1, since No-Show's per-branch data has 3
+    numbers, not 1. Date column shows `dateRangeLabel` ("$dateFrom to
+    $dateTo") same as Revenue/Patient Volume. Also matched: 16/20px
+    inter-section gaps bumped to 28/32px, and the table gated behind
+    `if (branchId == null)`.
 - **2026-08-15 (Reports — CSV/PDF exports: multi-section, not a flat metric
   dump)** — Explicit user instruction ("export real and rich reports with
   rich content and data"). Every tab's Export CSV/PDF previously flattened
@@ -708,6 +1189,16 @@ growth/trend chart rather than introducing a new chart style or color.
   compact version of the expanded state's full pill badge, same red/white
   styling as the notification bell's own unread-count dot. No new state or
   provider — reads the same `item.badgeCount` the expanded row already did.
+  - **2026-08-16 follow-up (Reviews badge removed)** — explicit user
+    instruction, pointing at the red "1" dot on the sidebar's star/Reviews
+    icon. `app_shell.dart`'s `_withBadge` dropped the `'/reviews' =>
+    ref.watch(reviewsNeedingReplyCountProvider(branchId)).valueOrNull` case
+    from its `switch` (now only `/appointments` sets a badge count; every
+    other route still falls through to `null` → no badge, same as before).
+    The now-unused `reviews_provider.dart` import was removed from
+    `app_shell.dart`. `reviewsNeedingReplyCountProvider` itself is left
+    defined in `reviews_provider.dart` (unused now — was `_withBadge`'s only
+    caller) since deleting the provider wasn't asked for.
 - **2026-08-15 (Billing table: 50px right padding on "Status")** — Explicit
   user instruction. `billing_screen.dart`'s `CliniqnovvaTableHeader`/
   `CliniqnovvaTableRow` now pass `lastColumnEndPadding: 50`, matching the

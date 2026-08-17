@@ -8,9 +8,11 @@ import '../../core/theme/theme_ext.dart';
 import '../../features/appointments/providers/appointments_provider.dart';
 import '../../features/auth/providers/access_control_provider.dart';
 import '../../features/auth/providers/auth_provider.dart';
+import '../../features/clinics/providers/branches_provider.dart'
+    show branchDetailProvider;
 import '../../features/departments/providers/departments_provider.dart'
     show activeBranchIdProvider;
-import '../../features/reviews/providers/reviews_provider.dart';
+import '../../features/go_public/providers/go_public_provider.dart';
 import 'cliniqnovva_sidebar.dart';
 import 'loading_widget.dart';
 
@@ -258,21 +260,57 @@ class AppShell extends ConsumerWidget {
 
         return Scaffold(
           backgroundColor: context.appBg,
-          body: Row(
-            children: [
-              CliniqnovvaSidebar(
-                items: items,
-                currentRoute: currentRoute,
-                currentRole: role,
-                userName: userName,
-                userRoleLabel: roleLabel(role),
-                onNavTap: (route) => context.go(route),
-              ),
-              Expanded(child: child),
-            ],
-          ),
+          // 2026-08-17, explicit user instruction — "Go Public" is a
+          // full-screen page with no sidebar (it has its own back icon
+          // instead, see `GoPublicScreen`'s `_BackButton`); every other
+          // route keeps the normal sidebar + content `Row`.
+          body: currentRoute == '/go-public'
+              ? child
+              : Row(
+                  children: [
+                    CliniqnovvaSidebar(
+                      items: items,
+                      currentRoute: currentRoute,
+                      currentRole: role,
+                      userName: userName,
+                      userRoleLabel: roleLabel(role),
+                      onNavTap: (route) => context.go(route),
+                      pinnedItem: _goPublicItem(ref, role, branchId),
+                    ),
+                    Expanded(child: child),
+                  ],
+                ),
         );
       },
+    );
+  }
+
+  /// "Go Public" (2026-08-16, explicit user instruction) — pinned above the
+  /// profile chip, not part of the scrollable [appNavItems] list (see
+  /// [CliniqnovvaSidebar.pinnedItem]). Branch-scoped like the wizard itself,
+  /// so it's hidden entirely when no specific branch is selected (an org
+  /// admin viewing "All branches") rather than pointing at an ambiguous
+  /// target — same reasoning as every other branch-scoped screen in this
+  /// app declining to guess.
+  SidebarNavItem? _goPublicItem(WidgetRef ref, String role, String? branchId) {
+    final allowed =
+        role == AppConstants.roleClinicAdmin ||
+        role == AppConstants.roleBranchAdmin;
+    if (!allowed || branchId == null) return null;
+
+    final branch = ref.watch(branchDetailProvider(branchId)).valueOrNull;
+    final needsAttention =
+        branch != null && GoPublicSteps(branch).needsAttention;
+
+    return SidebarNavItem(
+      label: 'nav_go_public',
+      icon: AppIcons.mobilePhone,
+      route: '/go-public',
+      allowedRoles: const [
+        AppConstants.roleClinicAdmin,
+        AppConstants.roleBranchAdmin,
+      ],
+      warning: needsAttention,
     );
   }
 
@@ -295,8 +333,6 @@ class AppShell extends ConsumerWidget {
             .valueOrNull
             ?.where((a) => a.status != 'completed' && a.status != 'cancelled')
             .length,
-      '/reviews' =>
-        ref.watch(reviewsNeedingReplyCountProvider(branchId)).valueOrNull,
       _ => null,
     };
     if (count == null) return item;

@@ -35,6 +35,31 @@ class ReviewStarRow extends StatelessWidget {
   }
 }
 
+/// One star icon + a single-decimal numeric rating (e.g. "★ 4.0") — a
+/// compact alternative to [ReviewStarRow]'s 5-icon row for places like a
+/// name line where 5 stars would crowd the layout.
+class ReviewSingleStarRating extends StatelessWidget {
+  const ReviewSingleStarRating({super.key, required this.rating, this.size = 14});
+
+  final int rating;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        AppIcon(AppIcons.star, size: size, color: AppColors.skyBlue),
+        const SizedBox(width: 3),
+        Text(
+          rating.toStringAsFixed(1),
+          style: TextStyle(color: context.appSubtext, fontSize: 12.5, fontWeight: FontWeight.w600),
+        ),
+      ],
+    );
+  }
+}
+
 /// A single row of the 5/4/3/2/1 rating-distribution bars — sky blue fill,
 /// light track (same color as [ReviewStarRow]'s filled stars).
 class ReviewDistributionRow extends StatelessWidget {
@@ -107,11 +132,12 @@ class RatingSummaryHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final maxCount = distribution.values.isEmpty ? 0 : distribution.values.reduce((a, b) => a > b ? a : b);
 
-    final content = Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(
-          child: Column(
+    final content = IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Column(
+            mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
@@ -129,18 +155,20 @@ class RatingSummaryHeader extends StatelessWidget {
               ReviewStarRow(rating: averageRating.round(), size: 18),
             ],
           ),
-        ),
-        const SizedBox(width: 32),
-        Expanded(
-          flex: 2,
-          child: Column(
-            children: [
-              for (final stars in [5, 4, 3, 2, 1])
-                ReviewDistributionRow(stars: stars, count: distribution[stars] ?? 0, maxCount: maxCount),
-            ],
+          const SizedBox(width: 24),
+          VerticalDivider(width: 1, thickness: 1, color: context.appSecondaryBg),
+          const SizedBox(width: 24),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                for (final stars in [5, 4, 3, 2, 1])
+                  ReviewDistributionRow(stars: stars, count: distribution[stars] ?? 0, maxCount: maxCount),
+              ],
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
 
     return asCard ? CliniqnovvaCard(child: content) : content;

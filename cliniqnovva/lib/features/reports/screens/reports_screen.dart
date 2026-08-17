@@ -25,6 +25,7 @@ import '../../departments/models/service_model.dart';
 import '../../clinics/models/branch_model.dart';
 import '../../staff/models/staff_model.dart';
 import '../../staff/providers/staff_provider.dart';
+import '../models/report_models.dart';
 import '../providers/reports_provider.dart';
 
 const _groupByLabels = {'day': 'Daily', 'week': 'Weekly', 'month': 'Monthly'};
@@ -120,45 +121,56 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                   ],
                 ),
                 const SizedBox(height: 20),
-                SizedBox(
-                  width: 420,
-                  child: SegmentedTabs(
-                    labels: const ['Revenue', 'Patient Volume', 'No-Show'],
-                    index: _tab,
-                    onChanged: (i) => setState(() => _tab = i),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Wrap(
-                  spacing: 12,
-                  runSpacing: 12,
-                  crossAxisAlignment: WrapCrossAlignment.center,
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    _DateFilterButton(
-                      label: _isoDate(_dateFrom),
-                      onTap: () => _pickDate(isFrom: true),
-                    ),
-                    Text('to', style: TextStyle(color: context.appSubtext)),
-                    _DateFilterButton(
-                      label: _isoDate(_dateTo),
-                      onTap: () => _pickDate(isFrom: false),
-                    ),
-                    if (_tab != 2)
-                      SizedBox(
-                        width: 160,
-                        child: AppSelect(
-                          value: _groupBy,
-                          options: [
-                            for (final e in _groupByLabels.entries)
-                              AppSelectOption(value: e.key, label: e.value),
-                          ],
-                          onChanged: (v) =>
-                              setState(() => _groupBy = v ?? 'day'),
-                        ),
+                    SizedBox(
+                      width: 420,
+                      child: SegmentedTabs(
+                        labels: const ['Revenue', 'Patient Volume', 'No-Show'],
+                        index: _tab,
+                        onChanged: (i) => setState(() => _tab = i),
                       ),
+                    ),
+                    const Spacer(),
+                    Wrap(
+                      spacing: 12,
+                      runSpacing: 12,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        _DateFilterButton(
+                          label: _isoDate(_dateFrom),
+                          onTap: () => _pickDate(isFrom: true),
+                        ),
+                        Text(
+                          'to',
+                          style: TextStyle(color: context.appSubtext),
+                        ),
+                        _DateFilterButton(
+                          label: _isoDate(_dateTo),
+                          onTap: () => _pickDate(isFrom: false),
+                        ),
+                        if (_tab != 2)
+                          SizedBox(
+                            width: 160,
+                            child: AppSelect(
+                              value: _groupBy,
+                              options: [
+                                for (final e in _groupByLabels.entries)
+                                  AppSelectOption(
+                                    value: e.key,
+                                    label: e.value,
+                                  ),
+                              ],
+                              onChanged: (v) =>
+                                  setState(() => _groupBy = v ?? 'day'),
+                            ),
+                          ),
+                      ],
+                    ),
                   ],
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 32),
                 Expanded(
                   child: switch (_tab) {
                     0 => _RevenueTab(
@@ -485,60 +497,8 @@ class _TrendBars extends StatelessWidget {
   }
 }
 
-class _BreakdownTable extends StatelessWidget {
-  const _BreakdownTable({
-    required this.title,
-    required this.entries,
-    required this.names,
-  });
-
-  final String title;
-  final Map<String, int> entries;
-  final Map<String, String> names;
-
-  @override
-  Widget build(BuildContext context) {
-    if (entries.isEmpty) return const SizedBox.shrink();
-    final sorted = entries.entries.toList()
-      ..sort((a, b) => b.value.compareTo(a.value));
-
-    return CliniqnovvaCard(
-      title: title,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: sorted
-            .take(10)
-            .map(
-              (e) => Padding(
-                padding: const EdgeInsets.symmetric(vertical: 5),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        names[e.key] ??
-                            (e.key == 'manual' || e.key == 'unknown'
-                                ? 'Other / Manual'
-                                : e.key),
-                        style: TextStyle(color: context.appText),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    Text(
-                      '${e.value}',
-                      style: TextStyle(color: context.appSubtext),
-                    ),
-                  ],
-                ),
-              ),
-            )
-            .toList(),
-      ),
-    );
-  }
-}
-
-/// One flattened row inside [_BreakdownDataTable] — a single entity
-/// (branch/doctor/service) on a single date.
+/// One row inside [_BreakdownDataTable] — a single entity
+/// (branch/doctor/service), totaled over the whole selected date range.
 class _BreakdownRow {
   const _BreakdownRow(this.date, this.name, this.value);
   final String date;
@@ -548,60 +508,57 @@ class _BreakdownRow {
 
 /// 2026-08-15, explicit user instruction — the Revenue tab's By branch/By
 /// doctor/By service breakdowns should read as a proper table (header row +
-/// ruled rows), not the plain label/value list [_BreakdownTable] still uses
-/// elsewhere (Patient Volume tab). "Daily collected" stays the bar chart —
-/// this only replaces the three breakdown sections below it.
+/// ruled rows) instead of a plain label/value list. "Daily collected" stays
+/// the bar chart — this only replaces the three breakdown sections below it.
 ///
-/// Same-day follow-up (explicit user instruction): a doctor/branch/service
-/// with revenue on several different dates now gets one row PER DATE
-/// instead of one collapsed whole-period-total row — [dailyEntries] is
-/// entityId -> {date -> amount} (`report.byBranchByDate` etc.), flattened
-/// here into [_BreakdownRow]s, grouped by entity (highest whole-period
-/// total first, matching the old ordering) with each entity's own dates
-/// sorted oldest-first underneath it. The Date/name/value columns use
-/// matching `Expanded(flex: ...)` weights in both the header and every row
-/// — was a bare trailing `Text` with nothing constraining its width, which
-/// let the `Expanded` name column swallow all the remaining space and
-/// shove the value against the card's far edge instead of reading as one
-/// proportioned table.
+/// 2026-08-16, explicit user instruction (reverted a same-day-earlier
+/// change): a brief detour split each entity into one row PER DATE, but
+/// that produced duplicate branch/doctor/service names stacked in the
+/// table — reverted back to one row per entity, totaled across [entries]
+/// (`report.byBranch` etc., the whole-period flat totals), with every row
+/// showing the same [dateRangeLabel] ("dateFrom to dateTo") since these
+/// totals have no per-row date of their own. The equal-width column look
+/// from that same session is kept (name column itself is left-aligned).
+///
+/// 2026-08-16, explicit user instruction — also adopted by the Patient
+/// Volume tab's By branch/By doctor cards (previously the older
+/// `_BreakdownTable`, a plain label/value list with no header row — deleted,
+/// this was its only remaining caller).
 class _BreakdownDataTable extends StatelessWidget {
   const _BreakdownDataTable({
     required this.title,
     required this.columnLabel,
     required this.valueLabel,
-    required this.dailyEntries,
+    required this.entries,
     required this.names,
+    required this.dateRangeLabel,
   });
 
   final String title;
   final String columnLabel;
   final String valueLabel;
-  final Map<String, Map<String, int>> dailyEntries;
+  final Map<String, int> entries;
   final Map<String, String> names;
+  final String dateRangeLabel;
 
   @override
   Widget build(BuildContext context) {
-    if (dailyEntries.isEmpty) return const SizedBox.shrink();
+    if (entries.isEmpty) return const SizedBox.shrink();
 
-    final entityTotals = {
-      for (final e in dailyEntries.entries)
-        e.key: e.value.values.fold<int>(0, (sum, v) => sum + v),
-    };
-    final sortedEntities = entityTotals.entries.toList()
+    final sortedEntities = entries.entries.toList()
       ..sort((a, b) => b.value.compareTo(a.value));
 
-    final rows = <_BreakdownRow>[];
-    for (final entity in sortedEntities.take(10)) {
-      final name = names[entity.key] ??
-          (entity.key == 'manual' || entity.key == 'unknown'
-              ? 'Other / Manual'
-              : entity.key);
-      final dates = dailyEntries[entity.key]!.entries.toList()
-        ..sort((a, b) => a.key.compareTo(b.key));
-      for (final d in dates) {
-        rows.add(_BreakdownRow(d.key, name, d.value));
-      }
-    }
+    final rows = <_BreakdownRow>[
+      for (final entity in sortedEntities.take(10))
+        _BreakdownRow(
+          dateRangeLabel,
+          names[entity.key] ??
+              (entity.key == 'manual' || entity.key == 'unknown'
+                  ? 'Other / Manual'
+                  : entity.key),
+          entity.value,
+        ),
+    ];
 
     final headerStyle = TextStyle(
       color: context.appSubtext,
@@ -615,11 +572,14 @@ class _BreakdownDataTable extends StatelessWidget {
       required Widget value,
     }) => Row(
       children: [
-        SizedBox(width: 105, child: date),
-        const SizedBox(width: 20),
-        Expanded(flex: 2, child: name),
-        const SizedBox(width: 20),
-        Expanded(child: value),
+        Expanded(child: date),
+        Expanded(child: name),
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.only(right: 100),
+            child: value,
+          ),
+        ),
       ],
     );
 
@@ -676,6 +636,136 @@ class _BreakdownDataTable extends StatelessWidget {
                     color: context.appText,
                     fontWeight: FontWeight.w500,
                   ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// No-Show's By branch table, same visual shape as [_BreakdownDataTable]
+/// (header row + ruled rows, equal-width columns, last column gets 100px
+/// right padding) but with 3 value columns (Completed/No-Shows/No-Show
+/// Rate) instead of 1, since [NoShowBranchStat] carries all three per
+/// branch. 2026-08-16, explicit user instruction ("both patient volume and
+/// no-show make sure data are displayed in table like the revenue tab") —
+/// replaces the old plain `Column` of label/value `Row`s that squeezed the
+/// rate into one formatted string ("86% (3/18)").
+class _NoShowBreakdownTable extends StatelessWidget {
+  const _NoShowBreakdownTable({
+    required this.title,
+    required this.byBranch,
+    required this.names,
+    required this.dateRangeLabel,
+  });
+
+  final String title;
+  final Map<String, NoShowBranchStat> byBranch;
+  final Map<String, String> names;
+  final String dateRangeLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    if (byBranch.isEmpty) return const SizedBox.shrink();
+
+    final headerStyle = TextStyle(
+      color: context.appSubtext,
+      fontSize: 12.5,
+      fontWeight: FontWeight.w600,
+    );
+    final cellStyle = TextStyle(
+      color: context.appText,
+      fontWeight: FontWeight.w500,
+    );
+
+    Widget columns({
+      required Widget date,
+      required Widget branch,
+      required Widget completed,
+      required Widget noShows,
+      required Widget rate,
+    }) => Row(
+      children: [
+        Expanded(child: date),
+        Expanded(child: branch),
+        Expanded(child: completed),
+        Expanded(child: noShows),
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.only(right: 100),
+            child: rate,
+          ),
+        ),
+      ],
+    );
+
+    return CliniqnovvaCard(
+      title: title,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 20),
+            child: columns(
+              date: Text('Date', style: headerStyle),
+              branch: Text('Branch', style: headerStyle),
+              completed: Text(
+                'Completed',
+                textAlign: TextAlign.right,
+                style: headerStyle,
+              ),
+              noShows: Text(
+                'No-Shows',
+                textAlign: TextAlign.right,
+                style: headerStyle,
+              ),
+              rate: Text(
+                'No-Show Rate',
+                textAlign: TextAlign.right,
+                style: headerStyle,
+              ),
+            ),
+          ),
+          Divider(height: 1, thickness: 1, color: context.appBorder),
+          ...byBranch.entries.map(
+            (e) => Container(
+              decoration: BoxDecoration(
+                border: Border(bottom: BorderSide(color: context.appBorder)),
+              ),
+              padding: const EdgeInsets.symmetric(vertical: 32),
+              child: columns(
+                date: Text(
+                  dateRangeLabel,
+                  maxLines: 1,
+                  softWrap: false,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: context.appSubtext,
+                    fontSize: 12.5,
+                  ),
+                ),
+                branch: Text(
+                  names[e.key] ?? e.key,
+                  style: TextStyle(color: context.appText),
+                  overflow: TextOverflow.ellipsis,
+                ),
+                completed: Text(
+                  '${e.value.completedCount}',
+                  textAlign: TextAlign.right,
+                  style: cellStyle,
+                ),
+                noShows: Text(
+                  '${e.value.noShowCount}',
+                  textAlign: TextAlign.right,
+                  style: cellStyle,
+                ),
+                rate: Text(
+                  '${(e.value.noShowRate * 100).toStringAsFixed(1)}%',
+                  textAlign: TextAlign.right,
+                  style: cellStyle,
                 ),
               ),
             ),
@@ -834,29 +924,37 @@ class _RevenueTab extends ConsumerWidget {
                 title: '${_groupByLabels[report.groupBy]} collected (RWF)',
                 child: _TrendBars(trend: report.trend, valueSuffix: ''),
               ),
-              const SizedBox(height: 28),
-              _BreakdownDataTable(
-                title: 'By branch (RWF)',
-                columnLabel: 'Branch',
-                valueLabel: 'Collected (RWF)',
-                dailyEntries: report.byBranchByDate,
-                names: branchNames,
-              ),
+              // "By branch" only makes sense with multiple branches in the
+              // data — a single branch selected means every row would
+              // repeat that same branch, so it's hidden then.
+              if (branchId == null) ...[
+                const SizedBox(height: 28),
+                _BreakdownDataTable(
+                  title: 'By branch (RWF)',
+                  columnLabel: 'Branch',
+                  valueLabel: 'Collected (RWF)',
+                  entries: report.byBranch,
+                  names: branchNames,
+                  dateRangeLabel: '$dateFrom to $dateTo',
+                ),
+              ],
               const SizedBox(height: 28),
               _BreakdownDataTable(
                 title: 'By doctor (RWF)',
                 columnLabel: 'Doctor',
                 valueLabel: 'Collected (RWF)',
-                dailyEntries: report.byDoctorByDate,
+                entries: report.byDoctor,
                 names: doctorNames,
+                dateRangeLabel: '$dateFrom to $dateTo',
               ),
               const SizedBox(height: 28),
               _BreakdownDataTable(
                 title: 'By service (RWF)',
                 columnLabel: 'Service',
                 valueLabel: 'Collected (RWF)',
-                dailyEntries: report.byServiceByDate,
+                entries: report.byService,
                 names: serviceNames,
+                dateRangeLabel: '$dateFrom to $dateTo',
               ),
             ],
           ),
@@ -928,7 +1026,7 @@ class _VolumeTab extends ConsumerWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 28),
               _ExportRow(
                 title: 'Patient Volume Report ($dateFrom to $dateTo)',
                 sections: [
@@ -979,22 +1077,33 @@ class _VolumeTab extends ConsumerWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 32),
               CliniqnovvaCard(
                 title: '${_groupByLabels[report.groupBy]} visits',
                 child: _TrendBars(trend: report.trend, valueSuffix: ''),
               ),
-              const SizedBox(height: 16),
-              _BreakdownTable(
-                title: 'By branch',
-                entries: report.byBranch,
-                names: branchNames,
-              ),
-              const SizedBox(height: 16),
-              _BreakdownTable(
+              // "By branch" only makes sense with multiple branches in the
+              // data — a single branch selected means every row would
+              // repeat that same branch, so it's hidden then.
+              if (branchId == null) ...[
+                const SizedBox(height: 28),
+                _BreakdownDataTable(
+                  title: 'By branch',
+                  columnLabel: 'Branch',
+                  valueLabel: 'Visits',
+                  entries: report.byBranch,
+                  names: branchNames,
+                  dateRangeLabel: '$dateFrom to $dateTo',
+                ),
+              ],
+              const SizedBox(height: 28),
+              _BreakdownDataTable(
                 title: 'By doctor',
+                columnLabel: 'Doctor',
+                valueLabel: 'Visits',
                 entries: report.byDoctor,
                 names: doctorNames,
+                dateRangeLabel: '$dateFrom to $dateTo',
               ),
             ],
           ),
@@ -1063,7 +1172,7 @@ class _NoShowTab extends ConsumerWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 28),
               _ExportRow(
                 title: 'No-Show Report ($dateFrom to $dateTo)',
                 sections: [
@@ -1097,35 +1206,18 @@ class _NoShowTab extends ConsumerWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: 20),
-              if (report.byBranch.isNotEmpty)
-                CliniqnovvaCard(
+              // "By branch" only makes sense with multiple branches in the
+              // data — a single branch selected means every row would
+              // repeat that same branch, so it's hidden then.
+              if (branchId == null) ...[
+                const SizedBox(height: 28),
+                _NoShowBreakdownTable(
                   title: 'By branch',
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: report.byBranch.entries
-                        .map(
-                          (e) => Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 5),
-                            child: Row(
-                              children: [
-                                Expanded(
-                                  child: Text(
-                                    branchNames[e.key] ?? e.key,
-                                    style: TextStyle(color: context.appText),
-                                  ),
-                                ),
-                                Text(
-                                  '${(e.value.noShowRate * 100).toStringAsFixed(1)}% (${e.value.noShowCount}/${e.value.completedCount + e.value.noShowCount})',
-                                  style: TextStyle(color: context.appSubtext),
-                                ),
-                              ],
-                            ),
-                          ),
-                        )
-                        .toList(),
-                  ),
+                  byBranch: report.byBranch,
+                  names: branchNames,
+                  dateRangeLabel: '$dateFrom to $dateTo',
                 ),
+              ],
             ],
           ),
         );

@@ -18,6 +18,7 @@ import '../../features/departments/screens/departments_screen.dart';
 import '../../features/departments/screens/services_screen.dart';
 import '../../features/doctor/screens/doctor_reviews_screen.dart';
 import '../../features/doctor/screens/doctor_today_screen.dart';
+import '../../features/go_public/screens/go_public_screen.dart';
 import '../../features/inventory/screens/inventory_screen.dart';
 import '../../features/inventory/screens/pharmacist_overview_screen.dart';
 import '../../features/lab_orders/screens/lab_orders_screen.dart';
@@ -336,6 +337,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/popular-clinics',
             builder: (context, state) => const PopularClinicsScreen(),
+          ),
+          GoRoute(
+            path: '/go-public',
+            builder: (context, state) => const GoPublicScreen(),
           ),
         ],
       ),

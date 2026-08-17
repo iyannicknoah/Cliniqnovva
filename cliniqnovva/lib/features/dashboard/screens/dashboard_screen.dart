@@ -638,6 +638,9 @@ class DashboardPreviewScreen extends StatelessWidget {
               byBranch: const {},
               byDoctor: const {},
               byService: const {},
+              byBranchByDate: const {},
+              byDoctorByDate: const {},
+              byServiceByDate: const {},
             );
           }
           return const RevenueReport(
@@ -651,6 +654,9 @@ class DashboardPreviewScreen extends StatelessWidget {
             byBranch: {},
             byDoctor: {},
             byService: {},
+            byBranchByDate: {},
+            byDoctorByDate: {},
+            byServiceByDate: {},
           );
         }),
       ],
