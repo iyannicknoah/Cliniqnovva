@@ -5,12 +5,13 @@ import '../../core/theme/app_theme.dart';
 
 enum _ButtonVariant { filled, text }
 
-/// The single button component used everywhere in the app — 45px height,
-/// fully-rounded pill radius, sky-blue fill by default (fixed brand color,
-/// same in both themes — diverges here from
-/// cliniqnovva/lib/shared/widgets/cliniqnovva_button.dart's theme-inverted
-/// black/white fill; see DESIGN_LANGUAGE.md). Never use ElevatedButton/
-/// TextButton directly.
+/// The single button component used everywhere in the app — 50px height,
+/// 18-radius (2026-08-19, explicit user instruction — copied from the login
+/// screen's FlutterFlow reference button, was 45px/full-pill), brand-blue
+/// fill by default (`AppColors.primary`, fixed, same in both themes —
+/// 2026-08-19 sync with cliniqnovva/lib/shared/widgets/cliniqnovva_button.dart,
+/// which moved off its own theme-inverted black/white fill on 2026-08-13;
+/// see DESIGN_LANGUAGE.md). Never use ElevatedButton/TextButton directly.
 class CliniqnovvaButton extends StatelessWidget {
   const CliniqnovvaButton({
     super.key,
@@ -46,7 +47,7 @@ class CliniqnovvaButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final disabled = onPressed == null || isLoading;
 
-    final color = this.color ?? AppColors.skyBlue;
+    final color = this.color ?? AppColors.primary;
     const onColor = Colors.white;
 
     final Widget button = switch (_variant) {

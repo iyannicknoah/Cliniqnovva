@@ -9,7 +9,11 @@ abstract final class AppTheme {
   static const String fontFamily = 'General Sans';
 
   static const double cardRadius = 18;
-  static const double buttonRadius = 30;
+
+  /// 2026-08-19, explicit user instruction — copied from the login screen's
+  /// FlutterFlow reference button (was 30, a full pill). Only
+  /// `CliniqnovvaButton` reads this, so the change is scoped there.
+  static const double buttonRadius = 18;
   static const double inputRadius = 12;
 
   /// Mobile bottom navigation bar height (replaces the web app's
@@ -146,17 +150,21 @@ abstract final class AppTheme {
   }
 
   static ThemeData lightTheme() {
+    // Seeded from the brand blue (2026-08-19 sync with the web dashboard's
+    // 2026-08-13 "copy primary color" pass — replaces the black/white
+    // theme-inversion seed). Fixes every default-Material-styled control
+    // (switches, radios, focus rings, etc.) to the brand color for free.
     final colorScheme = ColorScheme.fromSeed(
-      seedColor: Colors.black,
+      seedColor: AppColors.primary,
       brightness: Brightness.light,
     );
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.light,
-      colorScheme: colorScheme.copyWith(primary: Colors.black),
+      colorScheme: colorScheme.copyWith(primary: AppColors.primary),
       scaffoldBackgroundColor: AppColors.pageBackground,
       cardColor: Colors.white,
-      primaryColor: Colors.black,
+      primaryColor: AppColors.primary,
       fontFamily: fontFamily,
       textTheme: const TextTheme().apply(
         fontFamily: fontFamily,
@@ -172,16 +180,16 @@ abstract final class AppTheme {
 
   static ThemeData darkTheme() {
     final colorScheme = ColorScheme.fromSeed(
-      seedColor: Colors.white,
+      seedColor: AppColors.primary,
       brightness: Brightness.dark,
     );
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.dark,
-      colorScheme: colorScheme.copyWith(primary: Colors.white),
+      colorScheme: colorScheme.copyWith(primary: AppColors.primary),
       scaffoldBackgroundColor: AppColors.pageBackgroundDark,
       cardColor: AppColors.pageBackgroundDark,
-      primaryColor: Colors.white,
+      primaryColor: AppColors.primary,
       fontFamily: fontFamily,
       textTheme: const TextTheme().apply(
         fontFamily: fontFamily,

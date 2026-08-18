@@ -1,5 +1,5 @@
 {
-  "app_name": "Clisante",
+  "app_name": "Cliniqnovva",
   "app_tagline": "Gérez votre clinique. On s'occupe du reste.",
 
   "choose_language": "Choisissez votre langue",
@@ -11,11 +11,13 @@
   "field_phone_or_email": "Téléphone ou email",
   "field_email_optional": "Email (facultatif)",
   "field_password": "Mot de passe",
+  "field_enter_password": "Entrez le mot de passe",
   "field_confirm_password": "Confirmer le mot de passe",
   "action_create_account": "Créer un compte",
   "action_have_account": "Vous avez déjà un compte ? Se connecter",
   "action_sign_in": "Se connecter",
   "action_forgot_password": "Mot de passe oublié ?",
+  "action_or_sign_in_with": "Ou se connecter avec",
 
   "error_name_required": "Le nom complet est requis.",
   "error_phone_or_email_required": "Entrez un numéro de téléphone ou une adresse email.",

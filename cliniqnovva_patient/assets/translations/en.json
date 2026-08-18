@@ -1,5 +1,5 @@
 {
-  "app_name": "Clisante",
+  "app_name": "Cliniqnovva",
   "app_tagline": "Run your clinic. We handle the rest.",
 
   "choose_language": "Choose your language",
@@ -11,11 +11,13 @@
   "field_phone_or_email": "Phone or email",
   "field_email_optional": "Email (optional)",
   "field_password": "Password",
+  "field_enter_password": "Enter password",
   "field_confirm_password": "Confirm password",
   "action_create_account": "Create account",
   "action_have_account": "Already have an account? Sign in",
   "action_sign_in": "Sign In",
   "action_forgot_password": "Forgot password?",
+  "action_or_sign_in_with": "Or sign in with",
 
   "error_name_required": "Full name is required.",
   "error_phone_or_email_required": "Enter a phone number or an email address.",

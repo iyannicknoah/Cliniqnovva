@@ -25,7 +25,9 @@ class AppIcons {
 
   static const view = IconRef.font(MigambiIcons.eye);
   static const eyeSlash = IconRef.font(MigambiIcons.eyeSlash);
-  static const back = IconRef.font(MigambiIcons.arrowLeft);
+  /// 2026-08-19, explicit user instruction — switched from `arrowLeft` to
+  /// the exact "arrowLeft44" glyph, app-wide.
+  static const back = IconRef.font(MigambiIcons.arrowLeft44);
   static const close = IconRef.font(MigambiIcons.closeCircle);
   static const chevronRight = IconRef.font(MigambiIcons.arrowRight);
   static const logout = IconRef.font(MigambiIcons.logout);

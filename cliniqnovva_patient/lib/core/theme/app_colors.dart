@@ -1,20 +1,56 @@
 import 'package:flutter/material.dart';
 
 /// Cliniqnovva's fixed brand palette — byte-for-byte identical to
-/// cliniqnovva/lib/core/theme/app_colors.dart (see DESIGN_LANGUAGE.md:
-/// the Patient App reuses the web dashboard's current design tokens, not
-/// the older teal/navy-primary scheme). Do not change these values here
-/// without updating both apps and cliniqnovva/DESIGN_LANGUAGE.md together.
+/// cliniqnovva/lib/core/theme/app_colors.dart (2026-08-19 sync, explicit
+/// user instruction: "make patient app and dashboard get one theme" — this
+/// file had drifted out of sync with the web dashboard's 2026-08-13 color
+/// pass despite its own doc comment already promising parity). Do not
+/// change these values here without updating both apps and
+/// cliniqnovva/DESIGN_LANGUAGE.md together.
 abstract final class AppColors {
+  /// Page/scaffold background, input fill, and container backgrounds across
+  /// the whole app — pure white per explicit instruction (2026-07-19).
   static const Color pageBackground = Color(0xFFFFFFFF);
-  static const Color pageBackgroundDark = Color(0xFF000000);
-  static const Color successGreen = Color(0xFF2ECC71);
-  static const Color warningAmber = Color(0xFFF4A261);
-  static const Color errorRed = Color(0xFFE63946);
-  static const Color textPrimary = Color(0xFF0B2545);
-  static const Color textSecondary = Color(0xFF5B6B73);
-  static const Color cardBorder = Color(0xFFE1EDEC);
 
+  /// The dark-mode equivalent of [pageBackground] — near-black navy, ported
+  /// 2026-08-13 from the Smart Feed Rwanda reference's `--color-background`
+  /// dark value (was pure black `#000000`, retired). Cards/containers use
+  /// this SAME value, never a separate "dark card" shade — see
+  /// `theme_ext.dart`'s `appCard`.
+  static const Color pageBackgroundDark = Color(0xFF0D1117);
+
+  /// System primary — brand blue, ported 2026-08-13 from the Smart Feed
+  /// Rwanda reference project's `--color-primary` (explicit user
+  /// instruction: "copy primary color"). Fixed, NOT theme-inverted — same
+  /// exact blue in light and dark mode, replacing the retired
+  /// black(light)/white(dark) inversion rule. See `context.appPrimary`.
+  static const Color primary = Color(0xFF1E8CFF);
+
+  /// Hover/pressed state for [primary] (reference `--color-primary-hover`).
+  static const Color primaryHover = Color(0xFF1670CC);
+
+  /// ~10%-opacity tint of [primary], for tinted backgrounds/selected rows
+  /// (reference `--color-primary-tint`).
+  static const Color primaryTint = Color(0xFFE8F3FF);
+
+  /// Fixed white — text/icon color on top of a [primary] fill, in BOTH
+  /// themes (reference `--color-primary-contrast`, never theme-inverted).
+  static const Color primaryContrast = Color(0xFFFFFFFF);
+
+  static const Color successGreen = Color(0xFF16A34A);
+  static const Color warningAmber = Color(0xFFB98900);
+  static const Color errorRed = Color(0xFFD92D20);
+  static const Color infoBlue = Color(0xFF00A1DE);
+  static const Color textPrimary = Color(0xFF14181B);
+  static const Color textSecondary = Color(0xFF57636C);
+  static const Color cardBorder = Color(0xFFE0E3E7);
+
+  /// Dark-mode equivalent of [cardBorder] (reference `--color-border` dark
+  /// value) — was an inline `Color(0xFF2A2A2A)` hardcoded at every call
+  /// site; centralized here 2026-08-13 during the same color-token pass.
+  static const Color cardBorderDark = Color(0xFF26303C);
+
+  // Status pills: light background + a saturated/readable text color per tone.
   static const Color pillGreenBg = Color(0xFFE8F8EF);
   static const Color pillGreenText = Color(0xFF1E8449);
   static const Color pillAmberBg = Color(0xFFFDF0E1);
@@ -24,14 +60,20 @@ abstract final class AppColors {
   static const Color pillTealBg = Color(0xFFE3F3F1);
   static const Color pillTealText = Color(0xFF1F6F64);
 
+  /// Bright, no-background status text (2026-07-23) — used by [StatusBadge]
+  /// for success/error states (Active/Paid vs Suspended/Overdue) across the
+  /// whole system: no pill fill, just vivid colored text.
   static const Color brightGreen = Color(0xFF34C759);
   static const Color brightRed = Color(0xFFFF3B30);
 
-  /// The system's second primary color, alongside the black/white
-  /// `context.appPrimary` — avatar rings, chart accents, etc.
+  /// The system's second primary color (2026-07-23), alongside
+  /// `context.appPrimary`. Reach for this first before introducing any
+  /// other accent color.
   static const Color skyBlue = Color(0xFF38BDF8);
 
-  /// One unique 2-color gradient per letter A-Z for avatar-initial circles.
+  /// One unique 2-color gradient per letter A-Z, used for avatar-initial
+  /// circles when a person has no photo. Look up by the first letter of a
+  /// name (uppercased) — see [AvatarWidget].
   static const Map<String, List<Color>> avatarGradients = {
     'A': [Color(0xFF2A9D8F), Color(0xFF56C9B9)],
     'B': [Color(0xFF3A86FF), Color(0xFF6FB1FC)],
@@ -61,6 +103,7 @@ abstract final class AppColors {
     'Z': [Color(0xFF155E63), Color(0xFF5EC9C0)],
   };
 
+  /// Fallback gradient for a name that doesn't start with A-Z (rare).
   static const List<Color> fallbackGradient = [
     Color(0xFF2A9D8F),
     Color(0xFF0B2545),

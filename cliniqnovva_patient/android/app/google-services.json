@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "813219606331",
+    "project_id": "clinicnovva1",
+    "storage_bucket": "clinicnovva1.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:813219606331:android:1a91110c87760007e0911e",
+        "android_client_info": {
+          "package_name": "rw.cliniqnovva.cliniqnovva_patient"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "813219606331-7i84vhsj0vt8lg9splpk5mkd5gkpuivq.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDHsI5B0ImLjl-OjvNAIxB_vgqt-xsSCno"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "813219606331-7i84vhsj0vt8lg9splpk5mkd5gkpuivq.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

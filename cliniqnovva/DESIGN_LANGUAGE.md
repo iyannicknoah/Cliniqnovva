@@ -36,6 +36,18 @@ visually distinct, deliberately different blue from the new `primary`
 (`#1E8CFF`) — don't conflate the two or try to unify them without a separate
 explicit instruction.
 
+**As of 2026-08-19, the Patient App (`cliniqnovva_patient`) shares this SAME
+palette and primary rule** — explicit user instruction ("make patient app and
+dashboard get one theme"). Its own `app_colors.dart`/`theme_ext.dart` had
+quietly drifted out of the byte-for-byte parity their own doc comments
+already promised: it was still missing `primary`/`primaryHover`/
+`primaryTint`/`primaryContrast`/`infoBlue`/`cardBorderDark` entirely, still
+had the OLD `textPrimary`/`cardBorder`/status colors and pure-black
+`pageBackgroundDark` from before the 2026-08-13 pass, and `context.appPrimary`
+was still the retired black(light)/white(dark) inversion. All of it is now a
+straight copy of this app's current values — see the dated entry further
+down for exactly what changed and why.
+
 | Token | Value | Use |
 |---|---|---|
 | `primary` | `#1E8CFF` | System primary/brand accent (2026-08-13) — buttons, sidebar background, focus borders, selected-day/chip fills, spinners. Fixed in both themes. |
@@ -967,6 +979,72 @@ growth/trend chart rather than introducing a new chart style or color.
     card never renders a broken-image icon. `Image.network`'s
     `errorBuilder` also routes into the same fallback for a load failure
     after the url did resolve (expired/network error).
+- **2026-08-19 (Patient App: Google/Facebook social sign-in row added to
+  login screen)** — Explicit user instruction, from a reference screenshot
+  (a FlutterFlow-generated login screen with Google/Facebook/Apple buttons
+  below an "Or sign in with" divider). Apple deliberately excluded per the
+  user's explicit "only google and facebook" instruction. No real brand
+  asset files were available (the user's uploaded images were chat
+  attachments, not files in the repo), so `_GoogleMark`/`_FacebookMark`
+  (`login_screen.dart`) are from-scratch vector approximations — a
+  `CustomPainter`-drawn 4-arc "G" ring in the real brand colors
+  (`#4285F4`/`#34A853`/`#FBBC05`/`#EA4335`) plus a blue horizontal bar, and
+  a plain `#1877F2` circle with a white "f" — not generic placeholder icons,
+  since the reference specifically called for the real recognizable marks.
+  Both sit inside `_SocialButton`, a full-width bordered pill
+  (`context.appSecondaryBg` fill, `AppTheme.buttonRadius`) — same shape
+  language as `CliniqnovvaButton` but a distinct component since neither
+  provider button is the app's primary action. New `_OrDivider` (a
+  `context.appBorder` rule on each side of a centered label) separates it
+  from the existing email/password `CliniqnovvaButton`, which stays
+  `AppColors.primary`-filled per the user's explicit "must have our primary
+  color as background not black" instruction (the reference's own Sign In
+  button was black — deliberately not copied). Neither social button is
+  wired to a real auth flow (none exists yet for either provider) —
+  tapping either shows a plain "isn't available yet" SnackBar rather than
+  silently doing nothing or faking success.
+- **2026-08-19 (Patient App synced to the web dashboard's color/theme/logo,
+  explicit user instruction: "make patient app and dashboard get one theme
+  ... and also use one logo image")** — `cliniqnovva_patient`'s design-token
+  files had drifted from this app's despite their own doc comments already
+  claiming byte-for-byte parity:
+  1. **`app_colors.dart`** (patient) replaced wholesale with this app's
+     current version — added the missing `primary`/`primaryHover`/
+     `primaryTint`/`primaryContrast`/`infoBlue`/`cardBorderDark` tokens, and
+     corrected `textPrimary` (was the pre-2026-08-13 `#0B2545`),
+     `pageBackgroundDark` (was pure `#000000`), `cardBorder`, and
+     `successGreen`/`warningAmber`/`errorRed` (all were their pre-2026-08-13
+     values) to match this file exactly.
+  2. **`theme_ext.dart`'s `context.appPrimary`** (patient) was still the
+     retired black(light)/white(dark) inversion rule — now `AppColors.primary`
+     fixed in both themes, same as this app since 2026-08-13. `appBorder`'s
+     dark branch switched from a locally hardcoded `#2A2A2A` to the (now
+     newly-added) `AppColors.cardBorderDark`.
+  3. **`app_theme.dart`'s `lightTheme()`/`darkTheme()`** (patient) seeded
+     `ColorScheme.fromSeed`/`primaryColor` from `Colors.black`/`Colors.white`
+     — switched to `AppColors.primary` in both, matching this app's own
+     2026-08-13 seed change, so default-Material-styled controls follow suit
+     there too.
+  4. **`CliniqnovvaButton`'s default fill** (patient) was `AppColors.skyBlue`
+     — a deliberate divergence from THIS app's button when it was written
+     (back when this app's own button was still black/white-inverted), but
+     that comparison point moved on 2026-08-13 and the patient button never
+     followed. Now defaults to `AppColors.primary`, matching this app's
+     button exactly.
+  5. **`assets/images/logo.png`** (patient) was a stale, differently-cropped
+     mark (MD5 `8360e6d9…`, last touched 2026-08-08) — replaced with a
+     byte-for-byte copy of this app's current mark (MD5 `8f212ee7…`,
+     2026-08-14). `CliniqnovvaLogo` (patient) already pointed at the same
+     filename/convention as this app's, so no widget code changed, only the
+     asset bytes.
+  6. **`assets/translations/{en,fr}.json`'s `app_name`** (patient) was still
+     the pre-rebrand `"Clisante"` (visible on the patient login screen's
+     wordmark) — corrected to `"Cliniqnovva"` in both locales.
+  Not touched: `AppColors.skyBlue` (intentionally still a distinct second
+  accent in both apps, per the note above), and the date-picker/dialog
+  helper functions in `app_theme.dart` that still hardcode `#2A2A2A` for a
+  dark border rather than reading `AppColors.cardBorderDark` — a separate,
+  narrower drift than what this pass was asked to fix.
 - **2026-08-16 (Popular Clinics: "How this is calculated" removed, "Other
   branches" table added)** — Two explicit user instructions from a
   screenshot of `/popular-clinics`: (1) the "How this is calculated"

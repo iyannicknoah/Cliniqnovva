@@ -43,6 +43,12 @@ class MigambiIcons {
   /// (`FFIcons.karrowRight40`) — used for "View all" tiles.
   static const IconData arrowRight40 = IconData(0xed1c, fontFamily: _fontFamily);
 
+  /// The exact "arrowLeft44" glyph (2026-08-19, explicit user instruction)
+  /// — codepoint confirmed against the full icon pack's own generated
+  /// `Migambi-VIP-Icons_icons.dart` (`Documents\Migambi-VIP-Icons-v1.0\`),
+  /// not guessed. Now the app-wide back icon — see `AppIcons.back`.
+  static const IconData arrowLeft44 = IconData(0xed18, fontFamily: _fontFamily);
+
   // Bottom nav (2026-08-13) — explicit exact-name requests, switching the
   // nav off Heroicons/mini onto this font too (see app_icons.dart's
   // updated "Bottom nav" note — supersedes the earlier "navbar stays
