@@ -13,6 +13,7 @@ import '../../shared/widgets/cliniqnovva_button.dart';
 import '../../shared/widgets/cliniqnovva_card.dart';
 import '../../shared/widgets/loading_widget.dart';
 import '../../shared/widgets/rating_stars.dart';
+import '../../shared/widgets/shimmer_box.dart';
 import '../chat/providers/chats_provider.dart';
 import '../reviews/providers/reviews_provider.dart';
 import 'models/branch_review_summary.dart';
@@ -108,6 +109,8 @@ class _BranchInfoCard extends StatelessWidget {
                 child: Image.network(
                   branch.imageUrl!,
                   fit: BoxFit.cover,
+                  loadingBuilder: (context, child, progress) =>
+                      progress == null ? child : const ShimmerBox(),
                   errorBuilder: (context, error, stackTrace) => const SizedBox.shrink(),
                 ),
               ),

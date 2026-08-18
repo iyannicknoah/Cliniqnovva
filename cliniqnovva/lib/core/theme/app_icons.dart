@@ -66,4 +66,14 @@ class AppIcons {
   static const globe = IconRef.hero(HeroIcons.globeAlt);
   static const mobilePhone = IconRef.hero(HeroIcons.devicePhoneMobile);
   static const download = IconRef.hero(HeroIcons.arrowDownTray);
+
+  // 2026-08-17 — "Go Public" wizard's Doctors step: camera badge on each
+  // doctor card's avatar, indicating it's tappable to upload a photo.
+  static const camera = IconRef.hero(HeroIcons.camera);
+
+  // 2026-08-18 — "Go live" step's share-to-socials row. One generic share
+  // glyph reused for WhatsApp/X/Facebook (Heroicons has no brand logos —
+  // per-platform BRAND COLOR on the same icon, not mismatched generic
+  // icons pretending to be each platform's mark).
+  static const share = IconRef.hero(HeroIcons.share);
 }

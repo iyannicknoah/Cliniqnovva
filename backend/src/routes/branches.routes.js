@@ -31,6 +31,16 @@ router.post(
   upload.single('file'),
   controller.uploadPublicImage
 );
+// Resolves publicImageKey to a signed R2 url for staff callers — the
+// staff-side equivalent of browse.service.js's identical resolution for
+// the Patient App, which is patient-only and unreachable from here.
+router.get('/:branchId/image-url', requireRole(...READ_ROLES), controller.getPublicImageUrl);
+// Streams the branch's public photo bytes through our own server (2026-08-19
+// — same CORS fix as staff.routes.js's '/:id/photo-view'; see
+// branches.service.js#getPublicImageBytes's doc comment). Powers the "Go
+// Public" wizard's downloadable share card, which the signed url above
+// can't render via Image.network in Flutter web.
+router.get('/:branchId/image-view', requireRole(...READ_ROLES), controller.viewPublicImage);
 
 // Branch Admin is allowed on plain update but the service restricts them to
 // working-hours fields on their own branch only (Part 6 Task 3).

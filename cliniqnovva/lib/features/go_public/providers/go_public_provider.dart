@@ -50,4 +50,17 @@ class GoPublicSteps {
   /// live yet. Explicit user instruction: "when he saves when he comes back
   /// we show badge like warning ... to remind him to finish public setup".
   bool get needsAttention => started && !isLive;
+
+  /// Index (0-4, matching the wizard's own step order) of the first step
+  /// not yet done — explicit user instruction: clicking "Go Public" should
+  /// land on where the admin left off, not always restart at step 0. Every
+  /// step already done (branch already live) lands on the last step, "Go
+  /// live", same place "Manage public profile" already implies.
+  int get firstIncompleteStepIndex {
+    if (!infoDone) return 0;
+    if (!servicesDone) return 1;
+    if (!doctorsDone) return 2;
+    if (!payoutDone) return 3;
+    return 4;
+  }
 }

@@ -113,6 +113,32 @@ async function setStatus(req, res, next) {
   }
 }
 
+async function uploadPhoto(req, res, next) {
+  try {
+    if (!req.file) return res.status(400).json({ error: 'No file provided (field name must be "file")' });
+    const staffMember = await staffService.setPhoto(
+      req.params.id,
+      { buffer: req.file.buffer, contentType: req.file.mimetype },
+      { actorId: req.user?.uid, actorRole: req.user?.role, scope: req.scope }
+    );
+    res.json({ staff: staffMember });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function viewPhoto(req, res, next) {
+  try {
+    const photo = await staffService.getPhoto(req.params.id);
+    if (!photo) return res.status(404).json({ error: 'No photo uploaded for this doctor' });
+    res.set('Content-Type', photo.contentType || 'image/jpeg');
+    res.set('Cache-Control', 'private, max-age=300');
+    res.send(photo.body);
+  } catch (err) {
+    next(err);
+  }
+}
+
 async function setSchedule(req, res, next) {
   try {
     const staffMember = await staffService.setSchedule(
@@ -149,4 +175,15 @@ async function remove(req, res) {
   res.status(501).json({ error: 'Not implemented: staff are deactivated, never hard-deleted' });
 }
 
-module.exports = { list, getById, create, update, setStatus, setSchedule, addBlockedSlot, remove };
+module.exports = {
+  list,
+  getById,
+  create,
+  update,
+  setStatus,
+  uploadPhoto,
+  viewPhoto,
+  setSchedule,
+  addBlockedSlot,
+  remove,
+};

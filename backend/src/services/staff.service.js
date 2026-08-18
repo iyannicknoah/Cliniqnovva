@@ -16,6 +16,7 @@ const { auth } = require('../config/firebase-admin');
 const { ROLES } = require('../middleware/requireRole');
 const authService = require('./auth.service');
 const auditLogService = require('./auditLog.service');
+const storageService = require('./storage.service');
 
 const STAFF_ROLES = [
   ROLES.DOCTOR,
@@ -66,21 +67,33 @@ async function attachDoctorFields(staffRows) {
     if (doc.exists) doctorById[doc.id] = doc.data();
   });
 
-  return staffRows.map((s) => {
-    if (s.role !== ROLES.DOCTOR) return s;
-    const d = doctorById[s.id];
-    return {
-      ...s,
-      specialty: d?.specialty || null,
-      bio: d?.bio || null,
-      departmentIds: d?.departmentIds || [],
-      schedule: d?.schedule || [],
-      breakMinutes: d?.breakMinutes || 0,
-      blockedSlots: d?.blockedSlots || [],
-      averageRating: d?.averageRating || 0,
-      reviewCount: d?.reviewCount || 0,
-    };
-  });
+  // 2026-08-17 — "Go Public" wizard's Doctors step shows each doctor's
+  // actual uploaded photo. `photoKey` resolves to a relative path on OUR
+  // OWN API (`/staff/:id/photo-view`, see `getPhoto` below) rather than a
+  // signed R2 URL — the bucket has no CORS policy for browser origins,
+  // which breaks `Image.network` under Flutter web's CanvasKit renderer
+  // (unlike a plain `<img>` tag, it fetches bytes itself and is subject to
+  // CORS). The frontend prefixes this with its API base URL and an auth
+  // header, same as every other authenticated request.
+  return Promise.all(
+    staffRows.map((s) => {
+      if (s.role !== ROLES.DOCTOR) return s;
+      const d = doctorById[s.id];
+      const photoUrl = d?.photoKey ? `/api/v1/staff/${s.id}/photo-view` : null;
+      return {
+        ...s,
+        specialty: d?.specialty || null,
+        bio: d?.bio || null,
+        departmentIds: d?.departmentIds || [],
+        schedule: d?.schedule || [],
+        breakMinutes: d?.breakMinutes || 0,
+        blockedSlots: d?.blockedSlots || [],
+        averageRating: d?.averageRating || 0,
+        reviewCount: d?.reviewCount || 0,
+        photoUrl,
+      };
+    })
+  );
 }
 
 /** Staff (STAFF_ROLES plus that branch's own admin) for one branch — Part 8 Task 1. */
@@ -184,6 +197,37 @@ async function create(
   });
 
   return getById(uid);
+}
+
+/**
+ * Uploads/replaces a doctor's profile photo (2026-08-17 — "Go Public"
+ * wizard's Doctors step). Same fixed-key-path, overwrite-in-place shape as
+ * `branches.service.js#setPublicImage` — no orphaned old photo to clean up.
+ */
+async function setPhoto(doctorId, { buffer, contentType }, actor) {
+  const staffMember = await getById(doctorId);
+  if (!staffMember) throw httpError(404, 'Staff member not found');
+  if (staffMember.role !== ROLES.DOCTOR) throw httpError(400, 'This staff member is not a doctor');
+  assertAccess(staffMember, actor.scope);
+
+  const key = `doctors/${doctorId}/photo`;
+  await storageService.uploadFile(buffer, key, contentType);
+  await db.collection('doctors').doc(doctorId).update({ photoKey: key });
+
+  return getById(doctorId);
+}
+
+/**
+ * Fetches a doctor's uploaded photo bytes for `GET /staff/:id/photo-view`
+ * (2026-08-17) to stream — see `storage.service.js#getObjectBuffer`'s doc
+ * comment for why this proxies through our own server instead of a signed
+ * R2 URL. Returns null if the doctor has no photo uploaded yet (caller 404s).
+ */
+async function getPhoto(doctorId) {
+  const doc = await db.collection('doctors').doc(doctorId).get();
+  const photoKey = doc.exists ? doc.data().photoKey : null;
+  if (!photoKey) return null;
+  return storageService.getObjectBuffer(photoKey);
 }
 
 const EDITABLE_FIELDS = ['name', 'phone', 'email'];
@@ -369,6 +413,8 @@ module.exports = {
   create,
   update,
   setStatus,
+  setPhoto,
+  getPhoto,
   setSchedule,
   addBlockedSlot,
 };

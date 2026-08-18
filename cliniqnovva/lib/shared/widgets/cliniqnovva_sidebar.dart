@@ -381,7 +381,7 @@ class _SidebarNavTile extends StatelessWidget {
                             top: -1,
                             child: DecoratedBox(
                               decoration: BoxDecoration(
-                                color: AppColors.warningAmber,
+                                color: AppColors.brightRed,
                                 shape: BoxShape.circle,
                               ),
                               child: SizedBox(width: 10, height: 10),
@@ -434,7 +434,7 @@ class _SidebarNavTile extends StatelessWidget {
                         const SizedBox(width: 6),
                         const DecoratedBox(
                           decoration: BoxDecoration(
-                            color: AppColors.warningAmber,
+                            color: AppColors.brightRed,
                             shape: BoxShape.circle,
                           ),
                           child: SizedBox(width: 8, height: 8),

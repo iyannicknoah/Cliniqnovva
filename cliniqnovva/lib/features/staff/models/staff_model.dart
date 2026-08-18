@@ -20,6 +20,7 @@ class StaffModel {
     this.blockedSlots = const [],
     this.averageRating = 0,
     this.reviewCount = 0,
+    this.photoUrl,
   });
 
   final String id;
@@ -48,6 +49,11 @@ class StaffModel {
   /// never live-computed here.
   final double averageRating;
   final int reviewCount;
+
+  /// Doctor-only, resolved server-side from a private R2 object key
+  /// (`staff.service.js#attachDoctorFields`) — never null-vs-unset, just
+  /// null until the "Go Public" wizard's Doctors step uploads one.
+  final String? photoUrl;
 
   factory StaffModel.fromJson(Map<String, dynamic> json) {
     return StaffModel(
@@ -83,6 +89,7 @@ class StaffModel {
           const [],
       averageRating: (json['averageRating'] as num?)?.toDouble() ?? 0,
       reviewCount: (json['reviewCount'] as num?)?.toInt() ?? 0,
+      photoUrl: json['photoUrl'] as String?,
     );
   }
 }

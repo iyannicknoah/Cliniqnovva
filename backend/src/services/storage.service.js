@@ -62,6 +62,25 @@ async function getSignedDownloadUrl(key, expiresInSeconds = DEFAULT_SIGNED_URL_T
 }
 
 /**
+ * Fetches an object's raw bytes + content type directly (2026-08-17 —
+ * "Go Public" wizard's Doctors step). Unlike a signed URL, this lets a
+ * caller PROXY the bytes through our own Express server instead of having
+ * the browser fetch R2 directly — the bucket has no CORS policy configured
+ * for arbitrary browser origins, which silently breaks `Image.network` in
+ * Flutter web's CanvasKit renderer (it fetches bytes itself, unlike a plain
+ * `<img>` tag, so it's subject to CORS). Serving through our own
+ * already-CORS-permissive API sidesteps that entirely.
+ * @param {string} key
+ * @returns {Promise<{ body: Buffer, contentType: string | undefined }>}
+ */
+async function getObjectBuffer(key) {
+  const response = await r2.getClient().send(new GetObjectCommand({ Bucket: r2.bucketName, Key: key }));
+  const chunks = [];
+  for await (const chunk of response.Body) chunks.push(chunk);
+  return { body: Buffer.concat(chunks), contentType: response.ContentType };
+}
+
+/**
  * Confirms the R2 credentials/endpoint/bucket are all correct by checking
  * the bucket actually exists and is reachable (used by GET /api/health-storage).
  */
@@ -69,4 +88,11 @@ async function checkBucketConnection() {
   await r2.getClient().send(new HeadBucketCommand({ Bucket: r2.bucketName }));
 }
 
-module.exports = { uploadFile, deleteFile, getSignedDownloadUrl, checkBucketConnection, DEFAULT_SIGNED_URL_TTL_SECONDS };
+module.exports = {
+  uploadFile,
+  deleteFile,
+  getSignedDownloadUrl,
+  getObjectBuffer,
+  checkBucketConnection,
+  DEFAULT_SIGNED_URL_TTL_SECONDS,
+};

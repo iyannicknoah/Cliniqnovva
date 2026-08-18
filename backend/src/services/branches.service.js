@@ -369,4 +369,54 @@ async function setPublicImage(id, { buffer, contentType }, { scope }) {
   return { ...branch, publicImageKey: key };
 }
 
-module.exports = { list, listWithPlan, getById, create, update, setStatus, setPublicImage };
+// Same TTL as browse.service.js's own (unexported) PUBLIC_IMAGE_URL_TTL_SECONDS
+// for this exact field — longer than the 15-minute document default so the
+// Go Public wizard's share-card preview/download doesn't go stale mid-review.
+const PUBLIC_IMAGE_URL_TTL_SECONDS = 60 * 60 * 6;
+
+/**
+ * Resolves a branch's publicImageKey to a signed R2 GET url for staff
+ * callers (the Go Public wizard's downloadable share card) — the
+ * browse.service.js#toPublicBranch resolution is patient-role-only and
+ * unreachable from a staff session, so this is a separate staff-scoped path.
+ */
+async function getPublicImageUrl(id, { scope }) {
+  const branch = await getById(id);
+  if (!branch) throw httpError(404, 'Branch not found');
+  assertBranchAccess(branch, scope);
+
+  if (!branch.publicImageKey) return { url: null };
+  const url = await storageService.getSignedDownloadUrl(branch.publicImageKey, PUBLIC_IMAGE_URL_TTL_SECONDS);
+  return { url };
+}
+
+/**
+ * Fetches a branch's uploaded public-profile photo bytes for
+ * `GET /branches/:branchId/image-view` (2026-08-19) to stream — same
+ * reasoning as `staff.service.js#getPhoto`'s doc comment: the "Go Public"
+ * wizard's downloadable share card renders this via `Image.memory` after an
+ * authenticated fetch, not `Image.network` against the signed R2 url
+ * `getPublicImageUrl` returns above, because that url is blocked by R2's
+ * bucket having no CORS policy for browser origins under Flutter web's
+ * CanvasKit renderer. Returns null if no photo uploaded yet (caller 404s).
+ */
+async function getPublicImageBytes(id, { scope }) {
+  const branch = await getById(id);
+  if (!branch) throw httpError(404, 'Branch not found');
+  assertBranchAccess(branch, scope);
+
+  if (!branch.publicImageKey) return null;
+  return storageService.getObjectBuffer(branch.publicImageKey);
+}
+
+module.exports = {
+  list,
+  listWithPlan,
+  getById,
+  create,
+  update,
+  setStatus,
+  setPublicImage,
+  getPublicImageUrl,
+  getPublicImageBytes,
+};

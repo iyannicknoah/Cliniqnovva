@@ -104,7 +104,11 @@ class _BackButton extends StatelessWidget {
           color: context.appSecondaryBg,
           borderRadius: BorderRadius.circular(10),
         ),
-        child: AppIcon(AppIcons.back, size: 18, color: context.appText),
+        // `AppIcons.back` (`HeroIcons.arrowLeft`) rendered blank here in the
+        // release web build — swapped for `chevronLeft`, the exact icon+
+        // style combination the sidebar's own collapse toggle already uses
+        // successfully (`cliniqnovva_sidebar.dart`'s `toggle`).
+        child: AppIcon(AppIcons.chevronLeft, size: 18, color: context.appText),
       ),
     );
   }
@@ -182,6 +186,7 @@ class _GoPublicBody extends ConsumerWidget {
                     const SizedBox(height: 20),
                   ],
                   CliniqnovvaCard(
+                    borderRadius: 28,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
@@ -230,6 +235,7 @@ class _GoPublicBody extends ConsumerWidget {
                               onPressed: () => showGoPublicWizard(
                                 context,
                                 branchId: branchId,
+                                initialStep: steps.firstIncompleteStepIndex,
                               ),
                             ),
                           ),
@@ -269,20 +275,20 @@ class _StepRow extends StatelessWidget {
       child: Row(
         children: [
           Container(
-            width: 60,
-            height: 60,
+            width: 45,
+            height: 45,
             alignment: Alignment.center,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: done ? context.appPrimary : context.appSecondaryBg,
             ),
             child: done
-                ? const AppIcon(AppIcons.check, size: 26, color: Colors.white)
+                ? const AppIcon(AppIcons.check, size: 19, color: Colors.white)
                 : Text(
                     '$number',
                     style: TextStyle(
                       color: context.appSubtext,
-                      fontSize: 22,
+                      fontSize: 16,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -308,17 +314,6 @@ class _StepRow extends StatelessWidget {
               ],
             ),
           ),
-          if (done) ...[
-            const SizedBox(width: 8),
-            Text(
-              'Done',
-              style: TextStyle(
-                color: AppColors.successGreen,
-                fontSize: 12.5,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
         ],
       ),
     );

@@ -698,6 +698,275 @@ growth/trend chart rather than introducing a new chart style or color.
     `_GoPublicBody` is gone too — with no sidebar taking space on this page
     anymore, a plain `Center` already lands on the true screen center, so
     the compensation would now overcorrect.
+  - **2026-08-17 follow-up #9 (wizard: hint text removed, "Save & Next"
+    moved to a fixed bottom-right footer)** — Two further explicit user
+    instructions on `go_public_wizard_dialog.dart`'s wizard modal (separate
+    from the page above — this is the dialog `showGoPublicWizard` opens).
+    (1) Step 1 (Clinic info)'s four `CliniqnovvaTextField`s dropped their
+    `hint` values entirely (rather than setting `hint: ''`, since the param
+    is nullable and omitting it is the same as passing `null`) — no more
+    "Shown to patients...", "+250 7XX XXX XXX", "clinic@example.com", or
+    "Street, sector..." placeholder copy; the fields now start genuinely
+    empty. (Step 4/Payout's own separate `+250 7XX XXX XXX` hint, a
+    different field entirely, was untouched — not shown in the screenshot
+    this request came from.) (2) "Save & Next" moved out of the per-step
+    scrolling content column (where it sat inline after each step's fields,
+    left-aligned at whatever width the content happened to be) into its own
+    fixed footer: a `Divider` + `Align(alignment: centerRight)` row below
+    the tabs/content `Flexible`, shown whenever `_activeStep < 4` (step 5's
+    "Go live" keeps its own confirm button inside `_SuccessStep`, unchanged
+    from before). Same button, same per-step `onPressed` switch — only its
+    position in the widget tree changed, from scrolling-with-content to a
+    persistent bottom-right bar every step tab shares.
+  - **2026-08-17 follow-up #10 (Doctors step: photo-upload cards, full
+    backend feature)** — Explicit user instruction, confirmed full backend
+    persistence over a UI-only mock via a clarifying question (no
+    `photoKey`/upload endpoint existed anywhere before this). The Doctors
+    step's plain checkbox list (`_CheckRow`, still used by the Services step
+    next to it) is replaced by a `Wrap` of `_DoctorCard`s — a 72px circular
+    avatar (tap opens `FilePicker`, uploads via
+    `staffNotifierProvider.uploadDoctorPhoto`, showing a spinner overlay
+    mid-upload) with a small primary-color camera badge bottom-right (new
+    `AppIcons.camera`), doctor name (bold) and specialty below in a
+    `Column`. Selecting a doctor for the public listing still works exactly
+    as before — same `selected`/`onToggle` — just moved from tapping a row
+    to tapping the CARD (a checkmark badge top-left + tinted border/
+    `appPrimary` outline show selected state); tapping the avatar
+    specifically uploads instead, via a nested `GestureDetector` so the two
+    tap targets don't conflict. No photo yet shows a fixed placeholder
+    (`_defaultDoctorPhotoUrl`, a plain public image URL, not an R2 key —
+    it's a static fallback, not clinic data).
+    - **Backend, mirroring `branches.service.js#setPublicImage`'s exact
+      shape** (fixed key path, upload-overwrites-in-place, no orphan
+      cleanup needed): `staff.service.js` gained `setPhoto(doctorId, ...)`
+      (key `doctors/{id}/photo`, written to the `/doctors/{id}` doc's new
+      `photoKey` field) plus a new `POST /staff/:id/photo` route
+      (multer, same `MANAGE_ROLES` as every other staff-write route).
+      `attachDoctorFields` (used by both `GET /staff` and `GET /staff/:id`)
+      now resolves that key to a signed `photoUrl` inline — same
+      "store the key, resolve on read, never expose the raw key" shape
+      `browse.service.js#toPublicBranch` already uses for
+      `publicImageKey` — so the frontend's `StaffModel` just gets a
+      ready-to-use `photoUrl`, no separate signed-url round trip.
+    - **Patient App full-circle**: `doctors.service.js#toPublicDoctor` (the
+      allowlist backing the Patient App's own doctor listing/detail) also
+      resolves `photoKey` → `photoUrl` now, same shape, 6-hour TTL matching
+      `browse.service.js`'s own public-image TTL reasoning (not sensitive,
+      the clinic opted to show it) rather than storage.service's 15-minute
+      default. Required flipping `toPublicDoctor` itself `async` and its
+      two callers (`list`/`getById`) to `Promise.all`/`await` it —
+      mirroring the same pattern `browse.service.js#toPublicBranch`
+      already uses for its own `imageUrl`.
+  - **2026-08-17 follow-up #11 (Overview page: "Done" label removed)** —
+    Explicit user instruction. `GoPublicScreen`'s `_StepRow` (the overview
+    page's own step list, separate from the wizard modal's — not the same
+    file as follow-up #10) no longer renders the green "Done" text next to
+    a completed step's title; the filled primary circle + check icon
+    already say that on their own. Removed the `if (done) ...[Text('Done')]`
+    trailing block entirely, rather than hiding it — nothing else in the
+    row needed to change to fill the freed space.
+  - **2026-08-17 follow-up #12 (sidebar "needs attention" dot: amber → red)**
+    — Explicit user instruction on a screenshot of the collapsed rail's
+    "Go Public" icon. Both renderings of `SidebarNavItem.warning`'s plain
+    dot in `_SidebarNavTile` — the collapsed rail's 10px corner dot and the
+    expanded row's 8px trailing dot, both still exclusive to "Go Public" —
+    switched `AppColors.warningAmber` → `AppColors.brightRed` (the same red
+    the numeric `badgeCount` pill elsewhere in this file already uses).
+    Changed together since both render the same underlying state, just in
+    the two different sidebar layouts.
+  - **2026-08-17 follow-up #13 (doctor card: bigger, border-only selection,
+    robust avatar backdrop)** — Three more explicit user instructions from
+    a screenshot showing the avatar rendering as empty space (just the
+    camera badge floating with nothing behind it). Card `150px` → `190px`,
+    avatar `72px` → `96px`, camera badge icon `12px` → `16px` (padding
+    `5` → `7` to match). Selected state's background tint
+    (`appPrimary.withValues(alpha: 0.06)`) is gone — checked vs. unchecked
+    now differs ONLY by border color/width, background stays
+    `Colors.transparent` either way. Avatar itself: wrapped in a
+    `Container` the SAME 96×96 size as the image, `shape: BoxShape.circle`,
+    `color: context.appSecondaryBg` — a visible colored backdrop instead of
+    blank space while `Image.network` loads or if it errors, plus new
+    `loadingBuilder`/`errorBuilder` callbacks on the `Image.network` itself
+    (a spinner while loading, an `AppIcons.patients` icon on failure) — the
+    blank-space bug itself was `Image.network` never having either
+    callback, so a slow/failed load painted nothing.
+  - **2026-08-17 follow-up #14 (Overview page: number/check circles
+    trimmed back down)** — Explicit user instruction — follow-up #5's 80px
+    circles (already reduced once, in follow-up #6, to 60px) came down
+    further to 50px, check icon 26px → 21px, number text 22px → 18px. Only
+    `GoPublicScreen`'s own `_StepRow` (the overview page) — the wizard
+    modal's unrelated `_DoctorCard` sizing above is untouched.
+  - **2026-08-17 follow-up #15 (circles → 45px; card radius increased)** —
+    Two more explicit user instructions. `_StepRow`'s circles came down
+    once more, 50px → 45px (check icon 21px → 19px, number text 18px →
+    16px). Separately, `CliniqnovvaCard` (the shared component every card
+    app-wide uses) gained a `borderRadius` param defaulting to
+    `AppTheme.cardRadius` (18px, unchanged for every other card) — the
+    Setup steps card is the first and only instance passing an override
+    (`28`), a bigger rounding than the app-wide default rather than a new
+    one-off card widget.
+  - **2026-08-17 follow-up #16 (doctor photo bug fix: CORS-proof rendering)**
+    — User-reported bug: an uploaded doctor photo never actually displayed
+    (backend logs confirmed the upload itself succeeded — `POST
+    /staff/:id/photo` 200 — so this was a display bug, not an upload bug).
+    Root cause: follow-up #10's avatar used `Image.network` for BOTH the
+    Pinterest default AND the real uploaded photo (a raw R2 signed URL).
+    Flutter web's CanvasKit renderer fetches image bytes itself for
+    `Image.network` (unlike a plain `<img>` tag), which is subject to CORS —
+    and neither source had a CORS policy permitting the app's origin: the R2
+    bucket has none configured, and Pinterest's CDN doesn't reliably allow
+    arbitrary cross-origin embeds either. Both silently fell through to
+    `errorBuilder`'s fallback icon. No prior code path in this app had
+    actually exercised a network-image render to catch this — the Clinic
+    Info step's own image preview uses `MemoryImage` on locally-picked bytes
+    (never fetches back over the network), and `AvatarWidget`'s `photoUrl`
+    branch has never been exercised with real data in practice.
+    - **Fix, default image**: the Pinterest URL is now a bundled asset
+      (`assets/images/default_doctor.jpg`, downloaded once and committed —
+      `assets/images/` was already a whole-directory pubspec asset path, so
+      no pubspec change needed) rendered via `Image.asset` — zero network
+      dependency, zero CORS surface.
+    - **Fix, real photo**: `staff.service.js#attachDoctorFields` now returns
+      a relative path on our OWN API (`/api/v1/staff/:id/photo-view`)
+      instead of a signed R2 URL. New `storage.service.js#getObjectBuffer`
+      fetches the R2 object's bytes server-side; a new
+      `staff.service.js#getPhoto` → `staff.controller.js#viewPhoto` →
+      `GET /staff/:id/photo-view` route (same `READ_ROLES` as `GET
+      /staff`/`GET /staff/:id` — no new access granted) streams them
+      through our own already-CORS-permissive (`app.use(cors())`) Express
+      server. The frontend fetches this path as bytes via `ApiService`'s
+      existing Dio client (new `_AuthedDoctorPhoto` StatefulWidget in
+      `go_public_wizard_dialog.dart`) — same base URL and auth-header
+      interceptor every other authenticated request already uses — and
+      renders via `Image.memory` instead of `Image.network`.
+    - **Scope note**: `doctors.service.js#toPublicDoctor` (the Patient App's
+      OWN doctor-photo resolution, added in the same follow-up #10) was
+      deliberately left as a raw signed R2 URL — the Patient App is a native
+      mobile app, not a browser, so CORS never applies there; only the web
+      dashboard's wizard needed this fix.
+  - **2026-08-17 follow-up #17 (selected-doctor checkmark badge removed)** —
+    Explicit user instruction. `_DoctorCard`'s top-left checkmark badge
+    (shown only when `checked`) is gone — the border color/width from
+    follow-up #13 is now the ONLY selected-state indicator, no badge
+    layered on top of it.
+  - **2026-08-18 (Payout step: MoMo default-selected, warning banner
+    background removed)** — Two explicit user instructions. `_seedFromBranch`
+    now sets `_payoutMethod = branch.payoutMethod ?? 'momo'` — MoMo is
+    pre-selected in the `SegmentedTabs` the first time this step opens
+    (previously `null`, showing no tab selected and no fields at all until
+    the admin picked one); an already-saved method still wins over that
+    default once one exists. The "not verified against your provider..."
+    warning banner below it dropped its `AppColors.pillAmberBg` background
+    — icon and text keep their amber color as the only warning cue now,
+    the container itself is just a plain padded box.
+  - **2026-08-18 follow-up (warning copy trimmed; bordered instead of
+    filled)** — Two more explicit user instructions on that same banner.
+    Copy replaced entirely — down from the "not verified against your
+    provider" paragraph to just "Double check account number and account
+    holder names and make sure they match. If they don't match" (given
+    verbatim, including the trailing incomplete clause — not rewritten).
+    The container gained `Border.all(color: context.appSecondaryBg)` — the
+    plain padded box from the previous follow-up now has a visible edge
+    again, in the app's secondary-background color rather than a themed
+    "warning" border color.
+  - **2026-08-18 follow-up (warning copy completed)** — The trailing
+    clause above got its ending: "...If they don't match, you won't
+    receive your money." (spelling/punctuation cleaned up from the user's
+    shorthand, matching how every other follow-up in this log normalizes
+    user-supplied copy).
+  - **2026-08-18 follow-up (warning text recolored)** — The warning text
+    itself switched from `AppColors.pillAmberText` to `context.appSubtext`
+    (the app's secondary text color) — explicit user instruction to keep
+    the warning ICON's amber color unchanged while de-emphasizing the body
+    copy to a normal muted-text tone.
+  - **2026-08-18 (Go live step: footer button, promo card, share/download)**
+    — Three explicit user instructions on step 5. (1) Its "Go Public"
+    button moved out of `_SuccessStep`'s own inline layout into the SAME
+    fixed bottom-right footer steps 1-4 already share (follow-up #9) — the
+    footer's visibility condition became `_activeStep < 4 || (_activeStep
+    == 4 && !steps.isLive)` and its `onPressed` switch gained a `3 =>
+    _savePayout` case plus a `_ => steps.allStepsDone ? _goLive : null`
+    default for step 4 (disabled, not hidden, until every other step is
+    done — same gating the old inline button had). `_SuccessStep` dropped
+    its now-unused `saving`/`onGoLive` params entirely. Once `isLive`, no
+    footer button renders at all — that state's content is just the
+    existing share/download badge, no further "next" action. (2) The
+    not-live + `allStepsDone` content gained a new `_BookingPromoCard` —
+    360×200, `assets/images/default_doctor.jpg` (already bundled, see the
+    doctor-photo-bug fix above — no second image asset added just for
+    this) as a `DecorationImage` background, a bottom-anchored black
+    gradient scrim for legibility, and "Book your appointment with us on
+    the Clisante app" — the app name/wording given verbatim by the user,
+    typos aside, not assumed to mean "Cliniqnovva". (3) Below it, a share
+    row: three `_SocialIconButton`s (WhatsApp/X/Facebook) opening each
+    platform's share-intent URL via `url_launcher` with pre-filled
+    promotional text — NOT the downloaded image itself, since a web app
+    has no native OS share sheet to hand an image file to without a
+    hosted URL to point at — plus a "Download" button reusing the same
+    `RepaintBoundary`-capture-to-PNG routine the post-live `_ShareBadge`
+    already used (now a shared `_download(GlobalKey)` taking either card's
+    key instead of one hardcoded to the badge). New `AppIcons.share`
+    (`HeroIcons.share`) is the one icon all three share buttons use —
+    Heroicons has no WhatsApp/X/Facebook brand marks, so each button is
+    differentiated by tinting that SAME icon in the platform's real brand
+    color instead of reaching for mismatched generic icons pretending to
+    be logos.
+  - **2026-08-18 follow-up (promo card enlarged)** — `_BookingPromoCard`
+    grew 360×200 → 460×280, explicit user instruction — still comfortably
+    inside the wizard's ~561px content column (820px dialog − 210px tab
+    rail − 1px divider − 48px padding).
+  - **2026-08-18 follow-up #2 (post-live share badge removed)** — Explicit
+    user instruction. The `isLive` branch of `_SuccessStep` no longer shows
+    the `_ShareBadge` gradient card or its "Download badge" button — now
+    just the "You're public!" heading/subtitle, with the subtitle's "Share
+    the badge below on social media" clause dropped since there's nothing
+    left to share. `_ShareBadge` itself and the now-unused `_badgeKey`
+    were deleted from `go_public_wizard_dialog.dart`; the not-live +
+    `allStepsDone` state's `_BookingPromoCard`/share-row/download flow
+    (immediately above) is untouched.
+  - **2026-08-19 (post-live share badge replaced with a real, per-branch
+    `_ClinicShareCard`)** — Explicit user instruction, iterated from a
+    from-scratch iPhone-mockup concept down to a flat, non-framed
+    downloadable card once the phone-bezel chrome was confirmed out of
+    scope for an actual shareable asset. The `isLive` branch of
+    `_SuccessStep` now renders `_ClinicShareCard` (360px wide, white,
+    `radius: 20`, drop shadow) inside the same `RepaintBoundary` →
+    `toImage()` → PNG download flow the wizard's other cards already use
+    (new `_shareCardKey`), with a "Download" button below it. Card content,
+    top to bottom: a 200px photo header (the clinic's own uploaded public
+    image — see below), display name + a small `AppIcons.oversight`
+    (shield-check) mark in `AppColors.primary`, `publicAddress` with an
+    `AppIcons.branchLocation` pin (row omitted entirely if empty), a
+    `primary`→`primaryHover` gradient "Book Appointment" pill (a static
+    visual CTA, not an interactive button — this is a captured image), and
+    a small `CliniqnovvaLogo` + "Cliniqnovva" wordmark footer. Deliberately
+    NOT included: rating, review count, or doctor cards from the earlier
+    mockup concept — nothing in this wizard tracks real numbers for those,
+    and a shareable image with fabricated stats would be worse than
+    omitting them; this card only ever shows fields the branch itself set.
+    Fixed, non-theme-aware colors throughout, same reasoning as
+    `_BookingPromoCard`: a downloaded image should look identical
+    regardless of the admin's own light/dark setting.
+    **Real photo required a small backend addition, not just a Flutter
+    change**: `publicImageKey` is an R2 object key, and the only existing
+    code that ever resolved it to a fetchable url was
+    `browse.service.js#toPublicBranch` — patient-role-only, unreachable
+    from this staff-side wizard. New staff-scoped
+    `GET /api/v1/branches/:branchId/image-url`
+    (`branches.routes.js`/`.controller.js`/`.service.js#getPublicImageUrl`,
+    same `READ_ROLES`/`assertBranchAccess` pattern as every other branch
+    read route) returns `{url}` via the same
+    `storageService.getSignedDownloadUrl` primitive `browse.service.js`
+    and the patient-documents signed-url path both already use, same
+    6-hour TTL as `browse.service.js`'s own (unexported, so redefined
+    locally) `PUBLIC_IMAGE_URL_TTL_SECONDS`. New Flutter
+    `branchPublicImageUrlProvider` (`branches_provider.dart`) calls it;
+    `_ClinicShareCard` treats a null url (still loading, never uploaded, or
+    failed to resolve) identically — a plain `primary`→`skyBlue` gradient
+    `_ShareCardPhotoFallback` with a centered `AppIcons.image` mark, so the
+    card never renders a broken-image icon. `Image.network`'s
+    `errorBuilder` also routes into the same fallback for a load failure
+    after the url did resolve (expired/network error).
 - **2026-08-16 (Popular Clinics: "How this is calculated" removed, "Other
   branches" table added)** — Two explicit user instructions from a
   screenshot of `/popular-clinics`: (1) the "How this is calculated"

@@ -1,4 +1,8 @@
+import 'dart:typed_data';
+
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:http_parser/http_parser.dart';
 
 import '../../../core/services/api_service.dart';
 import '../models/staff_model.dart';
@@ -111,6 +115,34 @@ class StaffNotifier extends AsyncNotifier<void> {
     );
     ref.invalidate(staffListProvider);
     ref.invalidate(staffDetailProvider(staffId));
+  }
+
+  /// Uploads/replaces a doctor's profile photo ("Go Public" wizard's
+  /// Doctors step, 2026-08-17) — same shape as
+  /// `branches_provider.dart`'s `uploadBranchPublicImage`.
+  Future<StaffModel> uploadDoctorPhoto(
+    String doctorId, {
+    required Uint8List bytes,
+    required String filename,
+    required String contentType,
+  }) async {
+    final parts = contentType.split('/');
+    final formData = FormData.fromMap({
+      'file': MultipartFile.fromBytes(
+        bytes,
+        filename: filename,
+        contentType: parts.length == 2
+            ? MediaType(parts[0], parts[1])
+            : MediaType('application', 'octet-stream'),
+      ),
+    });
+    final response = await ApiService.instance.post<Map<String, dynamic>>(
+      '/api/v1/staff/$doctorId/photo',
+      data: formData,
+    );
+    ref.invalidate(staffListProvider);
+    ref.invalidate(staffDetailProvider(doctorId));
+    return StaffModel.fromJson(response.data!['staff'] as Map<String, dynamic>);
   }
 
   /// Saves a doctor's full weekly recurring schedule (Part 8 Task 2) — the

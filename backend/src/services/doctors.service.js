@@ -7,6 +7,13 @@
 // blockedSlots, which stay staff.service.js-only.
 const { db } = require('../config/firebase-admin');
 const { ROLES } = require('../middleware/requireRole');
+const storageService = require('./storage.service');
+
+// Same reasoning as browse.service.js's PUBLIC_IMAGE_URL_TTL_SECONDS — a
+// doctor's own uploaded photo isn't sensitive (the clinic explicitly
+// uploaded it for public display), so a longer TTL than storage.service's
+// 15-minute default avoids photos silently breaking mid-browse.
+const PUBLIC_PHOTO_URL_TTL_SECONDS = 60 * 60 * 6;
 
 function httpError(status, message) {
   const err = new Error(message);
@@ -15,9 +22,12 @@ function httpError(status, message) {
 }
 
 /** Explicit allowlist — never spread raw doc data into a patient-facing response. */
-function toPublicDoctor(userDoc, doctorDoc) {
+async function toPublicDoctor(userDoc, doctorDoc) {
   const u = userDoc || {};
   const d = doctorDoc || {};
+  const photoUrl = d.photoKey
+    ? await storageService.getSignedDownloadUrl(d.photoKey, PUBLIC_PHOTO_URL_TTL_SECONDS).catch(() => null)
+    : null;
   return {
     id: u.id,
     name: u.name || null,
@@ -42,6 +52,9 @@ function toPublicDoctor(userDoc, doctorDoc) {
       : [],
     averageRating: d.averageRating || 0,
     reviewCount: d.reviewCount || 0,
+    // 2026-08-17 — "Go Public" wizard's Doctors step upload; the admin web
+    // dashboard's own resolution lives in staff.service.js#attachDoctorFields.
+    photoUrl,
   };
 }
 
@@ -66,7 +79,7 @@ async function list({ branchId }) {
     if (doc.exists) doctorById[doc.id] = doc.data();
   });
 
-  return users.map((u) => toPublicDoctor(u, doctorById[u.id]));
+  return Promise.all(users.map((u) => toPublicDoctor(u, doctorById[u.id])));
 }
 
 /** One doctor, patient-safe shape, or null if not found/not an active doctor. */

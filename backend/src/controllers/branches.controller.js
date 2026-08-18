@@ -128,4 +128,36 @@ async function uploadPublicImage(req, res, next) {
   }
 }
 
-module.exports = { list, listByClinic, getById, create, update, setStatus, remove, uploadPublicImage };
+async function getPublicImageUrl(req, res, next) {
+  try {
+    const result = await branchesService.getPublicImageUrl(req.params.branchId, { scope: req.scope });
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function viewPublicImage(req, res, next) {
+  try {
+    const photo = await branchesService.getPublicImageBytes(req.params.branchId, { scope: req.scope });
+    if (!photo) return res.status(404).json({ error: 'No public photo uploaded for this branch' });
+    res.set('Content-Type', photo.contentType || 'image/jpeg');
+    res.set('Cache-Control', 'private, max-age=300');
+    res.send(photo.body);
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = {
+  list,
+  listByClinic,
+  getById,
+  create,
+  update,
+  setStatus,
+  remove,
+  uploadPublicImage,
+  getPublicImageUrl,
+  viewPublicImage,
+};

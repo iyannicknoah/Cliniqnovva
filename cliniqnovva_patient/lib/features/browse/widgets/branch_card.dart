@@ -7,6 +7,7 @@ import '../../../core/theme/theme_ext.dart';
 import '../../../shared/widgets/app_icon.dart';
 import '../../../shared/widgets/cliniqnovva_card.dart';
 import '../../../shared/widgets/rating_stars.dart';
+import '../../../shared/widgets/shimmer_box.dart';
 import '../models/branch_summary.dart';
 
 /// One clinic/branch card — used on the Home screen's clinic lists (Task 1)
@@ -157,7 +158,8 @@ class _BranchImage extends StatelessWidget {
     return Image.network(
       url!,
       fit: BoxFit.cover,
-      loadingBuilder: (context, child, progress) => progress == null ? child : _Placeholder(context: context),
+      loadingBuilder: (context, child, progress) =>
+          progress == null ? child : const ShimmerBox(),
       errorBuilder: (context, error, stackTrace) => _Placeholder(context: context),
     );
   }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/theme/app_colors.dart';
+import 'shimmer_box.dart';
 
 /// The single avatar component — identical to
 /// cliniqnovva/lib/shared/widgets/avatar_widget.dart.
@@ -46,6 +47,10 @@ class AvatarWidget extends StatelessWidget {
                 fit: BoxFit.cover,
                 width: size,
                 height: size,
+                loadingBuilder: (context, child, progress) {
+                  if (progress == null) return child;
+                  return const ShimmerBox(shape: BoxShape.circle);
+                },
               )
             : Container(
                 decoration: BoxDecoration(

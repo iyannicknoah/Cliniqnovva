@@ -15,6 +15,7 @@ class CliniqnovvaCard extends StatelessWidget {
     this.trailing,
     this.padding = const EdgeInsets.all(20),
     this.showBorder = true,
+    this.borderRadius = AppTheme.cardRadius,
   });
 
   final Widget child;
@@ -32,13 +33,21 @@ class CliniqnovvaCard extends StatelessWidget {
   /// border unless it opts out.
   final bool showBorder;
 
+  /// Per-instance override of the standard 18px radius (2026-08-17,
+  /// explicit user instruction — first used by "Go Public"'s Setup steps
+  /// card). Defaults to [AppTheme.cardRadius] so every other card is
+  /// unaffected.
+  final double borderRadius;
+
   @override
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
         color: AppTheme.cardColor(context),
-        borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-        border: showBorder ? Border.fromBorderSide(AppTheme.cardBorderSide(context)) : null,
+        borderRadius: BorderRadius.circular(borderRadius),
+        border: showBorder
+            ? Border.fromBorderSide(AppTheme.cardBorderSide(context))
+            : null,
       ),
       padding: padding,
       child: Column(
