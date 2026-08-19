@@ -19,13 +19,24 @@ enum _ButtonVariant { filled, text, outlined }
 ///
 /// `.text()` is the transparent, underline-capable secondary style (e.g.
 /// "Forgot password?", "Sign up").
+///
+/// **`isFullWidth` now defaults to `false` on every variant** (2026-08-19,
+/// explicit user instruction — "don't force a fixed width, let it have the
+/// width of the content, apply across the whole system... so other[s] have
+/// that behaviour"). A call site that genuinely wants a button to span its
+/// container (a login form's "Sign In", a wizard's "Finish Setup", a
+/// dialog's primary action) must now pass `isFullWidth: true` explicitly —
+/// it's no longer the silent default. This was a deliberate, confirmed
+/// tradeoff: every screen relying on the old implicit-`true` default needed
+/// auditing (see the same-day changelog entry in DESIGN_LANGUAGE.md for the
+/// full list of call sites updated alongside this change).
 class CliniqnovvaButton extends StatelessWidget {
   const CliniqnovvaButton({
     super.key,
     required this.label,
     required this.onPressed,
     this.isLoading = false,
-    this.isFullWidth = true,
+    this.isFullWidth = false,
     this.color,
   }) : _variant = _ButtonVariant.filled,
        underline = false,
@@ -56,7 +67,7 @@ class CliniqnovvaButton extends StatelessWidget {
     required this.label,
     required this.onPressed,
     this.isLoading = false,
-    this.isFullWidth = true,
+    this.isFullWidth = false,
     this.color,
     this.borderColor,
     this.backgroundColor,

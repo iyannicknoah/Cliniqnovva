@@ -222,12 +222,9 @@ class _InvoiceBody extends ConsumerWidget {
         const SizedBox(height: 24),
         Row(
           children: [
-            SizedBox(
-              width: 220,
-              child: CliniqnovvaButton(
-                label: 'Print / Download Receipt',
-                onPressed: () => _printReceipt(context, ref, invoice),
-              ),
+            CliniqnovvaButton(
+              label: 'Print / Download Receipt',
+              onPressed: () => _printReceipt(context, ref, invoice),
             ),
             const SizedBox(width: 12),
             if (!voided)
@@ -617,13 +614,10 @@ class _LineItemsCardState extends ConsumerState<_LineItemsCard> {
               ),
             ],
             const SizedBox(height: 12),
-            SizedBox(
-              width: 160,
-              child: CliniqnovvaButton(
-                label: 'Save line items',
-                isLoading: _saving,
-                onPressed: _saving ? null : () => _save(rows),
-              ),
+            CliniqnovvaButton(
+              label: 'Save line items',
+              isLoading: _saving,
+              onPressed: _saving ? null : () => _save(rows),
             ),
           ],
         ],
@@ -833,13 +827,10 @@ class _RecordCashCardState extends ConsumerState<_RecordCashCard> {
             ),
           ],
           const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            child: CliniqnovvaButton(
-              label: 'Record',
-              isLoading: _saving,
-              onPressed: _saving ? null : _record,
-            ),
+          CliniqnovvaButton(
+            label: 'Record',
+            isLoading: _saving,
+            onPressed: _saving ? null : _record,
           ),
         ],
       ),
@@ -958,13 +949,10 @@ class _RecordInsuranceCardState extends ConsumerState<_RecordInsuranceCard> {
             ),
           ],
           const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            child: CliniqnovvaButton(
-              label: 'Record',
-              isLoading: _saving,
-              onPressed: _saving ? null : _record,
-            ),
+          CliniqnovvaButton(
+            label: 'Record',
+            isLoading: _saving,
+            onPressed: _saving ? null : _record,
           ),
         ],
       ),

@@ -213,32 +213,32 @@ class _WorklistRowState extends ConsumerState<_WorklistRow> {
           type: BadgeType.warning,
         ),
         if (order.status == 'ordered')
-          SizedBox(
-            width: 130,
-            child: CliniqnovvaButton(
-              label: 'Mark collected',
-              isLoading: _busy,
-              onPressed: _busy ? null : _markCollected,
-            ),
+          CliniqnovvaButton(
+            label: 'Mark collected',
+            isLoading: _busy,
+            onPressed: _busy ? null : _markCollected,
           )
         else if (!_entering)
-          SizedBox(
-            width: 130,
-            child: CliniqnovvaButton(
-              label: 'Record result',
-              onPressed: () => setState(() => _entering = true),
-            ),
+          CliniqnovvaButton(
+            label: 'Record result',
+            onPressed: () => setState(() => _entering = true),
           )
         else
           SizedBox(
-            width: 220,
+            width: 280,
             child: Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Expanded(
                   child: CliniqnovvaTextField(label: 'Result', controller: _resultController),
                 ),
                 const SizedBox(width: 6),
-                CliniqnovvaButton(label: 'Save', isLoading: _busy, onPressed: _busy ? null : _recordResult),
+                CliniqnovvaButton(
+                  label: 'Save',
+                  isFullWidth: false,
+                  isLoading: _busy,
+                  onPressed: _busy ? null : _recordResult,
+                ),
               ],
             ),
           ),

@@ -118,13 +118,10 @@ class _DepartmentDialogState extends ConsumerState<_DepartmentDialog> {
           onPressed: _saving ? null : () => Navigator.pop(context),
           child: const Text('Cancel'),
         ),
-        SizedBox(
-          width: 90,
-          child: CliniqnovvaButton(
-            label: _isEdit ? 'Save' : 'Add',
-            isLoading: _saving,
-            onPressed: _saving ? null : _save,
-          ),
+        CliniqnovvaButton(
+          label: _isEdit ? 'Save' : 'Add',
+          isLoading: _saving,
+          onPressed: _saving ? null : _save,
         ),
       ],
     );

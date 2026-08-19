@@ -87,10 +87,7 @@ class _ReplyDialogState extends ConsumerState<_ReplyDialog> {
       ),
       actions: [
         TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),
-        SizedBox(
-          width: 120,
-          child: CliniqnovvaButton(label: 'Send', isLoading: _saving, onPressed: _saving ? null : _submit),
-        ),
+        CliniqnovvaButton(label: 'Send', isLoading: _saving, onPressed: _saving ? null : _submit),
       ],
     );
   }

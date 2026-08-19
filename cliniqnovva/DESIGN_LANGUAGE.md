@@ -219,6 +219,13 @@ web dashboard's `CliniqnovvaButton` is unchanged (still theme-inverted
 black/white per the rule above, with the auto-picked contrast text); the
 two components are no longer byte-for-byte identical. See Change log.
 
+**As of 2026-08-19, `isFullWidth` defaults to `false` on every variant**
+(filled, `.text()`, `.outlined()`) — buttons size to their own content
+instead of stretching to fill their container. A call site that genuinely
+wants a full-width button (a login form's "Sign In", a wizard's "Finish
+Setup", a dialog's full-width primary action) must now pass
+`isFullWidth: true` explicitly. See Change log.
+
 ## Backgrounds
 
 Pure white (`AppColors.pageBackground`) in light mode, pure black
@@ -475,6 +482,79 @@ growth/trend chart rather than introducing a new chart style or color.
 
 ## Change log
 
+- **2026-08-19 (`CliniqnovvaButton.isFullWidth` defaults to `false`
+  everywhere, all call sites audited)** — Explicit, confirmed user
+  instruction: "don't force them to have a certain fixed width — just let it
+  have the width of the content/text it has. Apply this across the whole
+  system and all dialog boxes... apply to the shared widget so others have
+  that behaviour" — confirmed as "literally every button, no exceptions"
+  after being warned this shrinks primary/CTA buttons (Sign In, Finish
+  Setup, dialog Confirm/Cancel, etc.) that used to span their container.
+  `CliniqnovvaButton`'s `isFullWidth` default flipped `true` → `false` on
+  all three constructors (filled, `.text()`, `.outlined()`) in
+  `lib/shared/widgets/cliniqnovva_button.dart`. Flipping the widget's own
+  default wasn't sufficient on its own: many call sites additionally wrapped
+  `CliniqnovvaButton(...)` in an explicit `SizedBox(width: N)` (or
+  `width: double.infinity`), which imposes a tight width constraint on its
+  child regardless of the button's own preference — those wrappers were
+  removed too, across 24 files and 41 call sites, so the new content-hugging
+  default can actually take effect: `appointments/screens/booking_screen.dart`
+  (2), `auth/screens/suspended_screen.dart`, `billing/screens/
+  invoice_detail_screen.dart` (4), `chat/screens/chat_inbox_screen.dart`,
+  `clinics/screens/branches_screen.dart` (2, one of which had a comment
+  explaining its `.outlined()` variant choice — comment preserved, moved to
+  sit above the button call), `clinics/screens/onboarding_screen.dart` (2,
+  including a `SizedBox` wrapping a ternary between two different button
+  calls), `departments/screens/departments_screen.dart`, `departments/
+  screens/services_screen.dart`, `departments/widgets/
+  add_department_dialog.dart`, `go_public/widgets/
+  go_public_wizard_dialog.dart` (2), `inventory/screens/
+  inventory_screen.dart`, `inventory/widgets/dispense_panel.dart`,
+  `lab_orders/screens/lab_orders_screen.dart` (3), `lab_orders/widgets/
+  patient_lab_orders_section.dart` (4), `patients/screens/
+  merge_patients_screen.dart` (2), `patients/screens/
+  patient_profile_screen.dart` (3), `patients/screens/patients_screen.dart`,
+  `patients/screens/register_patient_screen.dart`, `reports/screens/
+  reports_screen.dart` (2 — a Export CSV/Export PDF pair previously forced
+  to equal width for visual symmetry, now sized independently per the
+  "no exceptions" instruction), `reviews/widgets/hide_review_dialog.dart`,
+  `reviews/widgets/reply_dialog.dart`, `shared/widgets/empty_state.dart`,
+  `staff/screens/doctor_schedule_screen.dart` (2), `staff/screens/
+  staff_screen.dart`. Many other call sites already had explicit
+  `isFullWidth: false` (added in earlier, narrower fixes) and needed no
+  change; a few `SizedBox`s that constrain a `Row`/`TextField` pair rather
+  than the button itself (e.g. Lab Orders' inline result-entry row) were
+  deliberately left alone — only wrappers whose sole purpose was constraining
+  the button's own width were removed. `go_public/screens/
+  go_public_screen.dart`'s "Go Public"/"Manage public profile" button keeps
+  its `SizedBox(height: 50)` wrapper (constrains height, not width — out of
+  scope for this change).
+- **2026-08-19 (Patient Documents: "View" fixed, opens full-screen in-app)**
+  — Explicit user instruction: "this view action doesn't work... make it
+  work and when it displays Document it takes the whole screen."
+  `patient_profile_screen.dart`'s `_DocumentsTab._view()` used to `await`
+  `getDocumentSignedUrl` THEN call `launchUrl(..., mode:
+  LaunchMode.externalApplication)` — the actual bug: a `window.open` issued
+  after an `await` is no longer inside the click event's original user
+  gesture, so every browser's popup blocker silently swallows it. No error,
+  nothing visibly happens — exactly "doesn't work." Replaced with a new
+  `_DocumentViewerScreen`, pushed as a full-screen `MaterialPageRoute`
+  (`fullscreenDialog: true`, via the ROOT navigator so it covers the whole
+  app viewport, not just the existing patient-profile panel's bounds) —
+  sidesteps the popup-blocker issue entirely since there's no `window.open`
+  at all. Renders via an `<iframe>` (`dart:html`'s `IFrameElement`,
+  registered through `dart:ui_web.platformViewRegistry`) pointed at the
+  resolved signed url, NOT `Image.network`/any Flutter-side decode — same
+  CORS reasoning already documented on the Go Public wizard's
+  `_AuthedImage` (R2's bucket has no CORS policy for browser origins,
+  which breaks script-driven fetches specifically; a plain iframe
+  navigation is unaffected) — and it renders both images and PDFs natively
+  with zero new dependencies, which an `Image.network`-only approach
+  couldn't have covered anyway. Loading/error states handled via a
+  `FutureBuilder` around the signed-url fetch, black background + white
+  "X" close button in an `AppBar` matching a full-screen media-viewer
+  convention. The now-solitary `url_launcher` import in this file was
+  removed (nothing else in it used `launchUrl`).
 - **2026-08-16 (New "Go Public" wizard — sidebar link, overview page, 5-step
   modal)** — Explicit user instruction/spec, confirmed against 4 clarifying
   questions before starting (full stack now; services step uses the real
@@ -1045,6 +1125,63 @@ growth/trend chart rather than introducing a new chart style or color.
   helper functions in `app_theme.dart` that still hardcode `#2A2A2A` for a
   dark border rather than reading `AppColors.cardBorderDark` — a separate,
   narrower drift than what this pass was asked to fix.
+- **2026-08-19 (Onboarding wizard: logo/wordmark removed, step cards
+  bordered, "go public in full" added to step 4)** — Three explicit user
+  instructions, from a screenshot of `/onboarding`:
+  1. The `CliniqnovvaLogo` + "Cliniqnovva" wordmark row that sat above the
+     step progress bar (all 4 steps, `_OnboardingScreenState.build`) is
+     gone — the unused `cliniqnovva_logo.dart` import was dropped too.
+  2. Each step's `_StepShell` (title + subtitle + content) is now wrapped
+     in `context.cardDeco()` — same bordered-card convention as every other
+     surface in the app, previously bare page background.
+  3. **The real fix, not just cosmetic**: onboarding's step 3 "Public
+     visibility" toggle tried to set `isPublic: true` with only the 5
+     public-profile fields (name/phone/email/address/image) —
+     `branches.service.js#update` has required `publicServiceIds`/
+     `publicDoctorIds`/`payoutMethod`+details together with those 5 since
+     the "Go Public" wizard shipped (2026-08-16, see that entry above), so
+     onboarding's public toggle had been silently broken (a 400 "choose
+     which services to show") since then. Step 4 ("Confirm and finish") now
+     has a new `_GoPublicSetupSection` (shown only when Public is chosen)
+     to actually collect it: a Services sub-section (name/department/price/
+     duration, `+ Add`, chip list — mirrors `_DepartmentsStep`'s own
+     pattern), a Doctors sub-section (name/email/specialty, minimum 3
+     enforced at Finish time — each becomes a REAL staff account via
+     `staffNotifierProvider.create`, generated password, same
+     `_generatePassword()` shape as `add_edit_staff_panel.dart`'s), and a
+     Payout sub-section (method + fields, identical shape to the Go Public
+     wizard's own step 4, reusing its `payoutDetailFields` constant).
+     **Explicit user instruction, mid-build**: none of this may block
+     finishing onboarding — a prominent "Skip for now" button collapses the
+     whole section to one amber banner ("Skipped — finish from Go Public in
+     the dashboard") and an "Add it now instead" undo. Skipping does NOT
+     mean the public toggle is silently dropped: the 5 profile fields still
+     save and the branch is created, just with `isPublic: false` until the
+     admin finishes services/doctors/payout later from the dashboard's
+     existing Go Public wizard — `_finish()`'s `updateFields['isPublic']`
+     is literally `!_skipGoPublicSetup`, not a hardcoded `true`. Services/
+     doctors are created against the branch/departments only after they
+     exist (`createBranch` then `createDepartment` per name, THEN a
+     `departmentsProvider(branch.id)` re-fetch to resolve name → id for
+     each service, since department creation doesn't return an id and
+     re-fetching was simpler than changing that provider's return type for
+     one caller) — everything in this new section is local draft state
+     (`_ServiceDraft`/`_DoctorDraft`) until "Finish Setup" runs, same
+     pattern as the existing `_departments` list.
+  - **Same-day follow-up (the whole `_GoPublicSetupSection` removed)** —
+    explicit user instruction, reverting point 3 above entirely (points 1-2
+    — logo removed, step cards bordered — stand). `_finish()` no longer
+    ever sends `isPublic: true` from onboarding at all: choosing "Public" in
+    step 3 now always saves the 5 profile fields with `isPublic: false`,
+    and the summary step's "Patient App" row says so plainly ("Profile
+    saved... finish from 'Go Public' in the dashboard"). `_ServiceDraft`/
+    `_DoctorDraft`/`_GoPublicSetupSection` and their supporting state/
+    imports (`departmentsProvider`, `servicesProvider`/
+    `servicesNotifierProvider`, `staffNotifierProvider`,
+    `go_public_provider.dart`'s `payoutDetailFields`, `AppConstants`,
+    the local `_generatePassword()`) were all deleted — onboarding no
+    longer creates services, doctors, or payout details under any path;
+    that's exclusively the dashboard's Go Public wizard's job now.
 - **2026-08-16 (Popular Clinics: "How this is calculated" removed, "Other
   branches" table added)** — Two explicit user instructions from a
   screenshot of `/popular-clinics`: (1) the "How this is calculated"

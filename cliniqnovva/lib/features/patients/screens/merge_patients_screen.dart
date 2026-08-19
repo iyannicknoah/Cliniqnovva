@@ -270,15 +270,12 @@ class _MergeBodyState extends ConsumerState<_MergeBody> {
                 final bAsync = ref.watch(patientDetailProvider(_patientBId!));
                 final a = aAsync.valueOrNull;
                 final b = bAsync.valueOrNull;
-                return SizedBox(
-                  width: 180,
-                  child: CliniqnovvaButton(
-                    label: 'Merge',
-                    isLoading: _merging,
-                    onPressed: (_merging || a == null || b == null)
-                        ? null
-                        : () => _confirmAndMerge(a, b),
-                  ),
+                return CliniqnovvaButton(
+                  label: 'Merge',
+                  isLoading: _merging,
+                  onPressed: (_merging || a == null || b == null)
+                      ? null
+                      : () => _confirmAndMerge(a, b),
                 );
               },
             ),
@@ -499,13 +496,10 @@ class _PatientSlotState extends ConsumerState<_PatientSlot> {
             if (patient.nationalId != null)
               _CountRow(label: 'National ID', text: patient.nationalId),
             const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: CliniqnovvaButton(
-                label: isSurvivor ? 'Will survive' : 'Keep this record',
-                color: isSurvivor ? context.appPrimary : null,
-                onPressed: () => widget.onChooseSurvivor(id),
-              ),
+            CliniqnovvaButton(
+              label: isSurvivor ? 'Will survive' : 'Keep this record',
+              color: isSurvivor ? context.appPrimary : null,
+              onPressed: () => widget.onChooseSurvivor(id),
             ),
           ],
         );

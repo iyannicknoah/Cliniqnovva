@@ -11,7 +11,6 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/theme_ext.dart';
 import '../../../shared/widgets/app_icon.dart';
 import '../../../shared/widgets/cliniqnovva_button.dart';
-import '../../../shared/widgets/cliniqnovva_logo.dart';
 import '../../../shared/widgets/cliniqnovva_text_field.dart';
 import '../providers/branches_provider.dart';
 import '../widgets/branch_form.dart';
@@ -159,8 +158,16 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           filename: _pickedImageName!,
           contentType: _pickedImageContentType!,
         );
+        // Deliberately NOT `isPublic: true` here (2026-08-19, explicit user
+        // instruction — removed the step-4 services/doctors/payout section
+        // this would otherwise need) — branches.service.js#update requires
+        // publicServiceIds/publicDoctorIds/payoutMethod together with the
+        // profile fields before it'll actually flip a branch public, none
+        // of which onboarding collects. The profile fields below are saved
+        // and ready; the admin finishes going public later from the
+        // dashboard's "Go Public" wizard.
         await notifier.updateBranch(branch.id, {
-          'isPublic': true,
+          'isPublic': false,
           'publicDisplayName': _publicNameController.text.trim(),
           'publicPhone': _publicPhoneController.text.trim(),
           'publicEmail': _publicEmailController.text.trim(),
@@ -200,22 +207,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const SizedBox(height: 32),
-                  const Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      CliniqnovvaLogo(size: 32, radius: 10),
-                      SizedBox(width: 6),
-                      Text(
-                        'Cliniqnovva',
-                        style: TextStyle(
-                          color: AppColors.skyBlue,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 28),
                   Text(
                     'Step ${_step + 1} of $_stepCount',
                     style: TextStyle(color: context.appSubtext, fontSize: 13),
@@ -312,19 +303,16 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                           onPressed: _finishing ? null : _back,
                         ),
                       const Spacer(),
-                      SizedBox(
-                        width: 160,
-                        child: _step == _stepCount - 1
-                            ? CliniqnovvaButton(
-                                label: 'Finish Setup',
-                                isLoading: _finishing,
-                                onPressed: _finishing ? null : _finish,
-                              )
-                            : CliniqnovvaButton(
-                                label: 'Next',
-                                onPressed: _next,
-                              ),
-                      ),
+                      _step == _stepCount - 1
+                          ? CliniqnovvaButton(
+                              label: 'Finish Setup',
+                              isLoading: _finishing,
+                              onPressed: _finishing ? null : _finish,
+                            )
+                          : CliniqnovvaButton(
+                              label: 'Next',
+                              onPressed: _next,
+                            ),
                     ],
                   ),
                   const SizedBox(height: 24),
@@ -351,25 +339,30 @@ class _StepShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: TextStyle(
-            color: context.appText,
-            fontSize: 20,
-            fontWeight: FontWeight.w600,
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      decoration: context.cardDeco(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: TextStyle(
+              color: context.appText,
+              fontSize: 20,
+              fontWeight: FontWeight.w600,
+            ),
           ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          subtitle,
-          style: TextStyle(color: context.appSubtext, fontSize: 13.5),
-        ),
-        const SizedBox(height: 20),
-        child,
-      ],
+          const SizedBox(height: 4),
+          Text(
+            subtitle,
+            style: TextStyle(color: context.appSubtext, fontSize: 13.5),
+          ),
+          const SizedBox(height: 20),
+          child,
+        ],
+      ),
     );
   }
 }
@@ -404,10 +397,7 @@ class _DepartmentsStep extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 12),
-            SizedBox(
-              width: 90,
-              child: CliniqnovvaButton(label: 'Add', onPressed: onAdd),
-            ),
+            CliniqnovvaButton(label: 'Add', onPressed: onAdd),
           ],
         ),
         const SizedBox(height: 20),
@@ -686,7 +676,9 @@ class _SummaryStep extends StatelessWidget {
           ),
           _SummaryRow(
             label: 'Patient App',
-            value: isPublic ? 'Public — as "$publicName"' : 'Private',
+            value: isPublic
+                ? 'Profile saved as "$publicName" — finish from "Go Public" in the dashboard to go live'
+                : 'Private',
             isLast: true,
           ),
         ],

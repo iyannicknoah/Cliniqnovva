@@ -214,13 +214,10 @@ class _OrderTestFormState extends ConsumerState<_OrderTestForm> {
             Text(_error!, style: const TextStyle(color: AppColors.brightRed, fontSize: 13)),
           ],
           const SizedBox(height: 14),
-          SizedBox(
-            width: 140,
-            child: CliniqnovvaButton(
-              label: 'Order test',
-              isLoading: _saving,
-              onPressed: _saving ? null : _order,
-            ),
+          CliniqnovvaButton(
+            label: 'Order test',
+            isLoading: _saving,
+            onPressed: _saving ? null : _order,
           ),
         ],
       ),
@@ -298,59 +295,50 @@ class _LabOrderCardState extends ConsumerState<_LabOrderCard> {
           ],
           if (widget.canPerform && order.status == 'ordered') ...[
             const SizedBox(height: 12),
-            SizedBox(
-              width: 160,
-              child: CliniqnovvaButton(
-                label: 'Mark collected',
-                isLoading: _busy,
-                onPressed: _busy
-                    ? null
-                    : () => _run(
-                        () => ref.read(labOrdersNotifierProvider.notifier).markCollected(order.id),
-                        loading: 'Saving…',
-                        success: 'Marked collected.',
-                      ),
-              ),
+            CliniqnovvaButton(
+              label: 'Mark collected',
+              isLoading: _busy,
+              onPressed: _busy
+                  ? null
+                  : () => _run(
+                      () => ref.read(labOrdersNotifierProvider.notifier).markCollected(order.id),
+                      loading: 'Saving…',
+                      success: 'Marked collected.',
+                    ),
             ),
           ],
           if (widget.canPerform && order.status == 'collected') ...[
             const SizedBox(height: 12),
             CliniqnovvaTextField(label: 'Result', controller: _resultController),
             const SizedBox(height: 10),
-            SizedBox(
-              width: 160,
-              child: CliniqnovvaButton(
-                label: 'Record result',
-                isLoading: _busy,
-                onPressed: _busy
-                    ? null
-                    : () {
-                        final value = _resultController.text.trim();
-                        if (value.isEmpty) return;
-                        _run(
-                          () => ref.read(labOrdersNotifierProvider.notifier).recordResult(order.id, resultValue: value),
-                          loading: 'Saving…',
-                          success: 'Result recorded.',
-                        );
-                      },
-              ),
+            CliniqnovvaButton(
+              label: 'Record result',
+              isLoading: _busy,
+              onPressed: _busy
+                  ? null
+                  : () {
+                      final value = _resultController.text.trim();
+                      if (value.isEmpty) return;
+                      _run(
+                        () => ref.read(labOrdersNotifierProvider.notifier).recordResult(order.id, resultValue: value),
+                        loading: 'Saving…',
+                        success: 'Result recorded.',
+                      );
+                    },
             ),
           ],
           if (widget.isDoctor && order.status == 'resulted') ...[
             const SizedBox(height: 12),
-            SizedBox(
-              width: 140,
-              child: CliniqnovvaButton(
-                label: 'Mark reviewed',
-                isLoading: _busy,
-                onPressed: _busy
-                    ? null
-                    : () => _run(
-                        () => ref.read(labOrdersNotifierProvider.notifier).markReviewed(order.id),
-                        loading: 'Saving…',
-                        success: 'Marked reviewed.',
-                      ),
-              ),
+            CliniqnovvaButton(
+              label: 'Mark reviewed',
+              isLoading: _busy,
+              onPressed: _busy
+                  ? null
+                  : () => _run(
+                      () => ref.read(labOrdersNotifierProvider.notifier).markReviewed(order.id),
+                      loading: 'Saving…',
+                      success: 'Marked reviewed.',
+                    ),
             ),
           ],
         ],

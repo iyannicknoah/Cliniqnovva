@@ -373,15 +373,12 @@ class _BookingFormState extends ConsumerState<_BookingForm> {
                   ),
                 ],
                 const SizedBox(height: 24),
-                SizedBox(
-                  width: 220,
-                  child: CliniqnovvaButton(
-                    label: 'Confirm Booking',
-                    isLoading: _booking,
-                    onPressed: (_booking || _selectedSlot == null)
-                        ? null
-                        : () => _confirmBooking(effectiveBranchId),
-                  ),
+                CliniqnovvaButton(
+                  label: 'Confirm Booking',
+                  isLoading: _booking,
+                  onPressed: (_booking || _selectedSlot == null)
+                      ? null
+                      : () => _confirmBooking(effectiveBranchId),
                 ),
               ],
               const SizedBox(height: 24),
@@ -454,22 +451,19 @@ class _PatientPicker extends ConsumerWidget {
               ),
             ),
             const SizedBox(width: 10),
-            SizedBox(
-              width: 170,
-              child: CliniqnovvaButton.text(
-                label: '+ Register new',
-                // 2026-08-15 — Register Patient is a dialog too now, so this
-                // just nests it on top of the booking dialog and gets the
-                // new patient id back directly instead of round-tripping
-                // through a route (`returnTo` no longer exists).
-                onPressed: () async {
-                  final patientId = await showRegisterPatientPanel(
-                    context,
-                    returnPatientId: true,
-                  );
-                  if (patientId != null) onSelected(patientId);
-                },
-              ),
+            CliniqnovvaButton.text(
+              label: '+ Register new',
+              // 2026-08-15 — Register Patient is a dialog too now, so this
+              // just nests it on top of the booking dialog and gets the
+              // new patient id back directly instead of round-tripping
+              // through a route (`returnTo` no longer exists).
+              onPressed: () async {
+                final patientId = await showRegisterPatientPanel(
+                  context,
+                  returnPatientId: true,
+                );
+                if (patientId != null) onSelected(patientId);
+              },
             ),
           ],
         ),

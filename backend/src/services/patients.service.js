@@ -366,7 +366,14 @@ async function getById(id, actor) {
   }
 
   if (role === ROLES.LABORATORIAN) {
-    const labOrdersSnap = await db.collection('labOrders').where('patientId', '==', id).orderBy('createdAt', 'desc').get();
+    // orderedAt, not createdAt — lab order docs never had a createdAt field
+    // (see labOrders.service.js#create's actual write shape); ordering by a
+    // field that doesn't exist on any document silently excluded every
+    // order AND, without the resulting composite index deployed, could
+    // throw outright — breaking this whole getById call for a Laboratorian
+    // caller specifically (2026-08-19, found while fixing "patient name
+    // blank on the Lab Orders screen").
+    const labOrdersSnap = await db.collection('labOrders').where('patientId', '==', id).orderBy('orderedAt', 'desc').get();
     const labOrders = labOrdersSnap.docs.map((doc) => {
       const o = doc.data();
       return {

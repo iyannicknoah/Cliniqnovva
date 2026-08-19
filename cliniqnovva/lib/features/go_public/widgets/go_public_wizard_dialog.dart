@@ -493,21 +493,18 @@ class _GoPublicWizardState extends ConsumerState<_GoPublicWizard> {
                     ),
                     child: Align(
                       alignment: Alignment.centerRight,
-                      child: SizedBox(
-                        width: 160,
-                        child: CliniqnovvaButton(
-                          label: _activeStep == 4 ? 'Go Public' : 'Save & Next',
-                          isLoading: _saving,
-                          onPressed: _saving
-                              ? null
-                              : switch (_activeStep) {
-                                  0 => _saveInfo,
-                                  1 => _saveServices,
-                                  2 => _saveDoctors,
-                                  3 => _savePayout,
-                                  _ => steps.allStepsDone ? _goLive : null,
-                                },
-                        ),
+                      child: CliniqnovvaButton(
+                        label: _activeStep == 4 ? 'Go Public' : 'Save & Next',
+                        isLoading: _saving,
+                        onPressed: _saving
+                            ? null
+                            : switch (_activeStep) {
+                                0 => _saveInfo,
+                                1 => _saveServices,
+                                2 => _saveDoctors,
+                                3 => _savePayout,
+                                _ => steps.allStepsDone ? _goLive : null,
+                              },
                       ),
                     ),
                   ),
@@ -1418,13 +1415,10 @@ class _SuccessStepState extends ConsumerState<_SuccessStep> {
         ),
         const SizedBox(height: 20),
         Center(
-          child: SizedBox(
-            width: 200,
-            child: CliniqnovvaButton.outlined(
-              label: 'Download',
-              isLoading: _downloading,
-              onPressed: _downloading ? null : () => _download(_shareCardKey),
-            ),
+          child: CliniqnovvaButton.outlined(
+            label: 'Download',
+            isLoading: _downloading,
+            onPressed: _downloading ? null : () => _download(_shareCardKey),
           ),
         ),
       ],

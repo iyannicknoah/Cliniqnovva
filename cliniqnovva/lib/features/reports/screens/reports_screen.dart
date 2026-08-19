@@ -405,20 +405,14 @@ class _ExportRow extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.end,
       children: [
-        SizedBox(
-          width: 140,
-          child: CliniqnovvaButton.outlined(
-            label: 'Export CSV',
-            onPressed: _exportCsv,
-          ),
+        CliniqnovvaButton.outlined(
+          label: 'Export CSV',
+          onPressed: _exportCsv,
         ),
         const SizedBox(width: 12),
-        SizedBox(
-          width: 140,
-          child: CliniqnovvaButton.outlined(
-            label: 'Export PDF',
-            onPressed: _exportPdf,
-          ),
+        CliniqnovvaButton.outlined(
+          label: 'Export PDF',
+          onPressed: _exportPdf,
         ),
       ],
     );

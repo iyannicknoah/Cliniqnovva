@@ -151,12 +151,9 @@ class _PatientsBody extends ConsumerWidget {
                 const SizedBox(width: 4),
               ],
               if (canRegister) ...[
-                SizedBox(
-                  width: 190,
-                  child: CliniqnovvaButton(
-                    label: '+ Register Patient',
-                    onPressed: () => showRegisterPatientPanel(context),
-                  ),
+                CliniqnovvaButton(
+                  label: '+ Register Patient',
+                  onPressed: () => showRegisterPatientPanel(context),
                 ),
                 const SizedBox(width: 12),
               ],

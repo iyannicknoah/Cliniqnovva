@@ -182,17 +182,14 @@ class _StaffBodyState extends ConsumerState<_StaffBody> {
               ),
               if (widget.canManage) ...[
                 const SizedBox(width: 16),
-                SizedBox(
-                  width: 150,
-                  child: CliniqnovvaButton(
-                    label: '+ Add Staff',
-                    onPressed: effectiveBranchId == null
-                        ? null
-                        : () => showStaffPanel(
-                            context,
-                            branchId: effectiveBranchId,
-                          ),
-                  ),
+                CliniqnovvaButton(
+                  label: '+ Add Staff',
+                  onPressed: effectiveBranchId == null
+                      ? null
+                      : () => showStaffPanel(
+                          context,
+                          branchId: effectiveBranchId,
+                        ),
                 ),
               ],
             ],

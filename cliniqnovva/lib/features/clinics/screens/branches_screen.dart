@@ -148,19 +148,16 @@ class _ClinicBranchesView extends ConsumerWidget {
                       ],
                     ),
                   ),
-                  SizedBox(
-                    width: 150,
-                    // 2026-08-14, explicit user instruction — outlined
-                    // style specifically for this button (white/appBg
-                    // background, appSecondaryBg border, appPrimary text),
-                    // not the default filled brand-blue button every other
-                    // "+ Add X" uses.
-                    child: CliniqnovvaButton.outlined(
-                      label: '+ Add Branch',
-                      onPressed: result.limitReached
-                          ? null
-                          : () => showBranchPanel(context),
-                    ),
+                  // 2026-08-14, explicit user instruction — outlined
+                  // style specifically for this button (white/appBg
+                  // background, appSecondaryBg border, appPrimary text),
+                  // not the default filled brand-blue button every other
+                  // "+ Add X" uses.
+                  CliniqnovvaButton.outlined(
+                    label: '+ Add Branch',
+                    onPressed: result.limitReached
+                        ? null
+                        : () => showBranchPanel(context),
                   ),
                   const SizedBox(width: 12),
                   const TopBarActions(),
@@ -370,13 +367,10 @@ class _OwnBranchView extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(height: 20),
-                SizedBox(
-                  width: 200,
-                  child: CliniqnovvaButton(
-                    label: 'Edit working hours',
-                    onPressed: () =>
-                        showBranchPanel(context, branch: branch, hoursOnly: true),
-                  ),
+                CliniqnovvaButton(
+                  label: 'Edit working hours',
+                  onPressed: () =>
+                      showBranchPanel(context, branch: branch, hoursOnly: true),
                 ),
               ],
             ),

@@ -133,17 +133,14 @@ class _ServicesBody extends ConsumerWidget {
                 const SizedBox(width: 12),
               ],
               if (canManage) ...[
-                SizedBox(
-                  width: 150,
-                  child: CliniqnovvaButton(
-                    label: '+ Add Service',
-                    onPressed: effectiveBranchId == null
-                        ? null
-                        : () => showServicePanel(
-                            context,
-                            branchId: effectiveBranchId,
-                          ),
-                  ),
+                CliniqnovvaButton(
+                  label: '+ Add Service',
+                  onPressed: effectiveBranchId == null
+                      ? null
+                      : () => showServicePanel(
+                          context,
+                          branchId: effectiveBranchId,
+                        ),
                 ),
                 const SizedBox(width: 12),
               ],

@@ -131,14 +131,11 @@ class _StockTab extends ConsumerWidget {
       children: [
         Align(
           alignment: Alignment.centerRight,
-          child: SizedBox(
-            width: 140,
-            child: CliniqnovvaButton(
-              label: '+ Add Item',
-              onPressed: branchId == null
-                  ? null
-                  : () => showInventoryItemPanel(context, branchId: branchId!),
-            ),
+          child: CliniqnovvaButton(
+            label: '+ Add Item',
+            onPressed: branchId == null
+                ? null
+                : () => showInventoryItemPanel(context, branchId: branchId!),
           ),
         ),
         const SizedBox(height: 16),

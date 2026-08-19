@@ -69,15 +69,12 @@ class ChatInboxScreen extends ConsumerWidget {
                         ),
                       ),
                     ),
-                    SizedBox(
-                      width: 140,
-                      child: CliniqnovvaButton(
-                        label: '+ New Chat',
-                        onPressed: () => showNewChatPanel(
-                          context,
-                          branchId: branchId,
-                          clinicId: clinicId,
-                        ),
+                    CliniqnovvaButton(
+                      label: '+ New Chat',
+                      onPressed: () => showNewChatPanel(
+                        context,
+                        branchId: branchId,
+                        clinicId: clinicId,
                       ),
                     ),
                     const SizedBox(width: 12),

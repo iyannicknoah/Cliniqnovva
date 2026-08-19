@@ -43,10 +43,7 @@ class EmptyState extends StatelessWidget {
             ),
             if (actionLabel != null && onAction != null) ...[
               const SizedBox(height: 16),
-              SizedBox(
-                width: 200,
-                child: CliniqnovvaButton.text(label: actionLabel!, onPressed: onAction),
-              ),
+              CliniqnovvaButton.text(label: actionLabel!, onPressed: onAction),
             ],
           ],
         ),

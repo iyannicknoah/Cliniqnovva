@@ -93,10 +93,7 @@ class _HideReviewDialogState extends ConsumerState<_HideReviewDialog> {
       ),
       actions: [
         TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),
-        SizedBox(
-          width: 120,
-          child: CliniqnovvaButton(label: 'Hide', isLoading: _saving, onPressed: _saving ? null : _submit),
-        ),
+        CliniqnovvaButton(label: 'Hide', isLoading: _saving, onPressed: _saving ? null : _submit),
       ],
     );
   }

@@ -542,13 +542,10 @@ class _DispenseStep extends ConsumerWidget {
               ),
             ],
             const SizedBox(height: 16),
-            SizedBox(
-              width: 200,
-              child: CliniqnovvaButton(
-                label: 'Dispense',
-                isLoading: dispensing,
-                onPressed: dispensing ? null : onDispense,
-              ),
+            CliniqnovvaButton(
+              label: 'Dispense',
+              isLoading: dispensing,
+              onPressed: dispensing ? null : onDispense,
             ),
           ],
         );

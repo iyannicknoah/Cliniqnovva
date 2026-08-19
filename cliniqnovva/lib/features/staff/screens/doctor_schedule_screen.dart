@@ -581,13 +581,10 @@ class _WeeklyScheduleSectionState
               ],
               if (widget.canEdit) ...[
                 const SizedBox(height: 16),
-                SizedBox(
-                  width: 160,
-                  child: CliniqnovvaButton(
-                    label: 'Save schedule',
-                    isLoading: _saving,
-                    onPressed: _saving ? null : _save,
-                  ),
+                CliniqnovvaButton(
+                  label: 'Save schedule',
+                  isLoading: _saving,
+                  onPressed: _saving ? null : _save,
                 ),
               ],
             ],
@@ -871,13 +868,10 @@ class _BlockedSlotsSectionState extends ConsumerState<_BlockedSlotsSection> {
               ),
             ],
             const SizedBox(height: 16),
-            SizedBox(
-              width: 120,
-              child: CliniqnovvaButton(
-                label: 'Block',
-                isLoading: _saving,
-                onPressed: _saving ? null : _block,
-              ),
+            CliniqnovvaButton(
+              label: 'Block',
+              isLoading: _saving,
+              onPressed: _saving ? null : _block,
             ),
             const SizedBox(height: 20),
             Divider(height: 1, color: context.appBorder),

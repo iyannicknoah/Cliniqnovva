@@ -9,8 +9,12 @@ import 'cliniqnovva_button.dart';
 /// [SuccessDialog] but with the generated login credentials in place of a
 /// generic message, since the admin needs to read (and copy) them before
 /// they're gone. Replaces the old plain `AlertDialog` in
-/// `add_edit_staff_panel.dart`. Credential text is selectable so it can
-/// still be copied during the 2-second auto-dismiss window.
+/// `add_edit_staff_panel.dart`. Credential text is selectable so it can be
+/// copied. Deliberately does NOT auto-dismiss like [SuccessDialog] does
+/// (2026-08-19, explicit user instruction — a one-time password needs to
+/// stay on screen until the admin has actually read/copied it, not
+/// disappear on a fixed timer) — only the "Continue" button (or tapping the
+/// barrier) closes it.
 Future<void> showStaffAddedDialog(
   BuildContext context, {
   required String email,
@@ -56,15 +60,6 @@ class StaffAddedDialog extends StatefulWidget {
 }
 
 class _StaffAddedDialogState extends State<StaffAddedDialog> {
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      await Future.delayed(const Duration(milliseconds: 2000));
-      if (mounted) Navigator.pop(context);
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     final credentialStyle = TextStyle(

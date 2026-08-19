@@ -1,8 +1,11 @@
+// ignore: avoid_web_libraries_in_flutter, deprecated_member_use
+import 'dart:html' as html;
+import 'dart:ui_web' as ui_web;
+
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
@@ -516,13 +519,10 @@ class _ProfileTabState extends ConsumerState<_ProfileTab> {
             ),
           ],
           const SizedBox(height: 20),
-          SizedBox(
-            width: 160,
-            child: CliniqnovvaButton(
-              label: 'Save changes',
-              isLoading: _saving,
-              onPressed: _saving ? null : _save,
-            ),
+          CliniqnovvaButton(
+            label: 'Save changes',
+            isLoading: _saving,
+            onPressed: _saving ? null : _save,
           ),
         ],
       ),
@@ -983,13 +983,10 @@ class _AddRecordFormState extends ConsumerState<_AddRecordForm> {
             ),
           ],
           const SizedBox(height: 16),
-          SizedBox(
-            width: 160,
-            child: CliniqnovvaButton(
-              label: 'Save',
-              isLoading: _saving,
-              onPressed: _saving ? null : _save,
-            ),
+          CliniqnovvaButton(
+            label: 'Save',
+            isLoading: _saving,
+            onPressed: _saving ? null : _save,
           ),
         ],
       ),
@@ -1058,18 +1055,28 @@ class _DocumentsTabState extends ConsumerState<_DocumentsTab> {
     }
   }
 
-  Future<void> _view(PatientDocumentModel doc) async {
-    try {
-      final url = await ref
-          .read(patientsNotifierProvider.notifier)
-          .getDocumentSignedUrl(widget.patient.id, doc.key);
-      await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context)
-        ..clearSnackBars()
-        ..showSnackBar(SnackBar(content: Text('Failed: $e')));
-    }
+  /// Opens the document full-screen, in-app (2026-08-19, explicit user
+  /// instruction: "this view action doesn't work... make it work and when
+  /// it displays Document it takes the whole screen"). The old
+  /// implementation awaited [getDocumentSignedUrl] THEN called `launchUrl`
+  /// — that's exactly the bug: a `window.open` issued after an `await` is
+  /// no longer inside the original click's user-gesture, so every browser's
+  /// popup blocker silently swallows it (no error, nothing visibly
+  /// happens — matches "doesn't work" precisely). Pushing a full-screen
+  /// route instead sidesteps that entirely, and also reads better against
+  /// the explicit "whole screen" ask than any external tab would have.
+  void _view(PatientDocumentModel doc) {
+    Navigator.of(context, rootNavigator: true).push(
+      MaterialPageRoute(
+        fullscreenDialog: true,
+        builder: (_) => _DocumentViewerScreen(
+          documentName: doc.originalName,
+          loadUrl: () => ref
+              .read(patientsNotifierProvider.notifier)
+              .getDocumentSignedUrl(widget.patient.id, doc.key),
+        ),
+      ),
+    );
   }
 
   @override
@@ -1096,13 +1103,10 @@ class _DocumentsTabState extends ConsumerState<_DocumentsTab> {
                 ),
               ),
             ),
-            SizedBox(
-              width: 150,
-              child: CliniqnovvaButton(
-                label: '+ Upload',
-                isLoading: _uploading,
-                onPressed: _uploading ? null : _pickAndUpload,
-              ),
+            CliniqnovvaButton(
+              label: '+ Upload',
+              isLoading: _uploading,
+              onPressed: _uploading ? null : _pickAndUpload,
             ),
           ],
         ),
@@ -1178,6 +1182,84 @@ class _DocumentRow extends ConsumerWidget {
             onPressed: onView,
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Full-screen in-app document viewer (2026-08-19, explicit user
+/// instruction). Embeds the signed R2 url in an `<iframe>` rather than
+/// `Image.network`/any Flutter-side image decode — R2's bucket has no CORS
+/// policy for browser origins (same root cause documented on the Go Public
+/// wizard's photo fetches, `go_public_wizard_dialog.dart`'s `_AuthedImage`),
+/// which breaks `Image.network`/CanvasKit specifically. An iframe is a
+/// plain browser navigation into that url, not a script-driven fetch, so
+/// it's unaffected by the missing CORS headers — and it renders BOTH
+/// images and PDFs natively with zero extra dependencies (no PDF-viewer
+/// package needed), which a `Image.network`-only approach couldn't have
+/// covered anyway.
+class _DocumentViewerScreen extends StatefulWidget {
+  const _DocumentViewerScreen({
+    required this.documentName,
+    required this.loadUrl,
+  });
+
+  final String documentName;
+  final Future<String> Function() loadUrl;
+
+  @override
+  State<_DocumentViewerScreen> createState() => _DocumentViewerScreenState();
+}
+
+class _DocumentViewerScreenState extends State<_DocumentViewerScreen> {
+  late final Future<String> _urlFuture = widget.loadUrl();
+  String? _viewType;
+
+  String _registerIframe(String url) {
+    final viewType = 'patient-document-viewer-${identityHashCode(this)}';
+    ui_web.platformViewRegistry.registerViewFactory(viewType, (int viewId) {
+      return html.IFrameElement()
+        ..src = url
+        ..style.border = 'none'
+        ..style.width = '100%'
+        ..style.height = '100%';
+    });
+    return viewType;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.black,
+        foregroundColor: Colors.white,
+        elevation: 0,
+        title: Text(widget.documentName, overflow: TextOverflow.ellipsis),
+        leading: IconButton(
+          icon: const Icon(Icons.close),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+      ),
+      body: FutureBuilder<String>(
+        future: _urlFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState != ConnectionState.done) {
+            return const Center(
+              child: CircularProgressIndicator(color: Colors.white),
+            );
+          }
+          if (snapshot.hasError || !snapshot.hasData) {
+            return Center(
+              child: Text(
+                'Couldn\'t load this document: ${snapshot.error}',
+                style: const TextStyle(color: Colors.white70),
+              ),
+            );
+          }
+          _viewType ??= _registerIframe(snapshot.data!);
+          return HtmlElementView(viewType: _viewType!);
+        },
       ),
     );
   }

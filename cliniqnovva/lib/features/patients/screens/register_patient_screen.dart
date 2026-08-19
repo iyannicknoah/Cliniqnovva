@@ -473,13 +473,10 @@ class _RegisterFormState extends ConsumerState<_RegisterForm> {
                   onPressed: _saving ? null : () => Navigator.of(context).pop(),
                 ),
                 const Spacer(),
-                SizedBox(
-                  width: 180,
-                  child: CliniqnovvaButton(
-                    label: 'Register',
-                    isLoading: _saving,
-                    onPressed: _saving || noBranchSelected ? null : _submit,
-                  ),
+                CliniqnovvaButton(
+                  label: 'Register',
+                  isLoading: _saving,
+                  onPressed: _saving || noBranchSelected ? null : _submit,
                 ),
               ],
             ),

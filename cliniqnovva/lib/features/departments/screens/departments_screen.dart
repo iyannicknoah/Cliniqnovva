@@ -135,17 +135,14 @@ class _DepartmentsBody extends ConsumerWidget {
                 const SizedBox(width: 12),
               ],
               if (canManage) ...[
-                SizedBox(
-                  width: 200,
-                  child: CliniqnovvaButton(
-                    label: '+ Add Department',
-                    onPressed: effectiveBranchId == null
-                        ? null
-                        : () => showDepartmentDialog(
-                            context,
-                            branchId: effectiveBranchId,
-                          ),
-                  ),
+                CliniqnovvaButton(
+                  label: '+ Add Department',
+                  onPressed: effectiveBranchId == null
+                      ? null
+                      : () => showDepartmentDialog(
+                          context,
+                          branchId: effectiveBranchId,
+                        ),
                 ),
                 const SizedBox(width: 12),
               ],

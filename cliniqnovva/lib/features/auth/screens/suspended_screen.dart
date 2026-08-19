@@ -66,13 +66,10 @@ class SuspendedScreen extends ConsumerWidget {
                 ),
               ),
               const SizedBox(height: 32),
-              SizedBox(
-                width: 220,
-                child: CliniqnovvaButton(
-                  label: 'Sign Out',
-                  onPressed: () =>
-                      ref.read(authNotifierProvider.notifier).signOut(),
-                ),
+              CliniqnovvaButton(
+                label: 'Sign Out',
+                onPressed: () =>
+                    ref.read(authNotifierProvider.notifier).signOut(),
               ),
             ],
           ),
